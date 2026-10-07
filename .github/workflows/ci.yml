@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Quality and tests
+    runs-on: ubuntu-24.04
+    # A newer push supersedes the checks of an older one. Deployments, which
+    # must never be cut off mid-migration, will not share this group.
+    concurrency:
+      group: checks-${{ github.ref }}
+      cancel-in-progress: true
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: cdf2
+          POSTGRES_USER: cdf2
+          POSTGRES_PASSWORD: cdf2
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U cdf2"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # Throwaway values for an ephemeral test database: nothing here is a secret.
+      SECRET_KEY: ci-throwaway-key-not-used-anywhere-else
+      POSTGRES_DB: cdf2
+      POSTGRES_USER: cdf2
+      POSTGRES_PASSWORD: cdf2
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      # The same hooks as on every local commit: ruff, secrets detection,
+      # migrations up to date, OpenAPI schema exported and valid.
+      - name: Pre-commit hooks
+        run: uv run pre-commit run --all-files --show-diff-on-failure
+
+      - name: Tests with full coverage
+        run: uv run pytest --cov

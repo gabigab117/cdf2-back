@@ -1,5 +1,7 @@
 # Comité des fêtes d'Ons-en-Bray — API
 
+[![CI](https://github.com/gabigab117/cdf2-back/actions/workflows/ci.yml/badge.svg)](https://github.com/gabigab117/cdf2-back/actions/workflows/ci.yml)
+
 API de la v2 de l'application du Comité des fêtes d'Ons-en-Bray (Oise), une association qui organise les animations de la commune. L'application regroupe deux parties :
 - un **site public** : agenda des manifestations, fiches événements, souvenirs ;
 - un **espace réservé au bureau** de l'association : organisation des événements et des bénévoles, documents, trésorerie, stock de la buvette, prêts de matériel aux associations du village.
