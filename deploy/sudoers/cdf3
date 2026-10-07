@@ -1,0 +1,3 @@
+# The deployment scripts run as cdf3: they may restart the application's
+# services and nothing else. Install with: visudo -cf <file>, then mode 0440.
+cdf3 ALL=(root) NOPASSWD: /usr/bin/systemctl restart cdf3-api@preprod.service, /usr/bin/systemctl restart cdf3-web@preprod.service

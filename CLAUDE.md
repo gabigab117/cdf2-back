@@ -143,7 +143,7 @@ def test_loan_over_availability_rejected(api_client):
 
 ## Sécurité
 
-- Secrets uniquement en variables d'environnement (`django-environ`). `.env` dans `.gitignore`, `.env.example` commité. **Aucun secret dans le code ou les migrations.** Le dépôt est public : aucun hôte, utilisateur ni chemin de serveur réel non plus. Les modèles de `deploy/` n'ont que des valeurs génériques.
+- Secrets uniquement en variables d'environnement (`django-environ`). `.env` dans `.gitignore`, `.env.example` commité. **Aucun secret dans le code ou les migrations.** Le dépôt est public : aucun accès au serveur non plus (adresse, clés, comptes de connexion) ni valeur de configuration sensible (chemin de l'admin, secrets). Les modèles de `deploy/` décrivent l'organisation du serveur ; ces valeurs y restent des espaces réservés `{{…}}`, remplis à l'installation.
 - **Settings séparés** dev / test / prod.
   - En prod : `DEBUG=False`, `ALLOWED_HOSTS`, cookie de refresh `Secure`.
   - Derrière nginx : `SECURE_PROXY_SSL_HEADER` et `CSRF_TRUSTED_ORIGINS`. La redirection HTTPS est faite par nginx, pas par Django.

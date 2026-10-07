@@ -1,0 +1,68 @@
+# Comité des fêtes v2, {{INSTANCE}} instance, served on {{DOMAIN}}.
+#
+# Rendered from back/deploy/nginx/cdf3.conf.template by replacing the double-brace
+# placeholders; certbot then adds the TLS configuration and the HTTP to
+# HTTPS redirect. One origin for everything: /api/ and the admin go to Django,
+# the rest to the Nuxt server, so the browser never makes a cross-origin call.
+
+limit_req_zone $binary_remote_addr zone=cdf3_{{INSTANCE}}_admin:1m rate=10r/m;
+
+upstream cdf3_{{INSTANCE}}_api {
+    server 127.0.0.1:{{API_PORT}};
+    keepalive 8;
+}
+
+upstream cdf3_{{INSTANCE}}_web {
+    server 127.0.0.1:{{WEB_PORT}};
+    keepalive 8;
+}
+
+server {
+    listen 80;
+    server_name {{DOMAIN}};
+
+    # Response headers for every location (none of them declares its own).
+    # nginx is their single source: the copies set by the applications are hidden.
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "same-origin" always;
+    proxy_hide_header X-Content-Type-Options;
+    proxy_hide_header Referrer-Policy;
+    # Preproduction only (fictitious data): never indexed. Remove for production.
+    add_header X-Robots-Tag "noindex, nofollow" always;
+
+    client_max_body_size 20m;
+
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    location /api/ {
+        proxy_pass http://cdf3_{{INSTANCE}}_api;
+    }
+
+    # The admin lives on a path read from the environment (ADMIN_URL).
+    location /{{ADMIN_PATH}}/ {
+        limit_req zone=cdf3_{{INSTANCE}}_admin burst=20 nodelay;
+        proxy_pass http://cdf3_{{INSTANCE}}_api;
+    }
+
+    location /static/ {
+        alias /var/www/cdf3/{{INSTANCE}}/shared/static/;
+        expires 30d;
+        access_log off;
+    }
+
+    # Private files: served only after Django has checked access and answered
+    # with an X-Accel-Redirect to this location.
+    location /_private/ {
+        internal;
+        alias /var/www/cdf3/{{INSTANCE}}/shared/private/;
+    }
+
+    location / {
+        proxy_pass http://cdf3_{{INSTANCE}}_web;
+    }
+}
