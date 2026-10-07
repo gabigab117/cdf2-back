@@ -1,0 +1,42 @@
+# No hook may rewrite a migration. Both ruff hooks carry `--force-exclude` in
+# their upstream `entry` (checked in v0.16.10): without it, the exclusion
+# declared in pyproject.toml would be ignored for the paths pre-commit passes as
+# arguments. Do not repeat it here, ruff rejects the duplicate.
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.10
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+
+  # Read-only: stays active on the migrations.
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+
+  - repo: local
+    hooks:
+      - id: django-makemigrations-check
+        name: django makemigrations --check
+        entry: uv run python manage.py makemigrations --check --dry-run
+        language: system
+        types: [python]
+        pass_filenames: false
+
+      # The schema is the front end's contract: it is exported on every commit,
+      # so a stale openapi.json shows up as a modified file and fails the hook.
+      - id: openapi-schema-export
+        name: export the OpenAPI schema
+        entry: uv run python manage.py export_openapi_schema --api config.api.api --output openapi.json --indent 2 --sorted
+        language: system
+        types: [python]
+        pass_filenames: false
+
+      - id: openapi-schema-validate
+        name: validate the OpenAPI schema
+        entry: uv run openapi-spec-validator openapi.json
+        language: system
+        files: ^(openapi\.json|.*\.py)$
+        pass_filenames: false

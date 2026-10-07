@@ -1,0 +1,79 @@
+[project]
+name = "cdf2-back"
+version = "0.1.0"
+description = "API Django Ninja de l'application du Comité des fêtes d'Ons-en-Bray (v2)"
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Gabriel Trouvé" }]
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "django>=6.1,<6.2",
+    "django-environ>=0.14",
+    "django-ninja>=1.7,<1.8",
+    "gunicorn>=26.2",
+    "psycopg[binary]>=3.3",
+]
+
+[tool.uv]
+package = false
+
+[dependency-groups]
+dev = [
+    "factory-boy>=3.3.3",
+    "openapi-spec-validator>=0.9",
+    "pre-commit>=4.6.2",
+    "pytest>=9.1",
+    "pytest-cov>=7.1",
+    "pytest-django>=4.14",
+    "ruff>=0.16.10",
+]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+# Migrations are generated: neither lint nor format may rewrite them. The
+# pre-commit hooks pass `--force-exclude`, without which this exclusion would be
+# ignored for the paths given as arguments.
+extend-exclude = ["**/migrations/*"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "N", "UP", "B", "C4", "SIM", "DJ", "RUF", "ANN"]
+
+[tool.ruff.lint.per-file-ignores]
+# Type annotations are mandatory on business code only. The framework layer
+# follows Django's and Ninja's signatures; in api.py, the annotations of an
+# operation's parameters are the API contract and are written regardless.
+"**/api.py" = ["ANN"]
+"**/schemas.py" = ["ANN"]
+"**/models.py" = ["ANN", "RUF012"]
+"**/admin.py" = ["ANN", "RUF012"]
+"**/apps.py" = ["ANN"]
+"**/urls.py" = ["ANN"]
+"**/migrations/*" = ["ANN"]
+"config/settings/*" = ["F403", "F405"]
+"config/wsgi.py" = ["ANN"]
+"manage.py" = ["ANN"]
+"tests/**" = ["ANN"]
+
+[tool.pytest]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
+testpaths = ["tests"]
+addopts = ["-ra", "--strict-markers"]
+
+[tool.coverage.run]
+branch = true
+source = ["."]
+# Only configuration and generated code are left out (see CLAUDE.md).
+omit = [
+    ".venv/*",
+    "*/migrations/*",
+    "config/settings/*",
+    "config/wsgi.py",
+    "manage.py",
+    "tests/*",
+]
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true
+skip_covered = true

@@ -1,1 +1,64 @@
-# cdf2-back
+# Comité des fêtes d'Ons-en-Bray — API
+
+API de la v2 de l'application du Comité des fêtes d'Ons-en-Bray (Oise), une association qui organise les animations de la commune. L'application regroupe deux parties :
+- un **site public** : agenda des manifestations, fiches événements, souvenirs ;
+- un **espace réservé au bureau** de l'association : organisation des événements et des bénévoles, documents, trésorerie, stock de la buvette, prêts de matériel aux associations du village.
+
+Ce dépôt contient l'API. Le front (Nuxt 4) est dans [cdf2-front](https://github.com/gabigab117/cdf2-front).
+
+> **État** : projet en cours de construction (octobre 2026). Le socle technique est en place ; les fonctionnalités arrivent par étapes.
+
+## Stack
+
+- **Python 3.13**, **Django 6.1**, **Django Ninja 1.7** (Pydantic 2)
+- **PostgreSQL 17**, en développement, en CI et en production
+- Authentification **JWT** (django-ninja-jwt) : access token en mémoire côté front, refresh token en cookie httpOnly
+- Outillage : **uv**, **ruff** (lint et format), **pytest** (pytest-django, factory_boy, pytest-cov), **pre-commit**
+
+## Principes
+
+- **Le contrat d'API, c'est le schéma OpenAPI** généré par Django Ninja à partir des schémas Pydantic et des signatures des opérations. Il est exporté dans [`openapi.json`](openapi.json) à chaque commit, validé par `openapi-spec-validator`, et le front en génère ses types TypeScript. Chaque opération déclare toutes ses réponses, codes d'erreur compris.
+- **Vues fines, services épais** : une opération ne fait que la couche HTTP. La logique métier vit dans les `services/` de chaque app : des fonctions typées, testées sans HTTP, qui lèvent des erreurs métier, jamais des erreurs HTTP.
+- **Privé par défaut** : l'authentification est posée sur l'API entière, et un endpoint public se déclare explicitement (`auth=None`), avec des schémas dédiés sans donnée personnelle. Un objet hors de portée renvoie 404, jamais 403.
+- **Fonctionnalités natives d'abord** : contraintes en base plutôt que validations à la main, pagination, filtres et throttling de Ninja.
+- **Couverture de tests totale** : 100 % des lignes et des branches, vérifiée en CI.
+
+## Organisation
+
+```
+config/          projet Django : settings (base, dev, test, prod), urls, NinjaAPI unique (api.py)
+accounts/        comptes des membres du bureau (connexion par adresse e-mail)
+core/            socle commun : santé du service, traduction des erreurs en réponses 422
+tests/           tests pytest, en miroir des apps
+openapi.json     schéma OpenAPI exporté (contrat avec le front)
+```
+
+## Démarrage local
+
+Prérequis : [uv](https://docs.astral.sh/uv/) et un serveur PostgreSQL 17.
+
+```bash
+cp .env.example .env              # puis renseigner SECRET_KEY et la connexion PostgreSQL
+uv sync                           # environnement et dépendances (versions figées par uv.lock)
+uv run pre-commit install         # hooks de qualité à chaque commit
+uv run python manage.py migrate
+uv run python manage.py createsuperuser
+uv run python manage.py runserver
+```
+
+- Santé du service : `GET /api/health`.
+- Documentation interactive de l'API : `/api/docs` (servie en développement seulement).
+
+## Qualité
+
+| Commande | Rôle |
+|---|---|
+| `uv run pytest --cov` | Tests sur PostgreSQL, couverture de 100 % exigée (lignes et branches) |
+| `uv run ruff check .` / `uv run ruff format .` | Lint et formatage |
+| `uv run pre-commit run --all-files` | Tous les contrôles du commit : ruff, détection de secrets (gitleaks), migrations à jour, export et validation du schéma OpenAPI |
+
+Les tests sont écrits en fonctions, avec des docstrings Gherkin. Ils passent par le client HTTP de Django, pour exercer l'authentification et les middlewares réels.
+
+## Licence
+
+[MIT](LICENSE)

@@ -1,0 +1,66 @@
+{
+  "components": {
+    "schemas": {
+      "HealthOut": {
+        "properties": {
+          "database": {
+            "title": "Database",
+            "type": "boolean"
+          },
+          "release": {
+            "title": "Release",
+            "type": "string"
+          }
+        },
+        "required": [
+          "database",
+          "release"
+        ],
+        "title": "HealthOut",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "API of the Comité des fêtes d'Ons-en-Bray application.",
+    "title": "Comité des fêtes d'Ons-en-Bray",
+    "version": "1.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/health": {
+      "get": {
+        "description": "Report whether the service can answer, and which release is running.",
+        "operationId": "core_api_health",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthOut"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Service health",
+        "tags": [
+          "health"
+        ]
+      }
+    }
+  },
+  "servers": []
+}
