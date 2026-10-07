@@ -1,0 +1,173 @@
+# CLAUDE.md — Backend Comité des fêtes v2 (Django 6.1 + Django Ninja 1.7)
+
+Règles de développement de ce dépôt, pour les humains comme pour les agents. Elles couvrent tout ce qui touche au code du back. Le périmètre fonctionnel, la roadmap et le workflow multi-dépôts vivent dans le dépôt de documentation du projet (privé). Le front Nuxt est dans le dépôt `cdf2-front`.
+
+## Conventions
+
+- **Tout le code est en anglais** : apps, modèles, champs, services, schémas, chemins d'API, commentaires, docstrings (y compris les docstrings Gherkin des tests), messages de commit. **Seul ce que voit l'utilisateur final est en français** : messages d'erreur renvoyés par l'API, libellés (`verbose_name`, `choices`).
+- Le vocabulaire métier suit un glossaire fixe : événement → `event`, poste → `station`, affectation → `assignment`, prêt → `loan`, emprunteur → `borrower`, caution → `deposit`, ligne de trésorerie → `ledger entry`, justificatif → `receipt`… Aucun nouveau terme sans entrée au glossaire.
+- Fuseau Europe/Paris, stockage en UTC. Montants en `Decimal`, jamais en `float`.
+- Conventional commits, directement sur `main`, historique linéaire.
+- **Context7 avant tout code de librairie** : on vérifie l'API dans la documentation à jour (Context7, puis la doc officielle, puis le code source installé dans `.venv/`), jamais de mémoire. Beaucoup de réflexes « Django » sont des réflexes DRF, faux sous Ninja.
+
+## Outillage (obligatoire)
+
+- **uv** pour les dépendances et les environnements, jamais pip directement. Lockfile commité.
+- Toutes les commandes passent par uv : `uv run manage.py ...`, `uv run pytest`.
+- **ruff** pour le lint ET le format (`ruff check` + `ruff format`). Configuration dans `pyproject.toml`.
+- **Annotations de types obligatoires sur le code métier uniquement** (`services/` et tout module hors couche Django/Ninja) : signatures complètes, retours inclus, vérifiées par les règles `ANN` de ruff. La couche framework (api, schemas, models, admin, urls, migrations) en est exclue via `per-file-ignores` :
+
+```toml
+[tool.ruff.lint.per-file-ignores]
+"**/api.py" = ["ANN"]
+"**/schemas.py" = ["ANN"]
+"**/models.py" = ["ANN"]
+"**/admin.py" = ["ANN"]
+"**/urls.py" = ["ANN"]
+"**/migrations/*" = ["ANN"]
+```
+
+  Piège propre à Ninja : dans `api.py`, l'exclusion ne couvre que ce que Ninja ne lit pas (`request`, type de retour). **Les annotations des paramètres d'une opération sont le contrat** : Ninja s'en sert pour valider l'entrée et générer le schéma. Elles sont toujours là, ruff ou pas.
+- **Pas de vérificateur de types** (ni mypy ni ty), donc pas de stubs. ruff garantit qu'une annotation existe, jamais qu'elle est juste. **Ce sont les tests qui tiennent ce rôle** (Pydantic, lui, vérifie les schémas à l'exécution). C'est une décision, pas un oubli.
+- **Schéma OpenAPI natif de Ninja, source du contrat d'API.**
+  - Ninja n'a pas d'équivalent à `spectacular --validate`, et un `operation_id` en double n'y produit qu'un avertissement imprimé, sans échec.
+  - La validation passe donc par `openapi-spec-validator`, sur le schéma exporté (`manage.py export_openapi_schema`) dans `openapi.json`.
+  - Ce fichier est commité : le front en génère ses types, et sa CI vérifie qu'ils correspondent.
+- **pre-commit** : ruff (lint et format), `manage.py makemigrations --check`, détection de secrets (gitleaks), export du schéma suivi d'`openapi-spec-validator`. La CI rejoue exactement ces hooks.
+
+## Contrat d'API
+
+- Toute opération déclare ses entrées par des schémas et ses réponses par `response=`, **chaque code de statut renvoyé compris**. Une opération sans `response=` publie une réponse sans contenu : le front n'aurait aucun type pour elle. Un schéma faux est un bug, même si l'endpoint fonctionne.
+- Tout changement d'API se signale explicitement : le front doit régénérer ses types. Un changement n'est terminé que quand le front compile avec les nouveaux types.
+
+## Tests (pytest)
+
+- **Couverture totale** : 100 % des lignes **et** des branches sur tout le code du back.
+  - Elle est vérifiée en CI : `pytest --cov --cov-branch --cov-fail-under=100`.
+  - Seules exclusions, déclarées dans la configuration de coverage : migrations, settings, `manage.py`, `wsgi.py` et `asgi.py`.
+  - `# pragma: no cover` est interdit, sauf avec un commentaire qui explique pourquoi la ligne ne peut pas être testée.
+  - Une ligne non couverte, c'est un test manquant ou du code mort.
+- Chaque feature est testée. Dossier `tests/` à la racine du dépôt, structure miroir des apps.
+- **Tests en fonctions, jamais en classes** (`def test_...`). Le partage de contexte passe par des fixtures, pas par `setUp`.
+- **Fixtures built-in de pytest-django d'abord** : `client`, `admin_client`, `db`, `django_user_model`, `settings`, `rf`… Fixtures maison justifiées : client authentifié par rôle (header `Authorization: Bearer …` posé une fois dans la fixture), objets métier via factory_boy.
+- **Requêtes par le `client` de Django, pas par le `TestClient` de Ninja** : ce dernier appelle le routeur avec une requête fabriquée (utilisateur simulé, CSRF coupé, aucun middleware) et ne prouve donc rien sur l'authentification, les cookies ni le throttling.
+- `pytest-django` + **factory_boy** : pas de création manuelle de modèles reliés dans chaque test.
+- **Docstrings en Gherkin, en anglais** dans chaque test (sans pytest-bdd) :
+
+```python
+def test_loan_over_availability_rejected(api_client):
+    """
+    Given 2 folding tables free between 17 and 18 October
+    When a loan of 3 tables is recorded for that period
+    Then the loan is rejected with a 422
+    And the error reports how many tables are free
+    """
+```
+
+- **Tester les cas d'erreur et les permissions autant que les cas nominaux** :
+  - 401 et 403 ;
+  - entrée invalide → **422** (code de validation de Ninja, pas 400) ;
+  - throttling → 429 ;
+  - objet hors de portée de l'utilisateur → **404, jamais 403** (l'existence ne doit pas fuiter).
+- Les tests tournent sur **PostgreSQL** (même moteur qu'en prod) : les contraintes et le comportement transactionnel testés sont ceux de la production. Ne jamais retomber sur SQLite « pour aller plus vite ».
+- **Données de test fictives uniquement** : aucune donnée réelle (document, nom, montant) dans le dépôt, qui est public.
+
+## Architecture
+
+- **Vues fines, services épais** : chaque app expose un `Router` dans `api.py`, monté sur l'unique `NinjaAPI` du projet. Une opération ne contient que la couche HTTP : entrée lue par sa signature, appel du service, réponse. Toute logique métier vit dans `services/` (fonctions explicites, typées, testables unitairement sans HTTP) et n'est **jamais** dupliquée dans une opération, un schéma ou l'admin.
+- **Schémas dans `schemas.py` par app** (`Schema`, `ModelSchema`, `FilterSchema`), entrée et sortie distinctes (`EventIn` / `EventOut`). Validation croisée dans un `@model_validator` du schéma d'entrée. **Aucune logique métier dans un schéma** : il valide la forme, le service décide.
+- **Les services ne parlent pas HTTP** : ils lèvent la `ValidationError` de Django (données invalides) ou une exception métier, jamais `HttpError`. La traduction en réponse HTTP est faite une seule fois, par les `@api.exception_handler` du `NinjaAPI`. Ninja ne connaît pas la `ValidationError` de Django, qui finirait sinon en 500. Ces réponses d'erreur figurent dans le `response=` des opérations concernées.
+- **Privé par défaut**
+  - L'auth est posée sur le `NinjaAPI` (`auth=`) : toute opération est authentifiée, sauf opt-out explicite `auth=None`. Jamais l'inverse, jamais de défaut implicite permissif.
+  - Un seul rôle applicatif : **membre du bureau**. Il est porté par une classe d'auth du projet (sous-classe de `JWTAuth`).
+  - Une classe d'auth lève `AuthorizationError` (403) pour un utilisateur connecté sans le droit. Renvoyer `None` produirait un 401, faux pour quelqu'un de connecté.
+  - Pas de contrôle d'autorisation en `if request.user…` dans le corps d'une opération.
+- **Un objet inaccessible n'existe pas** : queryset filtré par utilisateur et par portée avant toute lecture (`get_object_or_404(<queryset filtré>, pk=...)`) → 404, jamais 403. Exemple : seul l'auteur d'une note peut la modifier.
+- **Endpoints publics** (ceux que lisent les pages publiques rendues côté serveur) : `auth=None`, lecture seule, sous `/api/public/`, avec des **schémas de sortie dédiés** sans aucune donnée personnelle. Jamais de schéma interne réutilisé pour un endpoint public : un champ ajouté pour l'usage interne fuiterait.
+- **Requêtes optimisées par défaut** : `select_related` / `prefetch_related` sur toute liste. Pas de N+1.
+- **Opérations synchrones** (WSGI, gunicorn) : Ninja accepte les vues `async`, mais l'ORM et les services sont synchrones. Pas d'`async def` sans arbitrage. Un traitement long ne bloque jamais un worker : il passera par le framework de tâches de Django, à arbitrer quand il arrivera.
+- **Fichiers : tous privés.**
+  - Ils sont stockés hors racine web, sous un nom UUID ; le nom d'origine est en base.
+  - Ils sont servis par un endpoint qui contrôle l'accès : authentification, ou visibilité publique pour une photo publiée. On utilise `FileResponse` en dev et **nginx `X-Accel-Redirect`** en prod.
+  - Le type est vérifié **sur le contenu** à l'envoi, et la réponse porte le type enregistré, `X-Content-Type-Options: nosniff` et un `Content-Disposition` avec `filename*`.
+  - Aucun dossier n'est servi directement par nginx.
+- **Fonctionnalités natives d'abord**, à vérifier dans Context7 **avant** d'écrire, pas après. Ninja n'a pas les réflexes de DRF ; voici leurs équivalents, à connaître avant d'écrire un validateur ou une boucle de requête :
+  - **pagination** :
+    - `PageNumberPagination` en réglage global (`NINJA_PAGINATION_CLASS`, `NINJA_PAGINATION_PER_PAGE`) et routeurs `RouterPaginated` : toute **collection de ressources** est paginée d'office ;
+    - un **agrégat borné** renvoie un objet complet, non paginé, qui enveloppe sa liste : disponibilités, planning, résultats par événement, liste de courses, éléments « à traiter », tableau de bord ;
+    - jamais de collection de ressources non paginée ;
+  - **throttling** :
+    - `ninja.throttling` (`AnonRateThrottle`, `AuthRateThrottle`, `UserRateThrottle`) sur l'API, un routeur ou une opération ;
+    - les throttles anonymes comptent par IP : derrière nginx, `NINJA_NUM_PROXIES` doit être réglé, sinon tous les visiteurs partagent un seul compteur ;
+    - pas d'`AnonRateThrottle` sur les endpoints publics : le rendu serveur les appelle tous depuis l'IP du serveur Nuxt, ils seraient étranglés pour tout le monde à la fois ;
+  - **filtres et recherche** : `FilterSchema` + `Query[...]`, avec `FilterLookup` et une liste de lookups pour une recherche multi-champs ;
+  - **tri** : pas de natif dans Ninja. On utilise un paramètre `Literal[...]` des tris autorisés (énuméré dans le schéma, donc typé côté front), appliqué par `order_by`. Jamais une chaîne libre passée à `order_by` ;
+  - **unicité** : contrainte en base (`UniqueConstraint` avec `violation_error_message` en français), vérifiée par `full_clean()` dans le service, contraintes à expression comme `Lower(...)` comprises. La `ValidationError` qui en résulte devient un 422 par le handler. Jamais de `filter(...).exists()` à la main ;
+  - **suppression des espaces de bord** : DRF le faisait par défaut, Pydantic non. On met `str_strip_whitespace=True` dans le `model_config` d'un schéma d'entrée de base dont héritent tous les schémas d'entrée. Pas de `.strip()` champ par champ ;
+  - **validation croisée entre champs** : `@model_validator` du schéma, jamais dans l'opération ;
+  - **messages d'erreur en français** : les nôtres, et ceux de Django (`LANGUAGE_CODE = "fr-fr"`, contraintes comprises). Ceux de Pydantic n'existent qu'en anglais : leur traduction est à arbitrer à la première card qui affiche une erreur de saisie, pas à rafistoler au fil de l'eau ;
+  - **back-office** : Django admin, pour la gestion des comptes.
+- **Auth : JWT via `django-ninja-jwt`** (décision projet : l'API reste ouverte à une future app mobile ou à un tiers). Trois règles non négociables, chacune répond à un risque précis :
+  - **access token court (15 min), transmis en header `Authorization`** et gardé en mémoire côté front. Jamais de token en `localStorage`.
+  - **refresh token (7 j) posé en cookie httpOnly**. Il survit au rechargement de page sans être lisible par un script. Attributs :
+    - `SameSite=Strict`, `Secure` en prod ;
+    - `Path` limité aux endpoints d'authentification, `/api/auth/`. Pas au seul refresh : logout doit recevoir le cookie pour blacklister, le front ne pouvant pas lire un cookie httpOnly.
+  - **app `ninja_jwt.token_blacklist` activée** :
+    - le refresh est invalidé à la déconnexion ;
+    - les refresh tournent (`ROTATE_REFRESH_TOKENS` + `BLACKLIST_AFTER_ROTATION`), pour qu'un refresh volé ne serve qu'une fois ;
+    - la désactivation d'un compte est immédiate : `JWTAuth` relit l'utilisateur à chaque requête et refuse un compte inactif.
+  - **Endpoints écrits par nous**, sur les classes de tokens de ninja-jwt (`RefreshToken.for_user`, `.blacklist()`) :
+    - login : pose le cookie de refresh et renvoie l'access ;
+    - refresh : lit le cookie ;
+    - logout : blackliste et supprime le cookie ;
+    - « qui suis-je ».
+
+    Raison du custom : les contrôleurs et routeurs fournis renvoient le refresh dans le corps JSON, ce que la règle du cookie httpOnly interdit.
+  - Throttling strict sur login et refresh. Purge des tokens expirés (`flushexpiredtokens`) planifiée sur le serveur.
+  - **`django-ninja-extra` n'est qu'une dépendance transitive de ninja-jwt**, pas un outil du projet : ni `NinjaExtraAPI`, ni contrôleurs en classes, ni permissions ninja-extra. Un seul paradigme, les routeurs fonctionnels de Ninja. `JWTAuth` fonctionne sur un `NinjaAPI` ordinaire (ses exceptions héritent de `HttpError` → 401).
+- **PostgreSQL en dev comme en prod** (paramètres locaux dans `.env.example`, base dédiée au projet). Aucune divergence de moteur : les types et contraintes Postgres sont autorisés, et le comportement transactionnel testé en dev est celui de la production.
+
+## Migrations
+
+- **Jamais de migration écrite à la main.** Toujours `uv run manage.py makemigrations` (avec `--name` significatif). Seule exception : les migrations de données (`RunPython`), créées via `makemigrations --empty`, complétées — et testées.
+- Ne **jamais** modifier une migration déjà appliquée.
+- `makemigrations --check` dans le pre-commit.
+- **Migrations rétrocompatibles.** Le déploiement migre la base avant de basculer sur le nouveau code, et peut revenir à la release précédente. Le code précédent doit donc fonctionner avec le schéma migré :
+  - on ajoute d'abord, on retire dans une release ultérieure ;
+  - pas de renommage ni de suppression de colonne utilisée dans la même release ;
+  - tout `RunPython` déclare un `reverse_code`.
+- **Aucun hook n'a le droit de réécrire une migration.**
+  - Les migrations sont exclues de ruff (`extend-exclude`), et les deux hooks ruff tournent avec `--force-exclude`. Piège : sans lui, `extend-exclude` ne s'applique pas aux chemins que pre-commit passe en argument.
+  - Les hooks de `ruff-pre-commit` le portent déjà dans leur `entry` amont : ne pas le repasser en `args`, ruff refuse le doublon.
+  - Les hooks de lecture seule (détection de secrets) restent actifs sur les migrations.
+
+## Sécurité
+
+- Secrets uniquement en variables d'environnement (`django-environ`). `.env` dans `.gitignore`, `.env.example` commité. **Aucun secret dans le code ou les migrations.** Le dépôt est public : aucun hôte, utilisateur ni chemin de serveur réel non plus. Les modèles de `deploy/` n'ont que des valeurs génériques.
+- **Settings séparés** dev / test / prod.
+  - En prod : `DEBUG=False`, `ALLOWED_HOSTS`, cookie de refresh `Secure`.
+  - Derrière nginx : `SECURE_PROXY_SSL_HEADER` et `CSRF_TRUSTED_ORIGINS`. La redirection HTTPS est faite par nginx, pas par Django.
+  - Le chemin de l'admin est lu dans l'environnement.
+  - Schéma OpenAPI et docs interactives (`/api/docs`) servis selon un réglage dédié (`SERVE_API_SCHEMA`), coupé en prod. Pas selon `DEBUG`, que pytest-django force à `False`.
+- **Pas de CORS** : le navigateur ne voit qu'une origine (nginx en prod, proxy de dev de Nuxt en local), et le rendu serveur appelle l'API de serveur à serveur. `django-cors-headers` n'arrive que si un client d'une autre origine entre au périmètre.
+- Throttling strict sur login et refresh. Messages d'erreur non énumérants.
+- **Toute entrée passe par un schéma.** Aucune confiance dans le client : règles métier et transitions de statut vérifiées côté serveur. Jamais de `ModelSchema` en `fields = "__all__"` ni en `exclude` sur une entrée : un champ ajouté au modèle deviendrait modifiable sans que personne l'ait décidé.
+- **Données personnelles (RGPD)**
+  - On ne stocke que ce qu'une card demande.
+  - Aucune donnée personnelle dans un endpoint public.
+  - Les durées de conservation sont appliquées par une purge planifiée.
+
+## Definition of Done (chaque feature)
+
+1. **Context7 consulté** pour chaque API de librairie utilisée ou modifiée : rien d'écrit de mémoire.
+2. `ruff check` (annotations `ANN` comprises) et `ruff format --check` passent.
+3. Tests pytest écrits avec docstrings Gherkin, verts, **couverture à 100 % (lignes et branches)**, cas d'erreur et permissions couverts.
+4. Aucun secret ni valeur en dur qui devrait être en config.
+5. Migrations propres et rétrocompatibles si des modèles sont touchés (`makemigrations --check` passe).
+6. Si l'API a changé :
+   - chaque opération déclare ses réponses (`response=`, codes d'erreur compris) ;
+   - `openapi.json` est régénéré et passe `openapi-spec-validator` ;
+   - le changement est signalé explicitement, car le front doit régénérer ses types.
+7. **Aucun code custom qui double une fonctionnalité native.** Tout validateur, helper ou boucle de requête écrit à la main suppose qu'on a cherché l'équivalent framework dans Context7 **avant** de l'écrire. S'il est conservé, un commentaire dit pourquoi le natif ne convenait pas.
+8. La CI est verte, et le déploiement en préproduction aussi.
+9. La card correspondante de la roadmap est annotée **✅ Terminé**.
