@@ -13,8 +13,8 @@ jobs:
   checks:
     name: Quality and tests
     runs-on: ubuntu-24.04
-    # A newer push supersedes the checks of an older one. Deployments, which
-    # must never be cut off mid-migration, will not share this group.
+    # A newer push supersedes the checks of an older one. The deployment, which
+    # must never be cut off mid-migration, has its own group below.
     concurrency:
       group: checks-${{ github.ref }}
       cancel-in-progress: true
@@ -65,3 +65,36 @@ jobs:
 
       - name: Tests with full coverage
         run: uv run pytest --cov
+
+  deploy:
+    name: Deploy to preproduction
+    needs: checks
+    # Only a commit pushed to main is deployed, never a pull request.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment: preprod
+    # One deployment at a time, never cancelled: stopping one could leave a
+    # migration halfway. A newer pending deployment replaces an older one.
+    concurrency:
+      group: deploy-preprod
+      cancel-in-progress: false
+    timeout-minutes: 20
+
+    steps:
+      # The key only runs the release script on the server, which takes the
+      # commit SHA as its single input. The script fetches that commit itself
+      # and answers with one status line, as the logs of this run are public.
+      - name: Deploy the tested commit
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes -o UserKnownHostsFile=~/.ssh/known_hosts \
+            "$DEPLOY_USER@$DEPLOY_HOST" "$GITHUB_SHA"

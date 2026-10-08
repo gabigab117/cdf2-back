@@ -40,6 +40,28 @@ Les migrations passent avant la bascule. Elles doivent donc rester compatibles a
 
 Le détail de chaque déploiement va dans le journal du serveur (`journalctl -t cdf3-release-back`). L'appelant ne reçoit qu'une ligne de statut, car les journaux d'une CI publique sont lisibles par tous.
 
+## Déploiement continu
+
+Un push sur `main` dont les contrôles passent se déploie seul, par le job `deploy` de [`ci.yml`](../.github/workflows/ci.yml).
+
+- **Environnement GitHub `preprod`**, réservé à la branche `main`.
+  - Secrets : `DEPLOY_SSH_KEY` (clé privée de la CI), `DEPLOY_KNOWN_HOSTS` (clé d'hôte du serveur, épinglée : jamais de confiance au premier contact) et `DEPLOY_HOST`.
+  - Variable : `DEPLOY_USER`.
+- **Côté serveur**, la clé publique de la CI figure dans le `authorized_keys` de l'utilisateur de l'application, restreinte au script de release :
+
+  ```
+  restrict,command="/usr/local/bin/cdf3-release-back <instance>" ssh-ed25519 AAAA… ci cdf2-back <instance>
+  ```
+
+  - `restrict` interdit le terminal, les redirections et tout autre accès.
+  - Le SHA envoyé par la CI arrive dans `SSH_ORIGINAL_COMMAND` : c'est le seul paramètre que le script accepte, et il refuse tout ce qui n'est pas un commit de `main`.
+- **Un déploiement à la fois, jamais interrompu.** Côté CI, une `concurrency` sans annulation. Côté serveur, le `flock` commun aux releases de l'API et du front.
+- **Changer la clé de la CI** :
+  1. générer une nouvelle paire ;
+  2. remplacer la ligne dans `authorized_keys` ;
+  3. poser la clé privée avec `gh secret set DEPLOY_SSH_KEY --env preprod < <fichier>` ;
+  4. effacer la copie locale.
+
 ## Fichiers
 
 | Fichier | Installé en | Rôle |
