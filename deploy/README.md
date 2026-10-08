@@ -34,7 +34,7 @@ L'application tourne sur un VPS Ubuntu 24.04, derrière nginx, une instance par 
 3. **Préparation** : `check --deploy`, `migrate`, `collectstatic`, sur la nouvelle release.
 4. **Bascule atomique** du lien `current`, puis redémarrage du service.
 5. **Contrôle de santé** : `/api/health` doit répondre avec la base joignable **et le SHA attendu**.
-6. **Retour arrière** : en cas d'échec, retour automatique à la release précédente. Les 3 dernières sont conservées.
+6. **Retour arrière** : en cas d'échec, retour automatique à la release précédente, dont la santé est vérifiée à son tour. Le statut renvoyé dit si l'API est revenue. Les 3 dernières releases sont conservées.
 
 Les migrations passent avant la bascule. Elles doivent donc rester compatibles avec la release précédente : voir la règle « Migrations » du [CLAUDE.md](../CLAUDE.md).
 

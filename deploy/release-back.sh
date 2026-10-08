@@ -69,12 +69,17 @@ main() {
     sudo systemctl restart "cdf3-api@$instance.service"
 
     if ! healthy "$env_file" "$sha"; then
-        if [[ -n $previous && $previous != "$release" ]]; then
-            echo "health check failed, rolling back to $(basename "$previous")"
-            activate "$app" "$previous"
-            sudo systemctl restart "cdf3-api@$instance.service"
-        fi
-        fail "$sha did not pass its health check"
+        [[ -n $previous && $previous != "$release" ]] || fail "$sha did not pass its health check"
+        local previous_sha
+        previous_sha=$(basename "$previous")
+        echo "health check failed, rolling back to $previous_sha"
+        activate "$app" "$previous"
+        sudo systemctl restart "cdf3-api@$instance.service"
+        # The caller must know whether the service is back, not only that the
+        # deployment failed.
+        healthy "$env_file" "$previous_sha" ||
+            fail "$sha did not pass its health check, nor did $previous_sha after the rollback"
+        fail "$sha did not pass its health check, rolled back to $previous_sha"
     fi
 
     prune "$app/releases" "$release"
