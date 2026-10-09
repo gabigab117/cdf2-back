@@ -48,6 +48,11 @@ Règles de développement de ce dépôt, pour les humains comme pour les agents.
 - **Schémas et énumérations portent un nom unique dans tout le projet** (`EventCategory`, pas `Category`). Le schéma OpenAPI les range par nom de classe, et un doublon en remplace un autre sans erreur, dans le schéma comme dans les types du front (constaté sur Ninja 1.7.1). Les `TextChoices` se déclarent donc au niveau du module, nommés d'après leur modèle. Un test le vérifie.
 - **Le corps JSON d'une opération se déclare `payload: XxxIn`.** Ninja situe une erreur 422 du schéma sous le nom de ce paramètre (`["body", "payload", "email"]`), quand les services la situent directement sous le champ (`["body", "email"]`, voir `core/errors.py`). Le front retire ce nom pour placer les deux sous le même champ du formulaire : un autre nom ferait disparaître ses erreurs de champ.
 - **Erreur sur une ligne d'une liste** : un service la nomme par son chemin pointé (`programme.2.title`), que `core/errors.py` situe comme Ninja (`["body", "programme", 2, "title"]`).
+- **Réponse non JSON**, comme un fichier iCalendar :
+  - l'opération renvoie une `HttpResponse`, que Ninja transmet telle quelle ;
+  - elle déclare `response={200: None, …}` et un `openapi_extra` qui donne le type de contenu du 200 (`CALENDAR_FILE` dans `events/api.py`) ;
+  - ses erreurs restent en JSON (`ErrorOut`).
+- **Ordre des routes** : Ninja les essaie dans leur ordre de déclaration, et un paramètre de chemin accepte un point. `/events/{slug}.ics` est donc déclaré avant `/events/{slug}`, qui prendrait sinon `loto-2026.ics` pour une adresse. Un test le vérifie.
 - Tout changement d'API se signale explicitement : le front doit régénérer ses types. Un changement n'est terminé que quand le front compile avec les nouveaux types.
 
 ## Tests (pytest)
@@ -80,6 +85,7 @@ def test_loan_over_availability_rejected(api_client):
   - throttling → 429 ;
   - objet hors de portée de l'utilisateur → **404, jamais 403** (l'existence ne doit pas fuiter).
 - Les tests tournent sur **PostgreSQL** (même moteur qu'en prod) : les contraintes et le comportement transactionnel testés sont ceux de la production. Ne jamais retomber sur SQLite « pour aller plus vite ».
+- **Dates attendues** : la réponse JSON écrit une date à la milliseconde (encodeur JSON de Django), et un fichier iCalendar à la seconde. Un test compare donc `DjangoJSONEncoder().default(date)`, ou la date sans ses microsecondes, et non la date brute.
 - **Données de test fictives uniquement** : aucune donnée réelle (document, nom, montant) dans le dépôt, qui est public.
 
 ## Architecture
@@ -97,6 +103,9 @@ def test_loan_over_availability_rejected(api_client):
   - Pas de contrôle d'autorisation en `if request.user…` dans le corps d'une opération.
 - **Un objet inaccessible n'existe pas** : queryset filtré par utilisateur et par portée avant toute lecture (`get_object_or_404(<queryset filtré>, pk=...)`) → 404, jamais 403. Exemple : seul l'auteur d'une note peut la modifier. Le 404 répond « Introuvable. » (handler de `config/api.py`) : Ninja, lui, répond en anglais.
 - **Endpoints publics** (ceux que lisent les pages publiques rendues côté serveur) : `auth=None`, lecture seule, sous `/api/public/`, avec des **schémas de sortie dédiés** sans aucune donnée personnelle. Jamais de schéma interne réutilisé pour un endpoint public : un champ ajouté pour l'usage interne fuiterait.
+  - Le routeur du site (`public_router`, dans `events/api.py`) est monté sur `/public/`. Chaque opération y déclare `auth=None` une à une : une opération ajoutée sans y penser reste privée.
+  - Un test vérifie qu'aucun schéma d'une réponse publique ne sert aussi une opération privée, les énumérations mises à part.
+  - **Une URL absolue tirée de la requête** (`build_absolute_uri`) ne vaut que pour ce que le navigateur ou l'agenda du visiteur appelle à travers nginx, comme les fichiers iCalendar. Le rendu serveur de Nuxt appelle l'API avec `Host: 127.0.0.1` : une réponse JSON qu'il lit donne des chemins relatifs.
 - **Requêtes optimisées par défaut** : `select_related` / `prefetch_related` sur toute liste. Pas de N+1.
   - Une condition qui traverse une relation multiple, comme les groupes d'un compte (`BOARD_MEMBERS`), renvoie une ligne par objet lié : `.distinct()`, et un test qui construit le doublon (un superuser membre de deux groupes).
 - **Opérations synchrones** (WSGI, gunicorn) : Ninja accepte les vues `async`, mais l'ORM et les services sont synchrones. Pas d'`async def` sans arbitrage. Un traitement long ne bloque jamais un worker : il passera par le framework de tâches de Django, à arbitrer quand il arrivera.

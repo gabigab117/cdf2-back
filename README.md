@@ -38,13 +38,25 @@ Ce dépôt contient l'API. Le front (Nuxt 4) est dans [cdf2-front](https://githu
 - **Throttling** par IP de la connexion et du renouvellement. Les compteurs sont dans un cache en base, partagé par les workers.
 - **Purge** chaque nuit des jetons expirés (`flushexpiredtokens`, timer systemd dans [`deploy/`](deploy/README.md)).
 
+## Site public
+
+Les pages publiques, rendues côté serveur par le front, lisent des endpoints ouverts et en lecture seule, sous `/api/public/`. Leurs schémas sont propres au site, et aucun ne nomme une personne.
+
+- `GET /api/public/events` : l'agenda, soit les événements publiés à venir, le plus proche d'abord, par page et filtrables par catégorie.
+- `GET /api/public/agenda` : les catégories présentes dans l'agenda, et la date de sa dernière modification.
+- `GET /api/public/events/{slug}` : la fiche d'un événement publié (programme, « Bon à savoir », lieu, tarifs), suivie des deux événements qui viennent après lui dans l'agenda.
+- `GET /api/public/agenda.ics` : l'agenda au format iCalendar, auquel s'abonne l'agenda du visiteur. Il garde les événements passés.
+- `GET /api/public/events/{slug}.ics` : un événement, à ajouter à son agenda.
+
+Les fichiers iCalendar sont écrits en heure de Paris (`TZID=Europe/Paris`, avec la définition du fuseau), avec la bibliothèque `icalendar`.
+
 ## Organisation
 
 ```
 config/          projet Django : settings (base, dev, test, prod), urls, NinjaAPI unique (api.py)
 accounts/        comptes et authentification JWT des membres du bureau (connexion par adresse e-mail), liste des membres (/api/board/members)
 core/            socle commun : santé du service, schémas partagés, traduction des erreurs en réponses 422
-events/          événements du comité : programme, « Bon à savoir », API du bureau (/api/board/events)
+events/          événements du comité : programme, « Bon à savoir », API du bureau (/api/board/events), API du site public (/api/public/) et fichiers iCalendar
 tests/           tests pytest, en miroir des apps
 openapi.json     schéma OpenAPI exporté (contrat avec le front)
 ```
