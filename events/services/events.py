@@ -1,5 +1,7 @@
 """The events the board writes, with their programme and practical info."""
 
+import datetime as dt
+
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.utils import timezone
@@ -15,6 +17,15 @@ _SLUG_SPELLING = str.maketrans({"œ": "oe", "Œ": "Oe", "æ": "ae", "Æ": "Ae", 
 
 # The fields of EventIn that are not copied onto the event as they come.
 _NOT_COPIED = {"slug", "lead", "previous_edition", "programme", "practical_infos"}
+
+
+def event_slug(title: str, starts_at: dt.datetime) -> str:
+    """The address an event gets when none is typed: its title and the year it
+    starts in Paris, such as "halloween-des-enfants-2026".
+
+    Each edition of a yearly event thus gets its own address.
+    """
+    return _slugify(f"{title} {timezone.localtime(starts_at).year}")
 
 
 def create_event(data: EventIn) -> Event:
@@ -43,8 +54,7 @@ def _save(event: Event, data: EventIn) -> Event:
     lead_unchanged = event.pk is not None and event.lead_id == data.lead
     for name, value in data.model_dump(exclude=_NOT_COPIED).items():
         setattr(event, name, value)
-    year = timezone.localtime(data.starts_at).year
-    event.slug = slugify((data.slug or f"{data.title} {year}").translate(_SLUG_SPELLING))
+    event.slug = _slugify(data.slug) if data.slug else event_slug(data.title, data.starts_at)
     event.lead_id = data.lead
     event.previous_edition_id = data.previous_edition
     programme = [
@@ -66,6 +76,10 @@ def _save(event: Event, data: EventIn) -> Event:
     event.practical_infos.all().delete()
     PracticalInfo.objects.bulk_create(practical_infos)
     return event
+
+
+def _slugify(text: str) -> str:
+    return slugify(text.translate(_SLUG_SPELLING))
 
 
 def _validate(event: Event, exclude: set[str], lines: dict[str, list[models.Model]]) -> None:
