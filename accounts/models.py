@@ -27,6 +27,11 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault("is_superuser", False)
         return self._create_user(email, password, **extra_fields)
 
+    def get_by_natural_key(self, username):
+        # Signing in, through the API as through the admin, ignores the case of
+        # the address typed, which is stored lower-cased.
+        return super().get_by_natural_key(self.normalize_email(username))
+
     def create_superuser(self, email, password=None, **extra_fields):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
@@ -38,10 +43,23 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractUser):
-    """A board member's account, signed in with an email address."""
+    """An account, signed in with an email address.
+
+    The board space is reserved to board members (accounts/services/roles.py).
+    """
 
     username = None
     email = models.EmailField(_("email address"), unique=True)
+    position = models.CharField(
+        "fonction",
+        max_length=100,
+        blank=True,
+        default="",
+        # Also set in the database, so that the previous release, which does not
+        # know the column, can still create accounts (see CLAUDE.md).
+        db_default="",
+        help_text="Affichée dans l'espace bureau. Elle ne donne aucun droit.",
+    )
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []

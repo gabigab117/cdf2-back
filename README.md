@@ -25,12 +25,25 @@ Ce dépôt contient l'API. Le front (Nuxt 4) est dans [cdf2-front](https://githu
 - **Fonctionnalités natives d'abord** : contraintes en base plutôt que validations à la main, pagination, filtres et throttling de Ninja.
 - **Couverture de tests totale** : 100 % des lignes et des branches, vérifiée en CI.
 
+## Authentification
+
+- **Access token** de 15 minutes : `POST /api/auth/login` le renvoie, et le front le garde en mémoire pour l'envoyer dans l'en-tête `Authorization: Bearer …`.
+- **Refresh token** de 7 jours, dans un cookie httpOnly, `SameSite=Strict`, limité à `/api/auth/` :
+  - `POST /api/auth/refresh` l'échange contre un nouvel access token et un nouveau refresh token, l'ancien étant blacklisté (rotation) ;
+  - `POST /api/auth/logout` le révoque et supprime le cookie.
+- **Un seul rôle, membre du bureau** : un compte actif, superuser ou membre du groupe « Bureau ». Le groupe est créé par migration, et les comptes se gèrent dans l'admin Django.
+  - Toute opération est réservée à ce rôle, sauf déclaration explicite `auth=None`.
+  - Un appel sans identité valable reçoit un 401, un compte hors bureau un 403.
+  - Désactiver un compte ou le retirer du groupe prend effet à la requête suivante.
+- **Throttling** par IP de la connexion et du renouvellement. Les compteurs sont dans un cache en base, partagé par les workers.
+- **Purge** chaque nuit des jetons expirés (`flushexpiredtokens`, timer systemd dans [`deploy/`](deploy/README.md)).
+
 ## Organisation
 
 ```
 config/          projet Django : settings (base, dev, test, prod), urls, NinjaAPI unique (api.py)
-accounts/        comptes des membres du bureau (connexion par adresse e-mail)
-core/            socle commun : santé du service, traduction des erreurs en réponses 422
+accounts/        comptes et authentification JWT des membres du bureau (connexion par adresse e-mail)
+core/            socle commun : santé du service, schémas partagés, traduction des erreurs en réponses 422
 tests/           tests pytest, en miroir des apps
 openapi.json     schéma OpenAPI exporté (contrat avec le front)
 ```
@@ -44,6 +57,7 @@ cp .env.example .env              # puis renseigner SECRET_KEY et la connexion P
 uv sync                           # environnement et dépendances (versions figées par uv.lock)
 uv run pre-commit install         # hooks de qualité à chaque commit
 uv run python manage.py migrate
+uv run python manage.py createcachetable  # table du cache, où le throttling compte les requêtes
 uv run python manage.py createsuperuser
 uv run python manage.py runserver
 ```

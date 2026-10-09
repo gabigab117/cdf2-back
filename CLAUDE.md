@@ -38,6 +38,12 @@ Règles de développement de ce dépôt, pour les humains comme pour les agents.
 ## Contrat d'API
 
 - Toute opération déclare ses entrées par des schémas et ses réponses par `response=`, **chaque code de statut renvoyé compris**. Une opération sans `response=` publie une réponse sans contenu : le front n'aurait aucun type pour elle. Un schéma faux est un bug, même si l'endpoint fonctionne.
+- **Ninja ne documente aucun code d'erreur de lui-même**, pas même ceux qu'il produit :
+  - une opération privée déclare 401 et 403, les refus de la classe d'auth ;
+  - une opération qui lit un corps déclare 400 (corps illisible) et 422 ;
+  - une opération throttlée déclare 429.
+
+  Un test du schéma vérifie que toute opération sans `auth=None` déclare 401 et 403.
 - Tout changement d'API se signale explicitement : le front doit régénérer ses types. Un changement n'est terminé que quand le front compile avec les nouveaux types.
 
 ## Tests (pytest)
@@ -49,7 +55,7 @@ Règles de développement de ce dépôt, pour les humains comme pour les agents.
   - Une ligne non couverte, c'est un test manquant ou du code mort.
 - Chaque feature est testée. Dossier `tests/` à la racine du dépôt, structure miroir des apps.
 - **Tests en fonctions, jamais en classes** (`def test_...`). Le partage de contexte passe par des fixtures, pas par `setUp`.
-- **Fixtures built-in de pytest-django d'abord** : `client`, `admin_client`, `db`, `django_user_model`, `settings`, `rf`… Fixtures maison justifiées : client authentifié par rôle (header `Authorization: Bearer …` posé une fois dans la fixture), objets métier via factory_boy.
+- **Fixtures built-in de pytest-django d'abord** : `client`, `admin_client`, `db`, `django_user_model`, `settings`, `rf`… Fixtures maison justifiées : client authentifié par rôle (`board_client` dans `tests/conftest.py`, header `Authorization: Bearer …` posé une fois), objets métier via factory_boy.
 - **Requêtes par le `client` de Django, pas par le `TestClient` de Ninja** : ce dernier appelle le routeur avec une requête fabriquée (utilisateur simulé, CSRF coupé, aucun middleware) et ne prouve donc rien sur l'authentification, les cookies ni le throttling.
 - `pytest-django` + **factory_boy** : pas de création manuelle de modèles reliés dans chaque test.
 - **Docstrings en Gherkin, en anglais** dans chaque test (sans pytest-bdd) :
@@ -75,12 +81,15 @@ def test_loan_over_availability_rejected(api_client):
 ## Architecture
 
 - **Vues fines, services épais** : chaque app expose un `Router` dans `api.py`, monté sur l'unique `NinjaAPI` du projet. Une opération ne contient que la couche HTTP : entrée lue par sa signature, appel du service, réponse. Toute logique métier vit dans `services/` (fonctions explicites, typées, testables unitairement sans HTTP) et n'est **jamais** dupliquée dans une opération, un schéma ou l'admin.
-- **Schémas dans `schemas.py` par app** (`Schema`, `ModelSchema`, `FilterSchema`), entrée et sortie distinctes (`EventIn` / `EventOut`). Validation croisée dans un `@model_validator` du schéma d'entrée. **Aucune logique métier dans un schéma** : il valide la forme, le service décide.
+- **Schémas dans `schemas.py` par app** (`Schema`, `ModelSchema`, `FilterSchema`), entrée et sortie distinctes (`EventIn` / `EventOut`). Validation croisée dans un `@model_validator` du schéma d'entrée. **Aucune logique métier dans un schéma** : il valide la forme, le service décide. En sortie, un `ModelSchema` publie les champs `blank=True` comme facultatifs et nullables : pour un contrat à champs requis, on écrit un `Schema` simple.
 - **Les services ne parlent pas HTTP** : ils lèvent la `ValidationError` de Django (données invalides) ou une exception métier, jamais `HttpError`. La traduction en réponse HTTP est faite une seule fois, par les `@api.exception_handler` du `NinjaAPI`. Ninja ne connaît pas la `ValidationError` de Django, qui finirait sinon en 500. Ces réponses d'erreur figurent dans le `response=` des opérations concernées.
 - **Privé par défaut**
   - L'auth est posée sur le `NinjaAPI` (`auth=`) : toute opération est authentifiée, sauf opt-out explicite `auth=None`. Jamais l'inverse, jamais de défaut implicite permissif.
-  - Un seul rôle applicatif : **membre du bureau**. Il est porté par une classe d'auth du projet (sous-classe de `JWTAuth`).
+  - Un seul rôle applicatif : **membre du bureau**.
+    - C'est un compte actif, superuser ou membre du groupe « Bureau » (`accounts/services/roles.py`). Le groupe est créé par migration.
+    - Il est porté par `BoardMemberAuth`, sous-classe de `JWTAuth` (`accounts/auth.py`).
   - Une classe d'auth lève `AuthorizationError` (403) pour un utilisateur connecté sans le droit. Renvoyer `None` produirait un 401, faux pour quelqu'un de connecté.
+  - Tout échec d'authentification donne le même 401 : jeton absent, invalide ou expiré, compte inconnu ou inactif. Un compte actif hors bureau reçoit un 403. Les messages, en français, sont posés par les handlers de `config/api.py`.
   - Pas de contrôle d'autorisation en `if request.user…` dans le corps d'une opération.
 - **Un objet inaccessible n'existe pas** : queryset filtré par utilisateur et par portée avant toute lecture (`get_object_or_404(<queryset filtré>, pk=...)`) → 404, jamais 403. Exemple : seul l'auteur d'une note peut la modifier.
 - **Endpoints publics** (ceux que lisent les pages publiques rendues côté serveur) : `auth=None`, lecture seule, sous `/api/public/`, avec des **schémas de sortie dédiés** sans aucune donnée personnelle. Jamais de schéma interne réutilisé pour un endpoint public : un champ ajouté pour l'usage interne fuiterait.
@@ -100,10 +109,16 @@ def test_loan_over_availability_rejected(api_client):
     - `ninja.throttling` (`AnonRateThrottle`, `AuthRateThrottle`, `UserRateThrottle`) sur l'API, un routeur ou une opération ;
     - les throttles anonymes comptent par IP : derrière nginx, `NINJA_NUM_PROXIES` doit être réglé, sinon tous les visiteurs partagent un seul compteur ;
     - pas d'`AnonRateThrottle` sur les endpoints publics : le rendu serveur les appelle tous depuis l'IP du serveur Nuxt, ils seraient étranglés pour tout le monde à la fois ;
+    - une sous-classe par usage, avec son propre `scope`. Sinon deux `AnonRateThrottle` partagent le même compteur par IP. Les taux sont dans `NINJA_DEFAULT_THROTTLE_RATES`, lus à l'import ;
+    - les compteurs vivent dans le cache par défaut, un `DatabaseCache` partagé par les workers gunicorn (`createcachetable` au déploiement). Un cache en mémoire compterait par worker ;
+    - workers synchrones seulement, sans `--threads` : les throttles gardent un état par requête sur des instances partagées ;
   - **filtres et recherche** : `FilterSchema` + `Query[...]`, avec `FilterLookup` et une liste de lookups pour une recherche multi-champs ;
   - **tri** : pas de natif dans Ninja. On utilise un paramètre `Literal[...]` des tris autorisés (énuméré dans le schéma, donc typé côté front), appliqué par `order_by`. Jamais une chaîne libre passée à `order_by` ;
   - **unicité** : contrainte en base (`UniqueConstraint` avec `violation_error_message` en français), vérifiée par `full_clean()` dans le service, contraintes à expression comme `Lower(...)` comprises. La `ValidationError` qui en résulte devient un 422 par le handler. Jamais de `filter(...).exists()` à la main ;
-  - **suppression des espaces de bord** : DRF le faisait par défaut, Pydantic non. On met `str_strip_whitespace=True` dans le `model_config` d'un schéma d'entrée de base dont héritent tous les schémas d'entrée. Pas de `.strip()` champ par champ ;
+  - **suppression des espaces de bord** : DRF le faisait par défaut, Pydantic non.
+    - `InputSchema` (`core/schemas.py`) pose `str_strip_whitespace=True`, et tous les schémas d'entrée en héritent.
+    - Un champ gardé tel quel, comme un mot de passe, s'en exclut par `StringConstraints(strip_whitespace=False)`.
+    - Pas de `.strip()` champ par champ ;
   - **validation croisée entre champs** : `@model_validator` du schéma, jamais dans l'opération ;
   - **messages d'erreur en français** : les nôtres, et ceux de Django (`LANGUAGE_CODE = "fr-fr"`, contraintes comprises). Ceux de Pydantic n'existent qu'en anglais : leur traduction est à arbitrer à la première card qui affiche une erreur de saisie, pas à rafistoler au fil de l'eau ;
   - **back-office** : Django admin, pour la gestion des comptes.
@@ -114,7 +129,7 @@ def test_loan_over_availability_rejected(api_client):
     - `Path` limité aux endpoints d'authentification, `/api/auth/`. Pas au seul refresh : logout doit recevoir le cookie pour blacklister, le front ne pouvant pas lire un cookie httpOnly.
   - **app `ninja_jwt.token_blacklist` activée** :
     - le refresh est invalidé à la déconnexion ;
-    - les refresh tournent (`ROTATE_REFRESH_TOKENS` + `BLACKLIST_AFTER_ROTATION`), pour qu'un refresh volé ne serve qu'une fois ;
+    - chaque renouvellement fait tourner le refresh et blackliste l'ancien (`accounts/services/sessions.py`), pour qu'un refresh volé ne serve qu'une fois. Un renouvellement concurrent du même jeton est refusé. Les réglages `ROTATE_REFRESH_TOKENS` et `BLACKLIST_AFTER_ROTATION` ne pilotent que les contrôleurs de ninja-jwt : ils ne sont pas posés ;
     - la désactivation d'un compte est immédiate : `JWTAuth` relit l'utilisateur à chaque requête et refuse un compte inactif.
   - **Endpoints écrits par nous**, sur les classes de tokens de ninja-jwt (`RefreshToken.for_user`, `.blacklist()`) :
     - login : pose le cookie de refresh et renvoie l'access ;
@@ -122,9 +137,18 @@ def test_loan_over_availability_rejected(api_client):
     - logout : blackliste et supprime le cookie ;
     - « qui suis-je ».
 
-    Raison du custom : les contrôleurs et routeurs fournis renvoient le refresh dans le corps JSON, ce que la règle du cookie httpOnly interdit.
-  - Throttling strict sur login et refresh. Purge des tokens expirés (`flushexpiredtokens`) planifiée sur le serveur.
-  - **`django-ninja-extra` n'est qu'une dépendance transitive de ninja-jwt**, pas un outil du projet : ni `NinjaExtraAPI`, ni contrôleurs en classes, ni permissions ninja-extra. Un seul paradigme, les routeurs fonctionnels de Ninja. `JWTAuth` fonctionne sur un `NinjaAPI` ordinaire (ses exceptions héritent de `HttpError` → 401).
+    Raison du custom : les contrôleurs et routeurs fournis renvoient le refresh dans le corps JSON, ce que la règle du cookie httpOnly interdit. Leur refresh ne vérifie pas non plus que le compte est actif.
+
+    Un refresh refusé ne touche pas au cookie : quand deux onglets renouvellent en même temps, la réponse perdante effacerait le cookie neuf.
+  - Throttling strict sur login et refresh. Purge des tokens expirés (`flushexpiredtokens`) planifiée sur le serveur, par un timer systemd (`deploy/`).
+  - **Limites acceptées** :
+    - pas de détection de la réutilisation d'un refresh volé ;
+    - changer de mot de passe ne révoque pas les sessions ouvertes ;
+    - la déconnexion ne révoque que le navigateur courant, et l'access token reste valide jusqu'à 15 min ;
+    - les compteurs de throttling sont approximatifs sous concurrence ;
+    - changer `SECRET_KEY` déconnecte tout le monde ;
+    - les refresh tokens sont en clair dans la table `OutstandingToken`. C'est pourquoi les admins de jetons de ninja-jwt sont retirés.
+  - **`django-ninja-extra` n'est qu'une dépendance transitive de ninja-jwt**, pas un outil du projet : ni `NinjaExtraAPI`, ni contrôleurs en classes, ni permissions ninja-extra. Un seul paradigme, les routeurs fonctionnels de Ninja. `JWTAuth` fonctionne sur un `NinjaAPI` ordinaire (ses exceptions héritent de `HttpError` → 401). `BoardMemberAuth` les ramène à un 401 uniforme, sans les messages détaillés de ninja-jwt.
 - **PostgreSQL en dev comme en prod** (paramètres locaux dans `.env.example`, base dédiée au projet). Aucune divergence de moteur : les types et contraintes Postgres sont autorisés, et le comportement transactionnel testé en dev est celui de la production.
 
 ## Migrations
@@ -135,6 +159,7 @@ def test_loan_over_availability_rejected(api_client):
 - **Migrations rétrocompatibles.** Le déploiement migre la base avant de basculer sur le nouveau code, et peut revenir à la release précédente. Le code précédent doit donc fonctionner avec le schéma migré :
   - on ajoute d'abord, on retire dans une release ultérieure ;
   - pas de renommage ni de suppression de colonne utilisée dans la même release ;
+  - une colonne NOT NULL ajoutée porte un `db_default` en plus de son `default` : la release précédente insère encore des lignes sans elle ;
   - tout `RunPython` déclare un `reverse_code`.
 - **Aucun hook n'a le droit de réécrire une migration.**
   - Les migrations sont exclues de ruff (`extend-exclude`), et les deux hooks ruff tournent avec `--force-exclude`. Piège : sans lui, `extend-exclude` ne s'applique pas aux chemins que pre-commit passe en argument.

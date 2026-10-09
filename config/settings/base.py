@@ -4,6 +4,7 @@ Every sensitive or environment-dependent value comes from the environment (see
 `.env.example`): nothing secret is written here.
 """
 
+from datetime import timedelta
 from pathlib import Path
 
 import environ
@@ -33,6 +34,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # Provides the `export_openapi_schema` command and the docs templates.
     "ninja",
+    # Refresh tokens: outstanding list, blacklist and `flushexpiredtokens`.
+    "ninja_jwt.token_blacklist",
     "accounts",
     "core",
 ]
@@ -111,6 +114,36 @@ SERVE_API_SCHEMA = False
 # Every collection of resources is paginated by page number (see CLAUDE.md).
 NINJA_PAGINATION_CLASS = "ninja.pagination.PageNumberPagination"
 NINJA_PAGINATION_PER_PAGE = 25
+
+# Authentication (accounts/api.py): a short-lived access token sent in the
+# Authorization header, and a refresh token kept in an httpOnly cookie, both
+# signed with SECRET_KEY. Every renewal rotates the refresh token and
+# blacklists the old one (accounts/services/sessions.py): ninja-jwt's
+# ROTATE_REFRESH_TOKENS and BLACKLIST_AFTER_ROTATION only drive its own
+# controllers, which this API does not use.
+NINJA_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+}
+
+# The refresh cookie only travels over HTTPS, except on the local dev server.
+REFRESH_COOKIE_SECURE = True
+
+# Strict throttling of the authentication endpoints, per client IP. The rates
+# are read once, when the API is imported.
+NINJA_DEFAULT_THROTTLE_RATES = {
+    "login": "5/min",
+    "refresh": "20/min",
+}
+
+# The throttles count requests in the cache, which every gunicorn worker must
+# share: a table of the database (`manage.py createcachetable`).
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "django_cache",
+    }
+}
 
 # A deployed release carries a REVISION file holding its git SHA, written by the
 # deployment script. The health check reports it, so a deployment can verify

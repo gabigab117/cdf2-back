@@ -4,6 +4,14 @@ from django.core.exceptions import ValidationError
 
 from config.api import django_validation_error
 
+# Operations open without authentication, each declared with auth=None.
+PUBLIC_OPERATIONS = {
+    ("get", "/api/health"),
+    ("post", "/api/auth/login"),
+    ("post", "/api/auth/refresh"),
+    ("post", "/api/auth/logout"),
+}
+
 
 def test_schema_is_served_where_enabled(client, settings):
     """
@@ -43,3 +51,22 @@ def test_service_validation_errors_become_422_responses(rf):
     assert json.loads(response.content) == {
         "detail": [{"type": "validation_error", "loc": ["body", "name"], "msg": "Requis."}]
     }
+
+
+def test_every_operation_is_private_unless_declared_public(client, settings):
+    """
+    Given the operations published in the API schema
+    When their security is reviewed
+    Then only the known public operations skip authentication
+    And every other one declares its 401 and 403 answers
+    """
+    settings.SERVE_API_SCHEMA = True
+
+    paths = client.get("/api/openapi.json").json()["paths"]
+
+    for path, operations in paths.items():
+        for method, operation in operations.items():
+            if "security" in operation:
+                assert {"401", "403"} <= operation["responses"].keys(), (method, path)
+            else:
+                assert (method, path) in PUBLIC_OPERATIONS
