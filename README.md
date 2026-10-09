@@ -56,7 +56,7 @@ Les fichiers iCalendar sont écrits en heure de Paris (`TZID=Europe/Paris`, avec
 config/          projet Django : settings (base, dev, test, prod), urls, NinjaAPI unique (api.py)
 accounts/        comptes et authentification JWT des membres du bureau (connexion par adresse e-mail), liste des membres (/api/board/members)
 core/            socle commun : santé du service, schémas partagés, traduction des erreurs en réponses 422
-events/          événements du comité : programme, « Bon à savoir », API du bureau (/api/board/events), API du site public (/api/public/) et fichiers iCalendar
+events/          événements du comité : programme, « Bon à savoir », API du bureau (/api/board/events), API du site public (/api/public/), fichiers iCalendar et jeu de démonstration (seed_demo)
 tests/           tests pytest, en miroir des apps
 openapi.json     schéma OpenAPI exporté (contrat avec le front)
 ```
@@ -72,11 +72,21 @@ uv run pre-commit install         # hooks de qualité à chaque commit
 uv run python manage.py migrate
 uv run python manage.py createcachetable  # table du cache, où le throttling compte les requêtes
 uv run python manage.py createsuperuser
+uv run python manage.py seed_demo         # facultatif : les événements fictifs de la maquette
 uv run python manage.py runserver
 ```
 
 - Santé du service : `GET /api/health`.
 - Documentation interactive de l'API : `/api/docs` (servie en développement seulement).
+
+## Données de démonstration
+
+`manage.py seed_demo` écrit les événements fictifs de la maquette, publiés : cinq à venir et quatre passés, avec leur programme et leur « Bon à savoir ». Il sert au développement, à la préproduction et aux parcours de bout en bout du front.
+
+- **Il n'est permis que si l'environnement pose `DEMO_DATA_ENABLED=true`** (`.env.example` le fait pour le développement local). Aucun fichier de settings ne l'active : il est refusé en production.
+- **Chaque événement revient chaque année au même jour.** Ceux à venir prennent leur prochaine date, aujourd'hui compris, et les passés leur dernière date avant aujourd'hui. La démonstration reste ainsi vivante d'une année sur l'autre.
+- **Il peut être relancé** : un événement déjà écrit est retrouvé par son adresse et réécrit. Relancé après la date d'un événement, il en écrit l'édition suivante, et la précédente reste parmi les événements passés.
+- Il ne crée aucun compte et ne nomme aucun responsable.
 
 ## Qualité
 

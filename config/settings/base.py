@@ -17,6 +17,7 @@ env = environ.Env(
     CSRF_TRUSTED_ORIGINS=(list, []),
     ADMIN_URL=(str, "admin/"),
     STATIC_ROOT=(str, str(BASE_DIR / "staticfiles")),
+    DEMO_DATA_ENABLED=(bool, False),
 )
 environ.Env.read_env(BASE_DIR / ".env")
 
@@ -111,6 +112,12 @@ ADMIN_URL = env("ADMIN_URL")
 # end needs them (development, tests). An explicit setting rather than DEBUG,
 # which the test suite always forces to False.
 SERVE_API_SCHEMA = False
+
+# `manage.py seed_demo` writes the fictitious events of the mockup. It is
+# allowed by the environment alone, development and preproduction, and refused
+# elsewhere. No settings file turns it on: on a server, manage.py run without
+# DJANGO_SETTINGS_MODULE loads the development settings.
+DEMO_DATA_ENABLED = env("DEMO_DATA_ENABLED")
 
 # Every collection of resources is paginated by page number (see CLAUDE.md).
 NINJA_PAGINATION_CLASS = "ninja.pagination.PageNumberPagination"
