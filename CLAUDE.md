@@ -7,6 +7,7 @@ Règles de développement de ce dépôt, pour les humains comme pour les agents.
 - **Tout le code est en anglais** : apps, modèles, champs, services, schémas, chemins d'API, commentaires, docstrings (y compris les docstrings Gherkin des tests), messages de commit. **Seul ce que voit l'utilisateur final est en français** : messages d'erreur renvoyés par l'API, libellés (`verbose_name`, `choices`).
 - Le vocabulaire métier suit un glossaire fixe : événement → `event`, poste → `station`, affectation → `assignment`, prêt → `loan`, emprunteur → `borrower`, caution → `deposit`, ligne de trésorerie → `ledger entry`, justificatif → `receipt`… Aucun nouveau terme sans entrée au glossaire.
 - Fuseau Europe/Paris, stockage en UTC. Montants en `Decimal`, jamais en `float`.
+- Les textes en français prennent l'apostrophe typographique (’), comme le front. ruff l'autorise (`allowed-confusables`).
 - Conventional commits, directement sur `main`, historique linéaire.
 - **Context7 avant tout code de librairie** : on vérifie l'API dans la documentation à jour (Context7, puis la doc officielle, puis le code source installé dans `.venv/`), jamais de mémoire. Beaucoup de réflexes « Django » sont des réflexes DRF, faux sous Ninja.
 
@@ -44,7 +45,9 @@ Règles de développement de ce dépôt, pour les humains comme pour les agents.
   - une opération throttlée déclare 429.
 
   Un test du schéma vérifie que toute opération sans `auth=None` déclare 401 et 403.
+- **Schémas et énumérations portent un nom unique dans tout le projet** (`EventCategory`, pas `Category`). Le schéma OpenAPI les range par nom de classe, et un doublon en remplace un autre sans erreur, dans le schéma comme dans les types du front (constaté sur Ninja 1.7.1). Les `TextChoices` se déclarent donc au niveau du module, nommés d'après leur modèle. Un test le vérifie.
 - **Le corps JSON d'une opération se déclare `payload: XxxIn`.** Ninja situe une erreur 422 du schéma sous le nom de ce paramètre (`["body", "payload", "email"]`), quand les services la situent directement sous le champ (`["body", "email"]`, voir `core/errors.py`). Le front retire ce nom pour placer les deux sous le même champ du formulaire : un autre nom ferait disparaître ses erreurs de champ.
+- **Erreur sur une ligne d'une liste** : un service la nomme par son chemin pointé (`programme.2.title`), que `core/errors.py` situe comme Ninja (`["body", "programme", 2, "title"]`).
 - Tout changement d'API se signale explicitement : le front doit régénérer ses types. Un changement n'est terminé que quand le front compile avec les nouveaux types.
 
 ## Tests (pytest)
@@ -82,7 +85,7 @@ def test_loan_over_availability_rejected(api_client):
 ## Architecture
 
 - **Vues fines, services épais** : chaque app expose un `Router` dans `api.py`, monté sur l'unique `NinjaAPI` du projet. Une opération ne contient que la couche HTTP : entrée lue par sa signature, appel du service, réponse. Toute logique métier vit dans `services/` (fonctions explicites, typées, testables unitairement sans HTTP) et n'est **jamais** dupliquée dans une opération, un schéma ou l'admin.
-- **Schémas dans `schemas.py` par app** (`Schema`, `ModelSchema`, `FilterSchema`), entrée et sortie distinctes (`EventIn` / `EventOut`). Validation croisée dans un `@model_validator` du schéma d'entrée. **Aucune logique métier dans un schéma** : il valide la forme, le service décide. En sortie, un `ModelSchema` publie les champs `blank=True` comme facultatifs et nullables : pour un contrat à champs requis, on écrit un `Schema` simple.
+- **Schémas dans `schemas.py` par app** (`Schema`, `ModelSchema`, `FilterSchema`), entrée et sortie distinctes (`EventIn` / `EventOut`). **Aucune logique métier dans un schéma** : il valide la forme (types, présence des clés, énumérations), le service décide. Les contraintes de valeur (longueurs, bornes, unicité, contraintes entre champs) vivent dans le modèle et passent par `full_clean()` dans le service, avec les messages de Django, en français. En sortie, un `ModelSchema` publie les champs `blank=True` comme facultatifs et nullables : pour un contrat à champs requis, on écrit un `Schema` simple.
 - **Les services ne parlent pas HTTP** : ils lèvent la `ValidationError` de Django (données invalides) ou une exception métier, jamais `HttpError`. La traduction en réponse HTTP est faite une seule fois, par les `@api.exception_handler` du `NinjaAPI`. Ninja ne connaît pas la `ValidationError` de Django, qui finirait sinon en 500. Ces réponses d'erreur figurent dans le `response=` des opérations concernées.
 - **Privé par défaut**
   - L'auth est posée sur le `NinjaAPI` (`auth=`) : toute opération est authentifiée, sauf opt-out explicite `auth=None`. Jamais l'inverse, jamais de défaut implicite permissif.
@@ -92,7 +95,7 @@ def test_loan_over_availability_rejected(api_client):
   - Une classe d'auth lève `AuthorizationError` (403) pour un utilisateur connecté sans le droit. Renvoyer `None` produirait un 401, faux pour quelqu'un de connecté.
   - Tout échec d'authentification donne le même 401 : jeton absent, invalide ou expiré, compte inconnu ou inactif. Un compte actif hors bureau reçoit un 403. Les messages, en français, sont posés par les handlers de `config/api.py`.
   - Pas de contrôle d'autorisation en `if request.user…` dans le corps d'une opération.
-- **Un objet inaccessible n'existe pas** : queryset filtré par utilisateur et par portée avant toute lecture (`get_object_or_404(<queryset filtré>, pk=...)`) → 404, jamais 403. Exemple : seul l'auteur d'une note peut la modifier.
+- **Un objet inaccessible n'existe pas** : queryset filtré par utilisateur et par portée avant toute lecture (`get_object_or_404(<queryset filtré>, pk=...)`) → 404, jamais 403. Exemple : seul l'auteur d'une note peut la modifier. Le 404 répond « Introuvable. » (handler de `config/api.py`) : Ninja, lui, répond en anglais.
 - **Endpoints publics** (ceux que lisent les pages publiques rendues côté serveur) : `auth=None`, lecture seule, sous `/api/public/`, avec des **schémas de sortie dédiés** sans aucune donnée personnelle. Jamais de schéma interne réutilisé pour un endpoint public : un champ ajouté pour l'usage interne fuiterait.
 - **Requêtes optimisées par défaut** : `select_related` / `prefetch_related` sur toute liste. Pas de N+1.
 - **Opérations synchrones** (WSGI, gunicorn) : Ninja accepte les vues `async`, mais l'ORM et les services sont synchrones. Pas d'`async def` sans arbitrage. Un traitement long ne bloque jamais un worker : il passera par le framework de tâches de Django, à arbitrer quand il arrivera.
@@ -103,7 +106,8 @@ def test_loan_over_availability_rejected(api_client):
   - Aucun dossier n'est servi directement par nginx.
 - **Fonctionnalités natives d'abord**, à vérifier dans Context7 **avant** d'écrire, pas après. Ninja n'a pas les réflexes de DRF ; voici leurs équivalents, à connaître avant d'écrire un validateur ou une boucle de requête :
   - **pagination** :
-    - `PageNumberPagination` en réglage global (`NINJA_PAGINATION_CLASS`, `NINJA_PAGINATION_PER_PAGE`) et routeurs `RouterPaginated` : toute **collection de ressources** est paginée d'office ;
+    - `PageNumberPagination` en réglage global (`NINJA_PAGINATION_CLASS`, `NINJA_PAGINATION_PER_PAGE`), posée par le décorateur `@paginate` sur chaque opération qui renvoie une **collection de ressources** ;
+    - pas de `RouterPaginated` : il ignore une opération dont le `response=` est un dictionnaire de statuts, ce qui est le cas de toute opération privée (401, 403). La liste part alors entière, sans erreur (constaté sur Ninja 1.7.1). Un test du schéma vérifie qu'aucune réponse 2xx n'est un tableau nu ;
     - un **agrégat borné** renvoie un objet complet, non paginé, qui enveloppe sa liste : disponibilités, planning, résultats par événement, liste de courses, éléments « à traiter », tableau de bord ;
     - jamais de collection de ressources non paginée ;
   - **throttling** :
@@ -115,12 +119,13 @@ def test_loan_over_availability_rejected(api_client):
     - workers synchrones seulement, sans `--threads` : les throttles gardent un état par requête sur des instances partagées ;
   - **filtres et recherche** : `FilterSchema` + `Query[...]`, avec `FilterLookup` et une liste de lookups pour une recherche multi-champs ;
   - **tri** : pas de natif dans Ninja. On utilise un paramètre `Literal[...]` des tris autorisés (énuméré dans le schéma, donc typé côté front), appliqué par `order_by`. Jamais une chaîne libre passée à `order_by` ;
-  - **unicité** : contrainte en base (`UniqueConstraint` avec `violation_error_message` en français), vérifiée par `full_clean()` dans le service, contraintes à expression comme `Lower(...)` comprises. La `ValidationError` qui en résulte devient un 422 par le handler. Jamais de `filter(...).exists()` à la main ;
+  - **unicité** : contrainte en base (`UniqueConstraint` avec `violation_error_message` en français), vérifiée par `full_clean()` dans le service, contraintes à expression comme `Lower(...)` comprises. La `ValidationError` qui en résulte devient un 422 par le handler. Jamais de `filter(...).exists()` à la main.
+    - Une contrainte à un seul champ porte aussi `violation_error_code="unique"` : Django ne rattache son erreur au champ que pour ce code. Sinon, elle tombe sur le formulaire entier ;
   - **suppression des espaces de bord** : DRF le faisait par défaut, Pydantic non.
     - `InputSchema` (`core/schemas.py`) pose `str_strip_whitespace=True`, et tous les schémas d'entrée en héritent.
     - Un champ gardé tel quel, comme un mot de passe, s'en exclut par `StringConstraints(strip_whitespace=False)`.
     - Pas de `.strip()` champ par champ ;
-  - **validation croisée entre champs** : `@model_validator` du schéma, jamais dans l'opération ;
+  - **validation croisée entre champs** : une contrainte du modèle (`CheckConstraint`) quand la règle vaut aussi en base, vérifiée par `full_clean()` ; sinon un `@model_validator` du schéma. Jamais dans l'opération. L'erreur d'une contrainte n'est rattachée à aucun champ : elle va au formulaire ;
   - **messages d'erreur en français** : les nôtres, et ceux de Django (`LANGUAGE_CODE = "fr-fr"`, contraintes comprises). Ceux de Pydantic n'existent qu'en anglais : leur traduction est à arbitrer à la première card qui affiche une erreur de saisie, pas à rafistoler au fil de l'eau ;
   - **back-office** : Django admin, pour la gestion des comptes.
 - **Auth : JWT via `django-ninja-jwt`** (décision projet : l'API reste ouverte à une future app mobile ou à un tiers). Trois règles non négociables, chacune répond à un risque précis :
