@@ -71,6 +71,12 @@ def forbidden(request, exc):
     )
 
 
+@api.exception_handler(Http404)
+def not_found(request, exc):
+    # Ninja's own answer is in English: "Not Found".
+    return api.create_response(request, {"detail": "Introuvable."}, status=404)
+
+
 @api.exception_handler(Throttled)
 def throttled(request, exc):
     # Ninja adds the Retry-After header to this answer.

@@ -31,3 +31,20 @@ def test_errors_raised_without_fields_are_located_under_the_body():
         {"type": "validation_error", "loc": ["body"], "msg": "Premier problème."},
         {"type": "validation_error", "loc": ["body"], "msg": "Second problème."},
     ]
+
+
+def test_errors_of_a_list_item_are_located_by_their_path():
+    """
+    Given a validation error on the title of the third line of a list
+    When it is converted for the API
+    Then it is located like Ninja's own errors, the position as a number
+    """
+    error = ValidationError({"programme.2.title": ["Ce champ ne peut pas être vide."]})
+
+    assert validation_error_details(error) == [
+        {
+            "type": "validation_error",
+            "loc": ["body", "programme", 2, "title"],
+            "msg": "Ce champ ne peut pas être vide.",
+        }
+    ]

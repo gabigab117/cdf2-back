@@ -1,8 +1,9 @@
 import json
 
 from django.core.exceptions import ValidationError
+from django.http import Http404
 
-from config.api import django_validation_error
+from config.api import django_validation_error, not_found
 
 # Operations open without authentication, each declared with auth=None.
 PUBLIC_OPERATIONS = {
@@ -51,6 +52,18 @@ def test_service_validation_errors_become_422_responses(rf):
     assert json.loads(response.content) == {
         "detail": [{"type": "validation_error", "loc": ["body", "name"], "msg": "Requis."}]
     }
+
+
+def test_not_found_answers_in_french(rf):
+    """
+    Given an operation that finds nothing at the requested address
+    When the API translates the exception
+    Then the response is a 404, with a message in French
+    """
+    response = not_found(rf.get("/api/"), Http404())
+
+    assert response.status_code == 404
+    assert json.loads(response.content) == {"detail": "Introuvable."}
 
 
 def test_every_operation_is_private_unless_declared_public(client, settings):

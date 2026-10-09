@@ -2,7 +2,8 @@
 
 from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
 
-ErrorItem = dict[str, str | list[str]]
+Location = list[str | int]
+ErrorItem = dict[str, str | Location]
 
 
 def validation_error_details(error: ValidationError) -> list[ErrorItem]:
@@ -12,16 +13,21 @@ def validation_error_details(error: ValidationError) -> list[ErrorItem]:
     and a message. Errors raised by the services take the same shape, so that
     the front end maps both onto the form fields with a single normaliser: a
     field error is located under its field name, an error without a field under
-    the body itself.
+    the body itself. A service names a field of a list item by its dotted path,
+    "programme.2.title", located like Ninja's ["body", "programme", 2, "title"].
     """
     if not hasattr(error, "error_dict"):
         return [_item(["body"], message) for message in error.messages]
     return [
-        _item(["body"] if field == NON_FIELD_ERRORS else ["body", field], message)
+        _item(["body"] if field == NON_FIELD_ERRORS else ["body", *_path(field)], message)
         for field, messages in error.message_dict.items()
         for message in messages
     ]
 
 
-def _item(location: list[str], message: str) -> ErrorItem:
+def _path(field: str) -> Location:
+    return [int(part) if part.isdigit() else part for part in field.split(".")]
+
+
+def _item(location: Location, message: str) -> ErrorItem:
     return {"type": "validation_error", "loc": location, "msg": message}
