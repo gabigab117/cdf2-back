@@ -44,6 +44,7 @@ Règles de développement de ce dépôt, pour les humains comme pour les agents.
   - une opération throttlée déclare 429.
 
   Un test du schéma vérifie que toute opération sans `auth=None` déclare 401 et 403.
+- **Le corps JSON d'une opération se déclare `payload: XxxIn`.** Ninja situe une erreur 422 du schéma sous le nom de ce paramètre (`["body", "payload", "email"]`), quand les services la situent directement sous le champ (`["body", "email"]`, voir `core/errors.py`). Le front retire ce nom pour placer les deux sous le même champ du formulaire : un autre nom ferait disparaître ses erreurs de champ.
 - Tout changement d'API se signale explicitement : le front doit régénérer ses types. Un changement n'est terminé que quand le front compile avec les nouveaux types.
 
 ## Tests (pytest)
