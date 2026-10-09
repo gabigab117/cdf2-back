@@ -1,14 +1,19 @@
 from django.conf import settings
 from django.http import HttpResponse
 from ninja import Cookie, Router
+from ninja.pagination import paginate
 from ninja.throttling import AnonRateThrottle
 from ninja_jwt.tokens import RefreshToken
 
-from accounts.schemas import AccessTokenOut, LoginIn, MeOut
+from accounts.schemas import AccessTokenOut, BoardMemberOut, LoginIn, MeOut
+from accounts.services.roles import board_members
 from accounts.services.sessions import close_session, open_session, renew_session
 from core.schemas import ErrorOut, ValidationErrorOut
 
 router = Router(tags=["auth"])
+
+# The board's own operations on its members, mounted with the board's space.
+members_router = Router(tags=["members"])
 
 # The refresh token lives in an httpOnly cookie, out of reach of scripts, and
 # goes back to the authentication endpoints only: logout needs it as well, to
@@ -91,3 +96,14 @@ def logout(request, response: HttpResponse, refresh_token: Cookie[str | None] = 
 def me(request):
     """The signed-in board member, as shown in the board space."""
     return request.auth
+
+
+@members_router.get(
+    "/members",
+    response={200: list[BoardMemberOut], 401: ErrorOut, 403: ErrorOut, 422: ValidationErrorOut},
+    summary="List the board members",
+)
+@paginate
+def list_members(request):
+    """The active board members, by name: the accounts that may lead an event."""
+    return board_members()

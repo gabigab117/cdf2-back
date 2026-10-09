@@ -15,8 +15,12 @@
         "type": "object"
       },
       "BoardMemberOut": {
-        "description": "A board member as the board space names them, the lead of an event.",
+        "description": "A board member as the board space names them, the lead of an event.\n\nAn account created without a name, such as with createsuperuser, is named\nafter its email address.",
         "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
           "first_name": {
             "title": "First Name",
             "type": "string"
@@ -33,7 +37,8 @@
         "required": [
           "id",
           "first_name",
-          "last_name"
+          "last_name",
+          "email"
         ],
         "title": "BoardMemberOut",
         "type": "object"
@@ -528,6 +533,27 @@
           "position"
         ],
         "title": "MeOut",
+        "type": "object"
+      },
+      "PagedBoardMemberOut": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BoardMemberOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "count"
+        ],
+        "title": "PagedBoardMemberOut",
         "type": "object"
       },
       "PagedEventItemOut": {
@@ -1410,6 +1436,93 @@
         "summary": "Update an event",
         "tags": [
           "events"
+        ]
+      }
+    },
+    "/api/board/members": {
+      "get": {
+        "description": "The active board members, by name: the accounts that may lead an event.",
+        "operationId": "accounts_api_list_members",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedBoardMemberOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "List the board members",
+        "tags": [
+          "members"
         ]
       }
     },

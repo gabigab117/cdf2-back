@@ -7,6 +7,7 @@ from ninja import NinjaAPI
 from ninja.errors import AuthenticationError, AuthorizationError, Throttled
 from ninja.errors import ValidationError as SchemaValidationError
 
+from accounts.api import members_router
 from accounts.api import router as accounts_router
 from accounts.auth import BoardMemberAuth
 from accounts.services.sessions import (
@@ -97,3 +98,4 @@ def throttled(request, exc):
 api.add_router("/", core_router)
 api.add_router("/auth/", accounts_router)
 api.add_router("/board/", events_router)
+api.add_router("/board/", members_router)

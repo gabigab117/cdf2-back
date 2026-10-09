@@ -98,6 +98,7 @@ def test_loan_over_availability_rejected(api_client):
 - **Un objet inaccessible n'existe pas** : queryset filtré par utilisateur et par portée avant toute lecture (`get_object_or_404(<queryset filtré>, pk=...)`) → 404, jamais 403. Exemple : seul l'auteur d'une note peut la modifier. Le 404 répond « Introuvable. » (handler de `config/api.py`) : Ninja, lui, répond en anglais.
 - **Endpoints publics** (ceux que lisent les pages publiques rendues côté serveur) : `auth=None`, lecture seule, sous `/api/public/`, avec des **schémas de sortie dédiés** sans aucune donnée personnelle. Jamais de schéma interne réutilisé pour un endpoint public : un champ ajouté pour l'usage interne fuiterait.
 - **Requêtes optimisées par défaut** : `select_related` / `prefetch_related` sur toute liste. Pas de N+1.
+  - Une condition qui traverse une relation multiple, comme les groupes d'un compte (`BOARD_MEMBERS`), renvoie une ligne par objet lié : `.distinct()`, et un test qui construit le doublon (un superuser membre de deux groupes).
 - **Opérations synchrones** (WSGI, gunicorn) : Ninja accepte les vues `async`, mais l'ORM et les services sont synchrones. Pas d'`async def` sans arbitrage. Un traitement long ne bloque jamais un worker : il passera par le framework de tâches de Django, à arbitrer quand il arrivera.
 - **Fichiers : tous privés.**
   - Ils sont stockés hors racine web, sous un nom UUID ; le nom d'origine est en base.

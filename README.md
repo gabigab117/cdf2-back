@@ -42,7 +42,7 @@ Ce dépôt contient l'API. Le front (Nuxt 4) est dans [cdf2-front](https://githu
 
 ```
 config/          projet Django : settings (base, dev, test, prod), urls, NinjaAPI unique (api.py)
-accounts/        comptes et authentification JWT des membres du bureau (connexion par adresse e-mail)
+accounts/        comptes et authentification JWT des membres du bureau (connexion par adresse e-mail), liste des membres (/api/board/members)
 core/            socle commun : santé du service, schémas partagés, traduction des erreurs en réponses 422
 events/          événements du comité : programme, « Bon à savoir », API du bureau (/api/board/events)
 tests/           tests pytest, en miroir des apps

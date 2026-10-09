@@ -14,6 +14,7 @@ LOGIN = "/api/auth/login"
 REFRESH = "/api/auth/refresh"
 LOGOUT = "/api/auth/logout"
 ME = "/api/auth/me"
+MEMBERS = "/api/board/members"
 
 UNAUTHENTICATED = {"detail": "Authentification requise."}
 FORBIDDEN = {"detail": "Accès réservé aux membres du bureau."}
@@ -23,6 +24,16 @@ def login(client, email, password=PASSWORD):
     return client.post(
         LOGIN, {"email": email, "password": password}, content_type="application/json"
     )
+
+
+def listed(member):
+    """A board member as the list of the board members shows them."""
+    return {
+        "id": member.pk,
+        "first_name": member.first_name,
+        "last_name": member.last_name,
+        "email": member.email,
+    }
 
 
 def expired(token):
@@ -423,3 +434,87 @@ def test_an_account_taken_out_of_the_board_is_refused_at_once(board_client, boar
 
     assert response.status_code == 403
     assert response.json() == FORBIDDEN
+
+
+# Board members
+
+
+def test_the_board_members_are_reserved_to_signed_in_members(client):
+    """
+    Given a visitor without a session
+    When they ask for the board members
+    Then they are refused with a 401
+    """
+    response = client.get(MEMBERS)
+
+    assert response.status_code == 401
+    assert response.json() == UNAUTHENTICATED
+
+
+def test_the_board_members_are_refused_to_accounts_outside_the_board(client):
+    """
+    Given an account outside the board, signed in
+    When it asks for the board members
+    Then it is refused with a 403
+    """
+    token = AccessToken.for_user(UserFactory())
+
+    response = client.get(MEMBERS, headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 403
+    assert response.json() == FORBIDDEN
+
+
+def test_the_board_members_are_listed_by_name(board_client, board_member):
+    """
+    Given board members, a superuser created without a name, an account outside
+    the board and inactive accounts
+    When the board lists its members
+    Then the active board members come by name, the nameless superuser first,
+    each with their email address
+    """
+    julie = BoardMemberFactory(first_name="Julie", last_name="Roux")
+    alain = BoardMemberFactory(first_name="Alain", last_name="Petit")
+    nameless = UserFactory(is_superuser=True, first_name="", last_name="")
+    UserFactory()
+    BoardMemberFactory(is_active=False)
+    UserFactory(is_superuser=True, is_active=False)
+
+    response = board_client.get(MEMBERS)
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "count": 4,
+        "items": [listed(nameless), listed(alain), listed(board_member), listed(julie)],
+    }
+
+
+def test_the_board_members_come_by_page(board_client):
+    """
+    Given three board members
+    When the board asks for them two at a time
+    Then the first page holds two of them, and counts all three
+    """
+    BoardMemberFactory.create_batch(2)
+
+    body = board_client.get(MEMBERS, {"page_size": 2}).json()
+
+    assert (len(body["items"]), body["count"]) == (2, 3)
+
+
+def test_a_page_size_below_one_is_refused_in_french(board_client):
+    """
+    Given the board's members
+    When they are asked for by pages of no member at all
+    Then the request is refused with a 422, in French, under the page size
+    """
+    response = board_client.get(MEMBERS, {"page_size": 0})
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == [
+        {
+            "type": "greater_than_equal",
+            "loc": ["query", "page_size"],
+            "msg": "Assurez-vous que cette valeur est supérieure ou égale à 1.",
+        }
+    ]

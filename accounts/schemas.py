@@ -27,8 +27,13 @@ class MeOut(Schema):
 
 
 class BoardMemberOut(Schema):
-    """A board member as the board space names them, the lead of an event."""
+    """A board member as the board space names them, the lead of an event.
+
+    An account created without a name, such as with createsuperuser, is named
+    after its email address.
+    """
 
     id: int
     first_name: str
     last_name: str
+    email: str

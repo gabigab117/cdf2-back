@@ -1,6 +1,6 @@
 """The application's single role: board member (decision A2 of the roadmap)."""
 
-from django.db.models import Q
+from django.db.models import Q, QuerySet
 
 from accounts.models import User
 
@@ -22,3 +22,14 @@ def is_board_member(user: User) -> bool:
     outside the board is authenticated, then refused (403).
     """
     return user.is_superuser or user.groups.filter(name=BOARD_GROUP).exists()
+
+
+def board_members() -> QuerySet[User]:
+    """The active board members, by name: the accounts that may lead an event.
+
+    The join on the groups returns a superuser once per group they belong to,
+    hence distinct(). The email address, unique, settles between namesakes, so
+    that the pages of the list stay stable.
+    """
+    members = User.objects.filter(BOARD_MEMBERS).distinct()
+    return members.order_by("first_name", "last_name", "email")

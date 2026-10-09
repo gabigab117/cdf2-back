@@ -188,7 +188,12 @@ def test_an_event_comes_with_all_its_content(board_client):
 
     body = board_client.get(event_url(event.pk)).json()
 
-    assert body["lead"] == {"id": lead.pk, "first_name": "Julie", "last_name": "Roux"}
+    assert body["lead"] == {
+        "id": lead.pk,
+        "first_name": "Julie",
+        "last_name": "Roux",
+        "email": lead.email,
+    }
     assert body["previous_edition"]["title"] == "Halloween des enfants"
     assert (body["latitude"], body["longitude"]) == (49.42, 1.98)
     assert body["programme"] == [
