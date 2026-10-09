@@ -14,6 +14,36 @@
         "title": "AccessTokenOut",
         "type": "object"
       },
+      "AgendaOut": {
+        "description": "What the site shows around its agenda.",
+        "properties": {
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/EventCategory"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "categories",
+          "updated_at"
+        ],
+        "title": "AgendaOut",
+        "type": "object"
+      },
       "BoardMemberOut": {
         "description": "A board member as the board space names them, the lead of an event.\n\nAn account created without a name, such as with createsuperuser, is named\nafter its email address.",
         "properties": {
@@ -577,6 +607,27 @@
         "title": "PagedEventItemOut",
         "type": "object"
       },
+      "PagedPublicEventItemOut": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PublicEventItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "count"
+        ],
+        "title": "PagedPublicEventItemOut",
+        "type": "object"
+      },
       "PracticalInfoIcon": {
         "enum": [
           "people",
@@ -681,6 +732,250 @@
           "description"
         ],
         "title": "ProgrammeItemOut",
+        "type": "object"
+      },
+      "PublicEventFilters": {
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EventCategory"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "PublicEventFilters",
+        "type": "object"
+      },
+      "PublicEventItemOut": {
+        "description": "An event of the agenda.",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/EventCategory"
+          },
+          "ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends At"
+          },
+          "price_detail": {
+            "title": "Price Detail",
+            "type": "string"
+          },
+          "price_label": {
+            "title": "Price Label",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "start_label": {
+            "title": "Start Label",
+            "type": "string"
+          },
+          "starts_at": {
+            "format": "date-time",
+            "title": "Starts At",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "venue_name": {
+            "title": "Venue Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "title",
+          "category",
+          "starts_at",
+          "ends_at",
+          "start_label",
+          "venue_name",
+          "price_label",
+          "price_detail"
+        ],
+        "title": "PublicEventItemOut",
+        "type": "object"
+      },
+      "PublicEventOut": {
+        "description": "An event's page on the site, followed by the next events of the agenda.",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/EventCategory"
+          },
+          "ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends At"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "next_events": {
+            "items": {
+              "$ref": "#/components/schemas/PublicEventItemOut"
+            },
+            "title": "Next Events",
+            "type": "array"
+          },
+          "practical_infos": {
+            "items": {
+              "$ref": "#/components/schemas/PublicPracticalInfoOut"
+            },
+            "title": "Practical Infos",
+            "type": "array"
+          },
+          "price_detail": {
+            "title": "Price Detail",
+            "type": "string"
+          },
+          "price_label": {
+            "title": "Price Label",
+            "type": "string"
+          },
+          "programme": {
+            "items": {
+              "$ref": "#/components/schemas/PublicProgrammeItemOut"
+            },
+            "title": "Programme",
+            "type": "array"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "start_label": {
+            "title": "Start Label",
+            "type": "string"
+          },
+          "starts_at": {
+            "format": "date-time",
+            "title": "Starts At",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "venue_address": {
+            "title": "Venue Address",
+            "type": "string"
+          },
+          "venue_name": {
+            "title": "Venue Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "title",
+          "category",
+          "starts_at",
+          "ends_at",
+          "start_label",
+          "venue_name",
+          "price_label",
+          "price_detail",
+          "venue_address",
+          "latitude",
+          "longitude",
+          "summary",
+          "programme",
+          "practical_infos",
+          "next_events"
+        ],
+        "title": "PublicEventOut",
+        "type": "object"
+      },
+      "PublicPracticalInfoOut": {
+        "properties": {
+          "icon": {
+            "$ref": "#/components/schemas/PracticalInfoIcon"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "icon",
+          "title",
+          "text"
+        ],
+        "title": "PublicPracticalInfoOut",
+        "type": "object"
+      },
+      "PublicProgrammeItemOut": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "time": {
+            "format": "time",
+            "title": "Time",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "time",
+          "title",
+          "description"
+        ],
+        "title": "PublicProgrammeItemOut",
         "type": "object"
       },
       "ValidationErrorItem": {
@@ -1556,6 +1851,215 @@
         "summary": "Service health",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/api/public/agenda": {
+      "get": {
+        "description": "The categories of the agenda's events, and when the board last changed one.",
+        "operationId": "events_api_agenda_overview",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgendaOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Agenda overview",
+        "tags": [
+          "site"
+        ]
+      }
+    },
+    "/api/public/agenda.ics": {
+      "get": {
+        "description": "Every published event, past ones included: a subscribed calendar keeps them.",
+        "operationId": "events_api_agenda_feed",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "text/calendar": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "iCalendar file"
+          }
+        },
+        "summary": "Calendar feed of the agenda",
+        "tags": [
+          "site"
+        ]
+      }
+    },
+    "/api/public/events": {
+      "get": {
+        "description": "The published events to come, the next first, by page.",
+        "operationId": "events_api_list_agenda",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/EventCategory"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedPublicEventItemOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "List the agenda",
+        "tags": [
+          "site"
+        ]
+      }
+    },
+    "/api/public/events/{slug}": {
+      "get": {
+        "description": "A published event's page, past ones included, with the events that follow it.",
+        "operationId": "events_api_public_event",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicEventOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          }
+        },
+        "summary": "Get a published event",
+        "tags": [
+          "site"
+        ]
+      }
+    },
+    "/api/public/events/{slug}.ics": {
+      "get": {
+        "description": "A published event, to add to one's calendar.",
+        "operationId": "events_api_event_file",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/calendar": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "iCalendar file"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          }
+        },
+        "summary": "Calendar file of an event",
+        "tags": [
+          "site"
         ]
       }
     }

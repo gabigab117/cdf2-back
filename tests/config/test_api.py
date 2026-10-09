@@ -17,6 +17,11 @@ PUBLIC_OPERATIONS = {
     ("post", "/api/auth/login"),
     ("post", "/api/auth/refresh"),
     ("post", "/api/auth/logout"),
+    ("get", "/api/public/events"),
+    ("get", "/api/public/events/{slug}"),
+    ("get", "/api/public/events/{slug}.ics"),
+    ("get", "/api/public/agenda"),
+    ("get", "/api/public/agenda.ics"),
 }
 
 
@@ -131,6 +136,55 @@ def test_every_collection_comes_by_page(client, settings):
                 schema = answer.get("content", {}).get("application/json", {}).get("schema", {})
                 if status.startswith("2"):
                     assert schema.get("type") != "array", (method, path)
+
+
+def references(node):
+    """The names of the schemas a part of the OpenAPI document refers to."""
+    if isinstance(node, dict):
+        if "$ref" in node:
+            yield node["$ref"].rsplit("/", 1)[-1]
+        for value in node.values():
+            yield from references(value)
+    elif isinstance(node, list):
+        for value in node:
+            yield from references(value)
+
+
+def answer_schemas(document, site):
+    """The object schemas of the successful answers, at any depth, of the public
+    site's operations, or of all the others.
+    """
+    schemas = document["components"]["schemas"]
+    to_visit = {
+        name
+        for path, operations in document["paths"].items()
+        if path.startswith("/api/public/") == site
+        for operation in operations.values()
+        for status, answer in operation["responses"].items()
+        if status.startswith("2")
+        for name in references(answer)
+    }
+    visited = set()
+    while to_visit:
+        name = to_visit.pop()
+        visited.add(name)
+        to_visit |= set(references(schemas[name])) - visited
+    return {name for name in visited if "properties" in schemas[name]}
+
+
+def test_the_site_answers_with_schemas_of_its_own(client, settings):
+    """
+    Given the operations of the public site and all the others
+    When the schemas of their successful answers are compared, choices aside
+    Then the site shares none: a field added for the board would reach it
+    """
+    settings.SERVE_API_SCHEMA = True
+
+    document = client.get("/api/openapi.json").json()
+
+    site = answer_schemas(document, site=True)
+    assert {"PagedPublicEventItemOut", "PublicEventOut", "AgendaOut"} <= site
+    assert site & answer_schemas(document, site=False) == set()
 
 
 def subclasses(cls):

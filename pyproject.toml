@@ -12,6 +12,7 @@ dependencies = [
     "django-ninja>=1.7,<1.8",
     "django-ninja-jwt>=5.4.5",
     "gunicorn>=26.2",
+    "icalendar>=7.3",
     "psycopg[binary]>=3.3",
 ]
 

@@ -99,3 +99,59 @@ class EventOut(EventItemOut):
     programme: list[ProgrammeItemOut]
     practical_infos: list[PracticalInfoOut]
     updated_at: dt.datetime
+
+
+# The public site's own schemas. No board schema is reused for the site: a field
+# added for the board would reach it. None of them names a person.
+
+
+class PublicEventFilters(FilterSchema):
+    category: EventCategory | None = None
+
+
+class PublicEventItemOut(Schema):
+    """An event of the agenda."""
+
+    slug: str
+    title: str
+    category: EventCategory
+    starts_at: dt.datetime
+    ends_at: dt.datetime | None
+    start_label: str
+    venue_name: str
+    price_label: str
+    price_detail: str
+
+
+class PublicProgrammeItemOut(Schema):
+    time: dt.time
+    title: str
+    description: str
+
+
+class PublicPracticalInfoOut(Schema):
+    icon: PracticalInfoIcon
+    title: str
+    text: str
+
+
+class PublicEventOut(PublicEventItemOut):
+    """An event's page on the site, followed by the next events of the agenda."""
+
+    venue_address: str
+    latitude: float | None
+    longitude: float | None
+    summary: str
+    programme: list[PublicProgrammeItemOut]
+    practical_infos: list[PublicPracticalInfoOut]
+    next_events: list[PublicEventItemOut]
+
+
+class AgendaOut(Schema):
+    """What the site shows around its agenda."""
+
+    # The categories of its events, in their usual order: the filter offers
+    # those only.
+    categories: list[EventCategory]
+    # When the board last changed one of its events; null for an empty agenda.
+    updated_at: dt.datetime | None
