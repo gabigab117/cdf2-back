@@ -12,9 +12,12 @@ class InputSchema(Schema):
 
     A field kept exactly as typed, like a password, opts out with
     `Annotated[str, StringConstraints(strip_whitespace=False)]`.
+
+    Numbers must be finite: JSON, as Python reads it, lets NaN and Infinity
+    through, which pass any bound and could not be written back as JSON.
     """
 
-    model_config = ConfigDict(str_strip_whitespace=True)
+    model_config = ConfigDict(str_strip_whitespace=True, allow_inf_nan=False)
 
 
 class ErrorOut(Schema):

@@ -308,6 +308,30 @@ def test_a_date_without_its_time_zone_is_refused(board_client):
     ]
 
 
+@pytest.mark.parametrize("value", [float("nan"), float("inf")], ids=["NaN", "infinity"])
+def test_a_coordinate_that_is_not_a_finite_number_is_refused(board_client, value):
+    """
+    Given an event whose latitude is not a finite number, which JSON as Python
+    reads it lets through
+    When the board sends it
+    Then the request is refused with a 422, in French, under the latitude
+    And no event is stored, which could not be read back as JSON
+    """
+    payload = event_payload(latitude=value, longitude=1.98)
+
+    response = board_client.post(EVENTS, payload, "application/json")
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == [
+        {
+            "type": "finite_number",
+            "loc": ["body", "payload", "latitude"],
+            "msg": "Saisissez un nombre.",
+        }
+    ]
+    assert not Event.objects.exists()
+
+
 def test_the_errors_of_the_schema_are_reported_in_french_under_their_field(board_client):
     """
     Given an event without a title, of an unknown category, whose programme
