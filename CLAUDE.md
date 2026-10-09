@@ -29,6 +29,7 @@ Règles de développement de ce dépôt, pour les humains comme pour les agents.
 ```
 
   Piège propre à Ninja : dans `api.py`, l'exclusion ne couvre que ce que Ninja ne lit pas (`request`, type de retour). **Les annotations des paramètres d'une opération sont le contrat** : Ninja s'en sert pour valider l'entrée et générer le schéma. Elles sont toujours là, ruff ou pas.
+- **Commande de gestion** : `handle(self, *args: object, **options: object) -> None`. `Any` est refusé par la règle `ANN401`.
 - **Pas de vérificateur de types** (ni mypy ni ty), donc pas de stubs. ruff garantit qu'une annotation existe, jamais qu'elle est juste. **Ce sont les tests qui tiennent ce rôle** (Pydantic, lui, vérifie les schémas à l'exécution). C'est une décision, pas un oubli.
 - **Schéma OpenAPI natif de Ninja, source du contrat d'API.**
   - Ninja n'a pas d'équivalent à `spectacular --validate`, et un `operation_id` en double n'y produit qu'un avertissement imprimé, sans échec.
@@ -193,6 +194,7 @@ def test_loan_over_availability_rejected(api_client):
   - Derrière nginx : `SECURE_PROXY_SSL_HEADER` et `CSRF_TRUSTED_ORIGINS`. La redirection HTTPS est faite par nginx, pas par Django.
   - Le chemin de l'admin est lu dans l'environnement.
   - Schéma OpenAPI et docs interactives (`/api/docs`) servis selon un réglage dédié (`SERVE_API_SCHEMA`), coupé en prod. Pas selon `DEBUG`, que pytest-django force à `False`.
+  - **Ce qui est interdit en production** (le jeu de démonstration, `DEMO_DATA_ENABLED`) ne s'autorise que par l'environnement, jamais par un fichier de settings. Sur le serveur, un `manage.py` lancé sans `DJANGO_SETTINGS_MODULE` charge les settings de dev, en lisant le même `.env`.
 - **Pas de CORS** : le navigateur ne voit qu'une origine (nginx en prod, proxy de dev de Nuxt en local), et le rendu serveur appelle l'API de serveur à serveur. `django-cors-headers` n'arrive que si un client d'une autre origine entre au périmètre.
 - Throttling strict sur login et refresh. Messages d'erreur non énumérants.
 - **Toute entrée passe par un schéma.** Aucune confiance dans le client : règles métier et transitions de statut vérifiées côté serveur. Jamais de `ModelSchema` en `fields = "__all__"` ni en `exclude` sur une entrée : un champ ajouté au modèle deviendrait modifiable sans que personne l'ait décidé.
