@@ -155,9 +155,18 @@ def test_an_unknown_filter_value_is_refused(board_client):
     """
     Given the board's events
     When they are filtered on a period that does not exist
-    Then the request is refused with a 422
+    Then the request is refused with a 422, in French, under the period
     """
-    assert board_client.get(EVENTS, {"period": "tomorrow"}).status_code == 422
+    response = board_client.get(EVENTS, {"period": "tomorrow"})
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == [
+        {
+            "type": "literal_error",
+            "loc": ["query", "period"],
+            "msg": "Sélectionnez un choix valide. Ce choix ne fait pas partie de ceux disponibles.",
+        }
+    ]
 
 
 # Detail
@@ -188,6 +197,20 @@ def test_an_event_comes_with_all_its_content(board_client):
     ]
     assert body["practical_infos"] == [
         {"icon": "parking", "title": "Stationnement sur la place", "text": "Gratuit."}
+    ]
+
+
+def test_an_event_id_that_is_not_a_number_is_refused(board_client):
+    """
+    Given an address of an event whose id is not a number
+    When the board reads it
+    Then the request is refused with a 422, in French, under the id
+    """
+    response = board_client.get(event_url("abc"))
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == [
+        {"type": "int_parsing", "loc": ["path", "event_id"], "msg": "Saisissez un nombre entier."}
     ]
 
 
@@ -264,14 +287,56 @@ def test_a_date_without_its_time_zone_is_refused(board_client):
     """
     Given an event whose start has no time zone
     When the board sends it
-    Then the request is refused with a 422, located under the start
+    Then the request is refused with a 422, in French, under the start
     """
     response = board_client.post(
         EVENTS, event_payload(starts_at="2026-10-31T15:00:00"), "application/json"
     )
 
     assert response.status_code == 422
-    assert response.json()["detail"][0]["loc"] == ["body", "payload", "starts_at"]
+    assert response.json()["detail"] == [
+        {
+            "type": "timezone_aware",
+            "loc": ["body", "payload", "starts_at"],
+            "msg": "Saisissez une date et une heure valides.",
+        }
+    ]
+
+
+def test_the_errors_of_the_schema_are_reported_in_french_under_their_field(board_client):
+    """
+    Given an event without a title, of an unknown category, whose programme
+    line has no time
+    When the board sends it
+    Then the request is refused with a 422 listing each error in French, under
+    its field or its line
+    """
+    payload = event_payload(
+        category="sport",
+        programme=[{"time": "", "title": "Accueil", "description": ""}],
+    )
+    del payload["title"]
+
+    response = board_client.post(EVENTS, payload, "application/json")
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == [
+        {
+            "type": "missing",
+            "loc": ["body", "payload", "title"],
+            "msg": "Ce champ est obligatoire.",
+        },
+        {
+            "type": "enum",
+            "loc": ["body", "payload", "category"],
+            "msg": "Sélectionnez un choix valide. Ce choix ne fait pas partie de ceux disponibles.",
+        },
+        {
+            "type": "time_parsing",
+            "loc": ["body", "payload", "programme", 0, "time"],
+            "msg": "Saisissez une heure valide.",
+        },
+    ]
 
 
 def test_the_board_rewrites_an_event_and_its_programme(board_client):

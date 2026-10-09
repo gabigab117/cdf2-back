@@ -147,7 +147,13 @@ def test_login_reports_a_missing_field(client):
     response = client.post(LOGIN, {"email": "julie@example.fr"}, content_type="application/json")
 
     assert response.status_code == 422
-    assert response.json()["detail"][0]["loc"][-1] == "password"
+    assert response.json()["detail"] == [
+        {
+            "type": "missing",
+            "loc": ["body", "payload", "password"],
+            "msg": "Ce champ est obligatoire.",
+        }
+    ]
 
 
 def test_login_rejects_a_body_that_is_not_json(client):

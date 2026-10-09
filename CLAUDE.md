@@ -126,7 +126,10 @@ def test_loan_over_availability_rejected(api_client):
     - Un champ gardé tel quel, comme un mot de passe, s'en exclut par `StringConstraints(strip_whitespace=False)`.
     - Pas de `.strip()` champ par champ ;
   - **validation croisée entre champs** : une contrainte du modèle (`CheckConstraint`) quand la règle vaut aussi en base, vérifiée par `full_clean()` ; sinon un `@model_validator` du schéma. Jamais dans l'opération. L'erreur d'une contrainte n'est rattachée à aucun champ : elle va au formulaire ;
-  - **messages d'erreur en français** : les nôtres, et ceux de Django (`LANGUAGE_CODE = "fr-fr"`, contraintes comprises). Ceux de Pydantic n'existent qu'en anglais : leur traduction est à arbitrer à la première card qui affiche une erreur de saisie, pas à rafistoler au fil de l'eau ;
+  - **messages d'erreur en français** : les nôtres, ceux de Django (`LANGUAGE_CODE = "fr-fr"`, contraintes comprises), et ceux de Pydantic, qui n'existent qu'en anglais.
+    - `core/errors.py` remplace les messages de Pydantic d'après leur type, par ceux que Django traduit déjà : les messages de ses champs de formulaire, les seuls sans `%(value)s` à remplir. Tout autre type reçoit « Saisissez une valeur valide. ».
+    - Un schéma qui introduit un type de champ nouveau (décimal, date, UUID…) ou une contrainte de schéma ajoute ses types d'erreur à la table, avec un test.
+    - Pas de `LocaleMiddleware` : le français de `LANGUAGE_CODE` vaut pour toutes les réponses ;
   - **back-office** : Django admin, pour la gestion des comptes.
 - **Auth : JWT via `django-ninja-jwt`** (décision projet : l'API reste ouverte à une future app mobile ou à un tiers). Trois règles non négociables, chacune répond à un risque précis :
   - **access token court (15 min), transmis en header `Authorization`** et gardé en mémoire côté front. Jamais de token en `localStorage`.

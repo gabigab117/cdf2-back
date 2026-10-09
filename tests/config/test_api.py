@@ -7,8 +7,9 @@ from django.core.exceptions import ValidationError
 from django.db.models import Choices
 from django.http import Http404
 from ninja import Schema
+from ninja.errors import ValidationError as SchemaValidationError
 
-from config.api import django_validation_error, not_found
+from config.api import django_validation_error, not_found, schema_validation_error
 
 # Operations open without authentication, each declared with auth=None.
 PUBLIC_OPERATIONS = {
@@ -56,6 +57,30 @@ def test_service_validation_errors_become_422_responses(rf):
     assert response.status_code == 422
     assert json.loads(response.content) == {
         "detail": [{"type": "validation_error", "loc": ["body", "name"], "msg": "Requis."}]
+    }
+
+
+def test_schema_validation_errors_become_422_responses_in_french(rf):
+    """
+    Given a request whose body lacks a key its schema requires
+    When the API translates Ninja's exception
+    Then the response is a 422 locating the key, with a message in French
+    """
+    error = SchemaValidationError(
+        [{"type": "missing", "loc": ("body", "payload", "title"), "msg": "Field required"}]
+    )
+
+    response = schema_validation_error(rf.get("/api/"), error)
+
+    assert response.status_code == 422
+    assert json.loads(response.content) == {
+        "detail": [
+            {
+                "type": "missing",
+                "loc": ["body", "payload", "title"],
+                "msg": "Ce champ est obligatoire.",
+            }
+        ]
     }
 
 

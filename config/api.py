@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from django.http import Http404
 from ninja import NinjaAPI
 from ninja.errors import AuthenticationError, AuthorizationError, Throttled
+from ninja.errors import ValidationError as SchemaValidationError
 
 from accounts.api import router as accounts_router
 from accounts.auth import BoardMemberAuth
@@ -14,7 +15,7 @@ from accounts.services.sessions import (
     NotBoardMemberError,
 )
 from core.api import router as core_router
-from core.errors import validation_error_details
+from core.errors import schema_error_details, validation_error_details
 from events.api import router as events_router
 
 
@@ -49,6 +50,13 @@ def django_validation_error(request, exc):
     # Services raise Django's ValidationError, which Ninja does not know and
     # would turn into a 500: it becomes a 422 shaped like Ninja's own.
     return api.create_response(request, {"detail": validation_error_details(exc)}, status=422)
+
+
+@api.exception_handler(SchemaValidationError)
+def schema_validation_error(request, exc):
+    # Ninja's own answer keeps Pydantic's messages, in English, and their
+    # context, which the declared 422 schema does not hold.
+    return api.create_response(request, {"detail": schema_error_details(exc)}, status=422)
 
 
 @api.exception_handler(AuthenticationError)
