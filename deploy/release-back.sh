@@ -61,6 +61,9 @@ main() {
     (cd "$release" && uv sync --locked --no-dev --quiet)
     manage "$release" check --deploy --fail-level WARNING
     manage "$release" migrate --noinput
+    # The cache table the throttles count in; like migrate, it only creates
+    # what is missing.
+    manage "$release" createcachetable
     manage "$release" collectstatic --noinput --verbosity 0
 
     local previous

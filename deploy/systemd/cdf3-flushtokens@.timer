@@ -1,0 +1,12 @@
+# Starts cdf3-flushtokens@<instance>.service every night.
+[Unit]
+Description=Comité des fêtes v2 nightly token purge (%i)
+
+[Timer]
+OnCalendar=*-*-* 04:00
+RandomizedDelaySec=30min
+# A purge missed while the server was down runs as soon as it is back.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -31,7 +31,7 @@ L'application tourne sur un VPS Ubuntu 24.04, derrière nginx, une instance par 
 Étapes :
 1. **Vérification du commit** : il doit appartenir à `main`. Une seule release à la fois (`flock`).
 2. **Création de la release** : extraction du commit (`git archive`), venv propre à la release (`uv sync --locked --no-dev`).
-3. **Préparation** : `check --deploy`, `migrate`, `collectstatic`, sur la nouvelle release.
+3. **Préparation** : `check --deploy`, `migrate`, `createcachetable` (la table où le throttling compte les requêtes, partagée par les workers), `collectstatic`, sur la nouvelle release.
 4. **Bascule atomique** du lien `current`, puis redémarrage du service.
 5. **Contrôle de santé** : `/api/health` doit répondre avec la base joignable **et le SHA attendu**.
 6. **Retour arrière** : en cas d'échec, retour automatique à la release précédente, dont la santé est vérifiée à son tour. Le statut renvoyé dit si l'API est revenue. Les 3 dernières releases sont conservées.
@@ -39,6 +39,19 @@ L'application tourne sur un VPS Ubuntu 24.04, derrière nginx, une instance par 
 Les migrations passent avant la bascule. Elles doivent donc rester compatibles avec la release précédente : voir la règle « Migrations » du [CLAUDE.md](../CLAUDE.md).
 
 Le détail de chaque déploiement va dans le journal du serveur (`journalctl -t cdf3-release-back`). L'appelant ne reçoit qu'une ligne de statut, car les journaux d'une CI publique sont lisibles par tous.
+
+## Purge des jetons expirés
+
+Les refresh tokens émis et révoqués restent en base jusqu'à leur expiration (7 jours). La commande `flushexpiredtokens` de ninja-jwt supprime ensuite ceux qui ont expiré.
+- [`cdf3-flushtokens@.timer`](systemd/cdf3-flushtokens@.timer) la lance chaque nuit, par [`cdf3-flushtokens@.service`](systemd/cdf3-flushtokens@.service), sous l'utilisateur de l'application.
+- Le timer n'est installé qu'une fois en place une release qui contient la commande :
+
+  ```bash
+  install -m 0644 /var/www/cdf3/<instance>/back/current/deploy/systemd/cdf3-flushtokens@.{service,timer} /etc/systemd/system/
+  systemctl daemon-reload
+  systemctl start cdf3-flushtokens@<instance>.service      # un premier passage, à vérifier dans le journal
+  systemctl enable --now cdf3-flushtokens@<instance>.timer
+  ```
 
 ## Déploiement continu
 
@@ -68,7 +81,10 @@ Un push sur `main` dont les contrôles passent se déploie seul, par le job `dep
 |---|---|---|
 | `release-back.sh` | `/usr/local/bin/cdf3-release-back` | Release de l'API |
 | `systemd/cdf3-api@.service` | `/etc/systemd/system/` | gunicorn, une instance par environnement (`cdf3-api@preprod`). Durci : système en lecture seule, mémoire et CPU plafonnés |
+| `systemd/cdf3-flushtokens@.service`, `.timer` | `/etc/systemd/system/` | Purge nocturne des jetons expirés, durcie comme l'API |
 | `sudoers/cdf3` | `/etc/sudoers.d/cdf3` (0440, vérifié par `visudo -cf`) | L'utilisateur de l'application ne peut que redémarrer ses propres services |
 | `nginx/cdf3.conf.template` | `/etc/nginx/sites-available/cdf3-<instance>` | Une seule origine : `/api/` et l'admin vers Django, le reste vers Nuxt. Les `{{…}}` sont remplacés à l'installation, puis certbot ajoute le TLS |
+
+Le serveur n'exécute jamais ces fichiers depuis le dépôt : il exécute les copies que root a installées. Modifier un script ou une unité ne prend effet qu'après sa réinstallation (suivie de `systemctl daemon-reload` pour une unité). Une étape ajoutée au script de release doit donc être installée **avant** de pousser le code qui en dépend.
 
 Les valeurs propres au serveur restent hors du dépôt : domaine, chemin de l'admin, secrets, adresse et accès SSH.
