@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     "ninja_jwt.token_blacklist",
     "accounts",
     "core",
+    "events",
 ]
 
 AUTH_USER_MODEL = "accounts.User"

@@ -24,3 +24,11 @@ class MeOut(Schema):
     first_name: str
     last_name: str
     position: str
+
+
+class BoardMemberOut(Schema):
+    """A board member as the board space names them, the lead of an event."""
+
+    id: int
+    first_name: str
+    last_name: str

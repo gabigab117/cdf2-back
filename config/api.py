@@ -15,6 +15,7 @@ from accounts.services.sessions import (
 )
 from core.api import router as core_router
 from core.errors import validation_error_details
+from events.api import router as events_router
 
 
 def serve_schema_if_enabled(view):
@@ -87,3 +88,4 @@ def throttled(request, exc):
 
 api.add_router("/", core_router)
 api.add_router("/auth/", accounts_router)
+api.add_router("/board/", events_router)

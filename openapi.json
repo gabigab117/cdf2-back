@@ -14,6 +14,30 @@
         "title": "AccessTokenOut",
         "type": "object"
       },
+      "BoardMemberOut": {
+        "description": "A board member as the board space names them, the lead of an event.",
+        "properties": {
+          "first_name": {
+            "title": "First Name",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "last_name": {
+            "title": "Last Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "first_name",
+          "last_name"
+        ],
+        "title": "BoardMemberOut",
+        "type": "object"
+      },
       "ErrorOut": {
         "properties": {
           "detail": {
@@ -25,6 +49,397 @@
           "detail"
         ],
         "title": "ErrorOut",
+        "type": "object"
+      },
+      "EventCategory": {
+        "enum": [
+          "children",
+          "meals",
+          "markets",
+          "games",
+          "festivities"
+        ],
+        "title": "EventCategory",
+        "type": "string"
+      },
+      "EventFilters": {
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EventCategory"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "published": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published"
+          }
+        },
+        "title": "EventFilters",
+        "type": "object"
+      },
+      "EventIn": {
+        "description": "An event as the board writes it: whole, every key required.\n\nA key left out never erases a value, the programme above all. The lists are\ngiven in display order and replace the previous ones. The values themselves\nare checked by the model, whose messages are in French.",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/EventCategory"
+          },
+          "ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends At"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "lead": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "practical_infos": {
+            "items": {
+              "$ref": "#/components/schemas/PracticalInfoIn"
+            },
+            "title": "Practical Infos",
+            "type": "array"
+          },
+          "previous_edition": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Edition"
+          },
+          "price_detail": {
+            "title": "Price Detail",
+            "type": "string"
+          },
+          "price_label": {
+            "title": "Price Label",
+            "type": "string"
+          },
+          "programme": {
+            "items": {
+              "$ref": "#/components/schemas/ProgrammeItemIn"
+            },
+            "title": "Programme",
+            "type": "array"
+          },
+          "published": {
+            "title": "Published",
+            "type": "boolean"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "start_label": {
+            "title": "Start Label",
+            "type": "string"
+          },
+          "starts_at": {
+            "format": "date-time",
+            "title": "Starts At",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "venue_address": {
+            "title": "Venue Address",
+            "type": "string"
+          },
+          "venue_name": {
+            "title": "Venue Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "slug",
+          "category",
+          "starts_at",
+          "ends_at",
+          "start_label",
+          "venue_name",
+          "venue_address",
+          "latitude",
+          "longitude",
+          "price_label",
+          "price_detail",
+          "summary",
+          "published",
+          "lead",
+          "previous_edition",
+          "programme",
+          "practical_infos"
+        ],
+        "title": "EventIn",
+        "type": "object"
+      },
+      "EventItemOut": {
+        "description": "An event in a list.",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/EventCategory"
+          },
+          "ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "published": {
+            "title": "Published",
+            "type": "boolean"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "start_label": {
+            "title": "Start Label",
+            "type": "string"
+          },
+          "starts_at": {
+            "format": "date-time",
+            "title": "Starts At",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "venue_name": {
+            "title": "Venue Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "slug",
+          "category",
+          "starts_at",
+          "ends_at",
+          "start_label",
+          "venue_name",
+          "published"
+        ],
+        "title": "EventItemOut",
+        "type": "object"
+      },
+      "EventOut": {
+        "description": "An event with all its content, in display order.",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/EventCategory"
+          },
+          "ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "lead": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BoardMemberOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "practical_infos": {
+            "items": {
+              "$ref": "#/components/schemas/PracticalInfoOut"
+            },
+            "title": "Practical Infos",
+            "type": "array"
+          },
+          "previous_edition": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EventItemOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "price_detail": {
+            "title": "Price Detail",
+            "type": "string"
+          },
+          "price_label": {
+            "title": "Price Label",
+            "type": "string"
+          },
+          "programme": {
+            "items": {
+              "$ref": "#/components/schemas/ProgrammeItemOut"
+            },
+            "title": "Programme",
+            "type": "array"
+          },
+          "published": {
+            "title": "Published",
+            "type": "boolean"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "start_label": {
+            "title": "Start Label",
+            "type": "string"
+          },
+          "starts_at": {
+            "format": "date-time",
+            "title": "Starts At",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "venue_address": {
+            "title": "Venue Address",
+            "type": "string"
+          },
+          "venue_name": {
+            "title": "Venue Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "slug",
+          "category",
+          "starts_at",
+          "ends_at",
+          "start_label",
+          "venue_name",
+          "published",
+          "venue_address",
+          "latitude",
+          "longitude",
+          "price_label",
+          "price_detail",
+          "summary",
+          "lead",
+          "previous_edition",
+          "programme",
+          "practical_infos",
+          "updated_at"
+        ],
+        "title": "EventOut",
         "type": "object"
       },
       "HealthOut": {
@@ -43,6 +458,30 @@
           "release"
         ],
         "title": "HealthOut",
+        "type": "object"
+      },
+      "Input": {
+        "properties": {
+          "page": {
+            "default": 1,
+            "minimum": 1,
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "anyOf": [
+              {
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Size"
+          }
+        },
+        "title": "Input",
         "type": "object"
       },
       "LoginIn": {
@@ -89,6 +528,133 @@
           "position"
         ],
         "title": "MeOut",
+        "type": "object"
+      },
+      "PagedEventItemOut": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EventItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "count"
+        ],
+        "title": "PagedEventItemOut",
+        "type": "object"
+      },
+      "PracticalInfoIcon": {
+        "enum": [
+          "people",
+          "home",
+          "check",
+          "info",
+          "warning",
+          "parking",
+          "food",
+          "accessibility"
+        ],
+        "title": "PracticalInfoIcon",
+        "type": "string"
+      },
+      "PracticalInfoIn": {
+        "properties": {
+          "icon": {
+            "$ref": "#/components/schemas/PracticalInfoIcon"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "icon",
+          "title",
+          "text"
+        ],
+        "title": "PracticalInfoIn",
+        "type": "object"
+      },
+      "PracticalInfoOut": {
+        "properties": {
+          "icon": {
+            "$ref": "#/components/schemas/PracticalInfoIcon"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "icon",
+          "title",
+          "text"
+        ],
+        "title": "PracticalInfoOut",
+        "type": "object"
+      },
+      "ProgrammeItemIn": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "time": {
+            "format": "time",
+            "title": "Time",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "time",
+          "title",
+          "description"
+        ],
+        "title": "ProgrammeItemIn",
+        "type": "object"
+      },
+      "ProgrammeItemOut": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "time": {
+            "format": "time",
+            "title": "Time",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "time",
+          "title",
+          "description"
+        ],
+        "title": "ProgrammeItemOut",
         "type": "object"
       },
       "ValidationErrorItem": {
@@ -387,6 +953,463 @@
         "summary": "Renew the session",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/board/events": {
+      "get": {
+        "description": "The events of the board, by page.\n\nUpcoming events come the next first; past ones, like the whole list, the\nlatest first. An event stays upcoming until the end of its last day.",
+        "operationId": "events_api_list_events",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/EventCategory"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "published",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Published"
+            }
+          },
+          {
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "upcoming",
+                    "past"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Period"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedEventItemOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "List the events",
+        "tags": [
+          "events"
+        ]
+      },
+      "post": {
+        "description": "Record an event, with its programme and practical info.",
+        "operationId": "events_api_create",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventOut"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Create an event",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/board/events/{event_id}": {
+      "delete": {
+        "description": "Delete an event, with its programme and practical info.",
+        "operationId": "events_api_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Delete an event",
+        "tags": [
+          "events"
+        ]
+      },
+      "get": {
+        "description": "An event with all its content.",
+        "operationId": "events_api_detail",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Get an event",
+        "tags": [
+          "events"
+        ]
+      },
+      "put": {
+        "description": "Rewrite an event whole: its programme and practical info are replaced.",
+        "operationId": "events_api_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Update an event",
+        "tags": [
+          "events"
         ]
       }
     },

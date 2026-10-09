@@ -1,7 +1,12 @@
 import json
+from collections import Counter
 
+from django.apps import apps
+from django.conf import settings as django_settings
 from django.core.exceptions import ValidationError
+from django.db.models import Choices
 from django.http import Http404
+from ninja import Schema
 
 from config.api import django_validation_error, not_found
 
@@ -83,3 +88,49 @@ def test_every_operation_is_private_unless_declared_public(client, settings):
                 assert {"401", "403"} <= operation["responses"].keys(), (method, path)
             else:
                 assert (method, path) in PUBLIC_OPERATIONS
+
+
+def test_every_collection_comes_by_page(client, settings):
+    """
+    Given the operations published in the API schema
+    When their successful answers are reviewed
+    Then none is a bare list: a collection comes by page, with its count
+    """
+    settings.SERVE_API_SCHEMA = True
+
+    paths = client.get("/api/openapi.json").json()["paths"]
+
+    for path, operations in paths.items():
+        for method, operation in operations.items():
+            for status, answer in operation["responses"].items():
+                schema = answer.get("content", {}).get("application/json", {}).get("schema", {})
+                if status.startswith("2"):
+                    assert schema.get("type") != "array", (method, path)
+
+
+def subclasses(cls):
+    for subclass in cls.__subclasses__():
+        yield subclass
+        yield from subclasses(subclass)
+
+
+def test_schemas_and_choices_have_unique_names():
+    """
+    Given the schemas and the choices the project's apps declare
+    When the OpenAPI document is built, naming each after its class
+    Then no two share a name: one would silently replace the other in the
+    document, and in the front end's types
+    """
+    project_apps = {
+        app.name
+        for app in apps.get_app_configs()
+        if app.path.startswith(str(django_settings.BASE_DIR)) and ".venv" not in app.path
+    }
+    names = Counter(
+        cls.__name__
+        for cls in {*subclasses(Schema), *subclasses(Choices)}
+        if cls.__module__.split(".")[0] in project_apps
+    )
+
+    assert {"events", "accounts", "core"} <= project_apps
+    assert [name for name, count in names.items() if count > 1] == []
