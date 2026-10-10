@@ -35,6 +35,7 @@ OPERATIONS = [
     ("post", "/api/board/loans/1/return"),
     ("post", "/api/board/loans/1/reopen"),
     ("post", "/api/board/loans/1/cancel"),
+    ("post", "/api/board/loans/1/agreement"),
 ]
 
 

@@ -7,6 +7,7 @@ from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 from equipment.models import Equipment, Loan, LoanLine, LoanNumberSequence, LoanStatus
+from tests.documents.factories import DocumentFactory
 from tests.equipment.factories import (
     CommitteeLoanFactory,
     EquipmentFactory,
@@ -119,6 +120,7 @@ def test_a_member_records_a_loan_to_an_association(board_client, board_member, m
         },
         "created_at": iso(loan.created_at),
         "returned_at": None,
+        "agreement": None,
     }
 
 
@@ -492,18 +494,25 @@ def test_a_member_reads_a_loan(board_client, marquees):
     assert (response.json()["state"], response.json()["lines"][0]["quantity"]) == ("overdue", 2)
 
 
+@pytest.mark.parametrize(
+    "lent",
+    [CommitteeLoanFactory, lambda: LoanFactory(agreement=DocumentFactory())],
+    ids=["committee loan", "loan with its agreement"],
+)
 def test_reading_a_loan_takes_a_fixed_number_of_queries(
-    board_client, django_assert_max_num_queries
+    board_client, django_assert_max_num_queries, lent
 ):
     """
-    Given the equipment an event keeps, five lines of it
+    Given the equipment an event keeps, or a loan with its signed agreement,
+    five lines of each
     When a member reads it
-    Then its event, author and lines come in a fixed number of queries
+    Then its event or agreement, author and lines come in a fixed number of queries
     """
-    loan = CommitteeLoanFactory()
+    loan = lent()
     LoanLineFactory.create_batch(5, loan=loan)
 
-    # Authentication (2), the loan with its event and author, its lines with their equipment.
+    # Authentication (2), the loan with its event, author and agreement, its
+    # lines with their equipment.
     with django_assert_max_num_queries(4):
         board_client.get(url(loan.id))
 

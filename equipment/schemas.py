@@ -197,6 +197,14 @@ class LoanEventOut(Schema):
     title: str
 
 
+class LoanAgreementOut(Schema):
+    """The agreement a borrower signed, a document of its own."""
+
+    id: int
+    title: str
+    created_at: dt.datetime
+
+
 class LoanOut(Schema):
     """A loan, as its page shows it and its form edits it."""
 
@@ -221,6 +229,8 @@ class LoanOut(Schema):
     created_by: BoardMemberOut | None
     created_at: dt.datetime
     returned_at: dt.datetime | None
+    # None until it is deposited, and for a committee loan.
+    agreement: LoanAgreementOut | None
 
 
 class LoanFilters(FilterSchema):

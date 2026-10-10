@@ -1,5 +1,5 @@
 from django.shortcuts import get_object_or_404
-from ninja import Query, Router, Status
+from ninja import File, Query, Router, Status, UploadedFile
 from ninja.pagination import paginate
 
 from core.schemas import ErrorOut, ValidationErrorOut
@@ -21,6 +21,7 @@ from equipment.schemas import (
     LoanReturnOut,
     OccupancyOut,
 )
+from equipment.services.agreements import attach_agreement
 from equipment.services.availability import availability_report
 from equipment.services.inventory import (
     create_equipment,
@@ -248,3 +249,15 @@ def reopen_loan(request, loan_id: int):
 )
 def cancel_loan(request, loan_id: int):
     return cancel(get_object_or_404(Loan, pk=loan_id))
+
+
+@loans_router.post(
+    "/loans/{loan_id}/agreement",
+    response={200: LoanOut, 400: ErrorOut, **REFUSALS},
+    summary="Deposit the signed agreement of a loan",
+)
+def deposit_agreement(request, loan_id: int, file: File[UploadedFile]):
+    """« Déposer la convention signée »: a document « Divers », awaiting review,
+    which takes the link of the loan. A committee loan has none.
+    """
+    return attach_agreement(get_object_or_404(Loan, pk=loan_id), file, request.auth)

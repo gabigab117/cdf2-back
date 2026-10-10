@@ -1790,6 +1790,31 @@
         "title": "LatestNoteOut",
         "type": "object"
       },
+      "LoanAgreementOut": {
+        "description": "The agreement a borrower signed, a document of its own.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "created_at"
+        ],
+        "title": "LoanAgreementOut",
+        "type": "object"
+      },
       "LoanBorrowerType": {
         "enum": [
           "association",
@@ -2226,6 +2251,16 @@
       "LoanOut": {
         "description": "A loan, as its page shows it and its form edits it.",
         "properties": {
+          "agreement": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LoanAgreementOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "borrower_name": {
             "title": "Borrower Name",
             "type": "string"
@@ -2348,7 +2383,8 @@
           "lines",
           "created_by",
           "created_at",
-          "returned_at"
+          "returned_at",
+          "agreement"
         ],
         "title": "LoanOut",
         "type": "object"
@@ -7439,6 +7475,115 @@
           }
         ],
         "summary": "Change a loan",
+        "tags": [
+          "loans"
+        ]
+      }
+    },
+    "/api/board/loans/{loan_id}/agreement": {
+      "post": {
+        "description": "« Déposer la convention signée »: a document « Divers », awaiting review,\nwhich takes the link of the loan. A committee loan has none.",
+        "operationId": "equipment_api_deposit_agreement",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "loan_id",
+            "required": true,
+            "schema": {
+              "title": "Loan Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "format": "binary",
+                    "title": "File",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "title": "FileParams",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Deposit the signed agreement of a loan",
         "tags": [
           "loans"
         ]

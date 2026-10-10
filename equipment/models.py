@@ -7,6 +7,7 @@ from django.db import models
 from django.db.models import F, Q
 from django.db.models.functions import Lower
 
+from documents.models import Document
 from events.models import Event
 
 # The longest a loan lasts, both its days counted: beyond, a date was mistyped
@@ -171,6 +172,16 @@ class Loan(models.Model):
     created_at = models.DateTimeField("saisi le", auto_now_add=True)
     # When the equipment came back: the purge of personal data counts from it.
     returned_at = models.DateTimeField("rendu le", null=True, blank=True)
+    # The agreement its borrower signed, deposited as a document (A16): a new
+    # one takes the link, the former stays among the documents.
+    agreement = models.ForeignKey(
+        Document,
+        verbose_name="convention signée",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
 
     class Meta:
         verbose_name = "prêt"
@@ -200,6 +211,11 @@ class Loan(models.Model):
                     "Un usage comité réserve pour un événement, sans numéro, emprunteur, "
                     "téléphone ni caution ; un prêt à un tiers a un numéro et un emprunteur."
                 ),
+            ),
+            models.CheckConstraint(
+                condition=~Q(borrower_type=LoanBorrowerType.COMMITTEE) | Q(agreement__isnull=True),
+                name="loan_committee_without_agreement",
+                violation_error_message="Un usage comité n’a pas de convention.",
             ),
             models.CheckConstraint(
                 condition=Q(status=LoanStatus.RETURNED, returned_at__isnull=False)

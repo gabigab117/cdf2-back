@@ -47,11 +47,11 @@ WRITABLE = {LoanStatus.CONFIRMED, LoanStatus.OUT}
 
 
 def loans() -> QuerySet[Loan]:
-    """The loans, with what their page shows: their event, author, and lines
-    with their equipment.
+    """The loans, with what their page shows: their event, author, signed
+    agreement, and lines with their equipment.
     """
     lines = LoanLine.objects.select_related("equipment").order_by("equipment__name", "pk")
-    return Loan.objects.select_related("event", "created_by").prefetch_related(
+    return Loan.objects.select_related("event", "created_by", "agreement").prefetch_related(
         Prefetch("lines", queryset=lines)
     )
 
