@@ -144,10 +144,12 @@ MAILERS = {
 }
 # The sender: the address of the account the emails go through. Required on the server.
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="Comité des fêtes <comite@example.org>")
+# The subject of a server error emailed to the administrators (prod.py).
+EMAIL_SUBJECT_PREFIX = "[Comité des fêtes] "
 
 # The application's journal (A9: 7 days on the server, by systemd): what the
 # project's loggers report goes to the error stream. Django's own loggers are
-# left as they are.
+# left as they are: theirs is the handler that emails server errors to ADMINS.
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,

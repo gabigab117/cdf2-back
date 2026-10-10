@@ -28,6 +28,13 @@ FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o750
 SITE_URL = env("SITE_URL")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
 
+# Server errors (status 500 and above) are emailed to the administrators by
+# Django's own handler, which LOGGING keeps, through the same mailer and from
+# the same sender: the SMTP refuses root@localhost. Nobody is emailed while the
+# list is empty, as on the preproduction.
+ADMINS = env.list("ADMINS", default=[])
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
+
 # The emails go through the SMTP of the association's account (D7): implicit
 # SSL, on port 465 by default. The timeout is short: an email is sent during
 # the request of the deposit, which must not wait long on it.

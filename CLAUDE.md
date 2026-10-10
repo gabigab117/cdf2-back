@@ -147,6 +147,7 @@ def test_loan_over_availability_rejected(api_client):
   - Un lien d'e-mail se construit sur `SITE_URL` : l'API n'apprend pas l'adresse du front d'une requête.
   - Le texte nomme l'objet et mène à lui, la page demandant de se connecter. Il ne contient ni fichier ni contenu.
 - **Journal** : `LOGGING` envoie les loggers du projet sur la sortie d'erreur, que systemd garde 7 jours sur le serveur. Ceux de Django restent tels quels (`disable_existing_loggers: False`), et rien ne coupe la propagation, sans quoi `caplog` ne verrait rien.
+- **Erreurs serveur** : une réponse 500 part par e-mail vers `ADMINS`, par le handler `mail_admins` de Django, que `LOGGING` garde. `SERVER_EMAIL` est l'expéditeur du compte SMTP, qui refuserait `root@localhost`. `ADMINS` vient de l'environnement : vide, personne n'est prévenu, comme en préproduction.
 - **Fonctionnalités natives d'abord**, à vérifier dans Context7 **avant** d'écrire, pas après. Ninja n'a pas les réflexes de DRF ; voici leurs équivalents, à connaître avant d'écrire un validateur ou une boucle de requête :
   - **pagination** :
     - `PageNumberPagination` en réglage global (`NINJA_PAGINATION_CLASS`, `NINJA_PAGINATION_PER_PAGE`), posée par le décorateur `@paginate` sur chaque opération qui renvoie une **collection de ressources** ;
