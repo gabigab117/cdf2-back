@@ -172,6 +172,7 @@ def test_loan_over_availability_rejected(api_client):
     - `core/errors.py` remplace les messages de Pydantic d'après leur type, par ceux que Django traduit déjà : les messages de ses champs de formulaire, les seuls sans `%(value)s` à remplir. Tout autre type reçoit « Saisissez une valeur valide. ».
     - Un schéma qui introduit un type de champ nouveau (décimal, date, UUID…) ou une contrainte de schéma ajoute ses types d'erreur à la table, avec un test.
     - Pas de `LocaleMiddleware` : le français de `LANGUAGE_CODE` vaut pour toutes les réponses ;
+    - un nombre dans un message s'écrit par `counted()` (`core/text.py`) : « 0 libre », « 2 libres ». Le français met le singulier sous deux ; `ngettext`, sans catalogue de traduction pour les messages du projet, suit la règle anglaise et écrirait « 0 libres » ;
   - **back-office** : Django admin, pour la gestion des comptes.
 - **Auth : JWT via `django-ninja-jwt`** (décision projet : l'API reste ouverte à une future app mobile ou à un tiers). Trois règles non négociables, chacune répond à un risque précis :
   - **access token court (15 min), transmis en header `Authorization`** et gardé en mémoire côté front. Jamais de token en `localStorage`.

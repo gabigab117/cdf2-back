@@ -24,10 +24,16 @@ OPERATIONS = [
     ("put", f"{EQUIPMENT}/1"),
     ("delete", f"{EQUIPMENT}/1"),
     ("get", f"{EQUIPMENT}/1/occupancy"),
+    ("get", "/api/board/loans"),
     ("post", "/api/board/loans"),
+    ("get", "/api/board/loans/counts"),
     ("get", "/api/board/loans/deposits"),
     ("get", "/api/board/loans/1"),
     ("put", "/api/board/loans/1"),
+    ("post", "/api/board/loans/1/checkout"),
+    ("post", "/api/board/loans/1/return"),
+    ("post", "/api/board/loans/1/reopen"),
+    ("post", "/api/board/loans/1/cancel"),
 ]
 
 

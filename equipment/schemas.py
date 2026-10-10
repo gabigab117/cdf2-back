@@ -1,7 +1,7 @@
 import datetime as dt
 from decimal import Decimal
 
-from ninja import Schema
+from ninja import FilterSchema, Schema
 
 from accounts.schemas import BoardMemberOut
 from core.schemas import InputSchema
@@ -221,3 +221,61 @@ class LoanOut(Schema):
     created_by: BoardMemberOut | None
     created_at: dt.datetime
     returned_at: dt.datetime | None
+
+
+class LoanFilters(FilterSchema):
+    """The loans the list keeps: those of a state, or all."""
+
+    state: LoanState | None = None
+
+
+class LoanItemOut(LoanBriefOut):
+    """A loan, as the list shows it: with its lines, and how they came back."""
+
+    lines: list[LoanLineOut]
+
+
+class LoanCountsOut(Schema):
+    """How many loans in all, and in each state: the chips of the list."""
+
+    total: int
+    to_prepare: int
+    confirmed: int
+    out: int
+    overdue: int
+    committee: int
+    returned: int
+    cancelled: int
+
+
+class ReturnLineIn(InputSchema):
+    """What came back of a line: the pieces damaged, and those missing."""
+
+    # The id of a line of the loan.
+    line: int
+    damaged_quantity: int
+    missing_quantity: int
+
+
+class LoanReturnIn(InputSchema):
+    """How the equipment of a loan came back: a line not given came back whole."""
+
+    lines: list[ReturnLineIn]
+
+
+class ShortageOut(Schema):
+    """An equipment the loans to come take more of than it offers (A17)."""
+
+    equipment: LoanEquipmentOut
+    # The first day short.
+    day: dt.date
+    offered: int
+    taken: int
+    loans: list[LoanBriefOut]
+
+
+class LoanReturnOut(Schema):
+    """A loan returned, and the loans to come its damage leaves short."""
+
+    loan: LoanOut
+    shortages: list[ShortageOut]

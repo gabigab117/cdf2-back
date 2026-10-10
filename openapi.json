@@ -1874,6 +1874,55 @@
         "title": "LoanConflictOut",
         "type": "object"
       },
+      "LoanCountsOut": {
+        "description": "How many loans in all, and in each state: the chips of the list.",
+        "properties": {
+          "cancelled": {
+            "title": "Cancelled",
+            "type": "integer"
+          },
+          "committee": {
+            "title": "Committee",
+            "type": "integer"
+          },
+          "confirmed": {
+            "title": "Confirmed",
+            "type": "integer"
+          },
+          "out": {
+            "title": "Out",
+            "type": "integer"
+          },
+          "overdue": {
+            "title": "Overdue",
+            "type": "integer"
+          },
+          "returned": {
+            "title": "Returned",
+            "type": "integer"
+          },
+          "to_prepare": {
+            "title": "To Prepare",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "to_prepare",
+          "confirmed",
+          "out",
+          "overdue",
+          "committee",
+          "returned",
+          "cancelled"
+        ],
+        "title": "LoanCountsOut",
+        "type": "object"
+      },
       "LoanDepositOut": {
         "description": "The cheque a type of borrower leaves by default (A16).",
         "properties": {
@@ -1961,6 +2010,23 @@
         "title": "LoanEventOut",
         "type": "object"
       },
+      "LoanFilters": {
+        "description": "The loans the list keeps: those of a state, or all.",
+        "properties": {
+          "state": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LoanState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "LoanFilters",
+        "type": "object"
+      },
       "LoanIn": {
         "description": "A loan as the board writes it: whole, every key required.\n\nIts values are checked by the model and the service, whose messages are in\nFrench. A committee loan keeps its equipment for an event: its borrower,\npurpose, phone and deposit are left empty.",
         "properties": {
@@ -2040,6 +2106,70 @@
           "lines"
         ],
         "title": "LoanIn",
+        "type": "object"
+      },
+      "LoanItemOut": {
+        "description": "A loan, as the list shows it: with its lines, and how they came back.",
+        "properties": {
+          "borrower_type": {
+            "$ref": "#/components/schemas/LoanBorrowerType"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "end_date": {
+            "format": "date",
+            "title": "End Date",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/LoanLineOut"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Number"
+          },
+          "purpose": {
+            "title": "Purpose",
+            "type": "string"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/LoanState"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "display_name",
+          "purpose",
+          "borrower_type",
+          "state",
+          "start_date",
+          "end_date",
+          "lines"
+        ],
+        "title": "LoanItemOut",
         "type": "object"
       },
       "LoanLineIn": {
@@ -2221,6 +2351,44 @@
           "returned_at"
         ],
         "title": "LoanOut",
+        "type": "object"
+      },
+      "LoanReturnIn": {
+        "description": "How the equipment of a loan came back: a line not given came back whole.",
+        "properties": {
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/ReturnLineIn"
+            },
+            "title": "Lines",
+            "type": "array"
+          }
+        },
+        "required": [
+          "lines"
+        ],
+        "title": "LoanReturnIn",
+        "type": "object"
+      },
+      "LoanReturnOut": {
+        "description": "A loan returned, and the loans to come its damage leaves short.",
+        "properties": {
+          "loan": {
+            "$ref": "#/components/schemas/LoanOut"
+          },
+          "shortages": {
+            "items": {
+              "$ref": "#/components/schemas/ShortageOut"
+            },
+            "title": "Shortages",
+            "type": "array"
+          }
+        },
+        "required": [
+          "loan",
+          "shortages"
+        ],
+        "title": "LoanReturnOut",
         "type": "object"
       },
       "LoanState": {
@@ -2677,6 +2845,27 @@
           "count"
         ],
         "title": "PagedEventItemOut",
+        "type": "object"
+      },
+      "PagedLoanItemOut": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LoanItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "count"
+        ],
+        "title": "PagedLoanItemOut",
         "type": "object"
       },
       "PagedNoteOut": {
@@ -3367,6 +3556,67 @@
           "ticket_types"
         ],
         "title": "ReservationStatsOut",
+        "type": "object"
+      },
+      "ReturnLineIn": {
+        "description": "What came back of a line: the pieces damaged, and those missing.",
+        "properties": {
+          "damaged_quantity": {
+            "title": "Damaged Quantity",
+            "type": "integer"
+          },
+          "line": {
+            "title": "Line",
+            "type": "integer"
+          },
+          "missing_quantity": {
+            "title": "Missing Quantity",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "line",
+          "damaged_quantity",
+          "missing_quantity"
+        ],
+        "title": "ReturnLineIn",
+        "type": "object"
+      },
+      "ShortageOut": {
+        "description": "An equipment the loans to come take more of than it offers (A17).",
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "equipment": {
+            "$ref": "#/components/schemas/LoanEquipmentOut"
+          },
+          "loans": {
+            "items": {
+              "$ref": "#/components/schemas/LoanBriefOut"
+            },
+            "title": "Loans",
+            "type": "array"
+          },
+          "offered": {
+            "title": "Offered",
+            "type": "integer"
+          },
+          "taken": {
+            "title": "Taken",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "equipment",
+          "day",
+          "offered",
+          "taken",
+          "loans"
+        ],
+        "title": "ShortageOut",
         "type": "object"
       },
       "StationBoardOut": {
@@ -6671,6 +6921,106 @@
       }
     },
     "/api/board/loans": {
+      "get": {
+        "description": "The loans, by page: late, out, to prepare, confirmed, the committee's to\ncome, then those over, the latest first. A state keeps its own.",
+        "operationId": "equipment_api_list_loans",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/LoanState"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedLoanItemOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "List the loans",
+        "tags": [
+          "loans"
+        ]
+      },
       "post": {
         "description": "Record a loan, never beyond what is free over its days (A15): a loan to\nsomeone takes the next number of its year.",
         "operationId": "equipment_api_record_loan",
@@ -6743,6 +7093,54 @@
           }
         ],
         "summary": "Record a loan",
+        "tags": [
+          "loans"
+        ]
+      }
+    },
+    "/api/board/loans/counts": {
+      "get": {
+        "description": "How many loans in all, and in each state: the counts of the list's chips.",
+        "operationId": "equipment_api_count_loans",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanCountsOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Count the loans by state",
         "tags": [
           "loans"
         ]
@@ -6964,6 +7362,337 @@
           }
         ],
         "summary": "Change a loan",
+        "tags": [
+          "loans"
+        ]
+      }
+    },
+    "/api/board/loans/{loan_id}/cancel": {
+      "post": {
+        "operationId": "equipment_api_cancel_loan",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "loan_id",
+            "required": true,
+            "schema": {
+              "title": "Loan Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Cancel a loan",
+        "tags": [
+          "loans"
+        ]
+      }
+    },
+    "/api/board/loans/{loan_id}/checkout": {
+      "post": {
+        "description": "« Préparer la sortie »: the loan holds its equipment from today, even\nbefore its start, and is refused if it is not free by then.",
+        "operationId": "equipment_api_checkout",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "loan_id",
+            "required": true,
+            "schema": {
+              "title": "Loan Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Hand the equipment of a loan over",
+        "tags": [
+          "loans"
+        ]
+      }
+    },
+    "/api/board/loans/{loan_id}/reopen": {
+      "post": {
+        "description": "« Rouvrir »: the return is undone, if the equipment is still free.",
+        "operationId": "equipment_api_reopen_loan",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "loan_id",
+            "required": true,
+            "schema": {
+              "title": "Loan Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Reopen a returned loan",
+        "tags": [
+          "loans"
+        ]
+      }
+    },
+    "/api/board/loans/{loan_id}/return": {
+      "post": {
+        "description": "« Valider le retour »: what is damaged goes under repair, what is missing\nis reported. The loans to come that the repairs leave short are named.",
+        "operationId": "equipment_api_record_return",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "loan_id",
+            "required": true,
+            "schema": {
+              "title": "Loan Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoanReturnIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanReturnOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Record the return of a loan",
         "tags": [
           "loans"
         ]

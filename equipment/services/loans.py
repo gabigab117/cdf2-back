@@ -12,22 +12,23 @@ from decimal import Decimal
 
 from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
 from django.db import transaction
-from django.db.models import Prefetch, QuerySet
+from django.db.models import Count, Prefetch, Q, QuerySet
 from django.utils import timezone
-from django.utils.translation import ngettext
 
 from accounts.models import User
+from core.text import counted
 from equipment.models import (
     Equipment,
     Loan,
     LoanBorrowerType,
     LoanLine,
     LoanNumberSequence,
+    LoanState,
     LoanStatus,
 )
 from equipment.schemas import LoanIn
 from equipment.services.availability import availability
-from equipment.services.states import loan_state
+from equipment.services.states import in_board_order, loan_state, with_states
 
 # The cheque a borrower leaves by default, by type (A16): the committee leaves none.
 DEFAULT_DEPOSITS = {
@@ -49,6 +50,18 @@ def loans() -> QuerySet[Loan]:
     return Loan.objects.select_related("event", "created_by").prefetch_related(
         Prefetch("lines", queryset=lines)
     )
+
+
+def listed_loans(*, today: dt.date | None = None) -> QuerySet[Loan]:
+    """The loans as the list shows them, with their state, in its order."""
+    return in_board_order(loans(), today or timezone.localdate())
+
+
+def loan_counts(*, today: dt.date | None = None) -> dict[str, int]:
+    """How many loans in all, and in each state: the chips of the list."""
+    loans_today = with_states(Loan.objects.all(), today or timezone.localdate())
+    by_state = {state: Count("pk", filter=Q(state=state)) for state in LoanState.values}
+    return loans_today.aggregate(total=Count("pk"), **by_state)
 
 
 def with_state(loan: Loan, *, today: dt.date | None = None) -> Loan:
@@ -112,21 +125,19 @@ def _write(loan: Loan, data: LoanIn) -> Loan:
         for line in data.lines
     ]
     previous = set(loan.lines.values_list("equipment_id", flat=True)) if loan.pk else set()
-    locked = _lock({line.equipment_id for line in lines} | previous)
+    locked = lock({line.equipment_id for line in lines} | previous)
     _validate(loan, lines)
-    _check_free(loan, lines, locked)
+    beyond = beyond_free(loan, lines, locked)
+    if beyond:
+        raise ValidationError(
+            {f"lines.{index}.quantity": message for index, message in beyond.items()}
+        )
     if loan.number is None and not committee:
         loan.number = _next_number()
     loan.save()
     loan.lines.all().delete()
     LoanLine.objects.bulk_create(lines)
     return with_state(loans().get(pk=loan.pk))
-
-
-def _lock(ids: set[int]) -> dict[int, Equipment]:
-    """Lock the equipment a write touches, in the order of their keys."""
-    equipment = Equipment.objects.select_for_update().filter(pk__in=ids).order_by("pk")
-    return {item.pk: item for item in equipment}
 
 
 def _validate(loan: Loan, lines: list[LoanLine]) -> None:
@@ -159,9 +170,10 @@ def _validate(loan: Loan, lines: list[LoanLine]) -> None:
         raise ValidationError(errors)
 
 
-def _check_free(loan: Loan, lines: list[LoanLine], locked: dict[int, Equipment]) -> None:
-    """Refuse a line beyond what is free over the loan's days, itself left out:
-    from the day it left, and until today if it is out (A15).
+def beyond_free(loan: Loan, lines: list[LoanLine], locked: dict[int, Equipment]) -> dict[int, str]:
+    """The lines beyond what is free over the loan's days, by their position,
+    the loan itself left out: from the day it left, and until today if it is
+    out (A15). Its equipment is locked already.
     """
     start, end = loan.start_date, loan.end_date
     if loan.status == LoanStatus.OUT:
@@ -172,21 +184,23 @@ def _check_free(loan: Loan, lines: list[LoanLine], locked: dict[int, Equipment])
         item.equipment.pk: item.free
         for item in availability(asked, start, end, exclude_loan=loan.pk)
     }
-    errors = {}
-    for index, line in enumerate(lines):
-        if line.quantity > free[line.equipment_id]:
-            errors[f"lines.{index}.quantity"] = _beyond(
-                locked[line.equipment_id], line.quantity, free[line.equipment_id]
-            )
-    if errors:
-        raise ValidationError(errors)
+    return {
+        index: _beyond(locked[line.equipment_id], line.quantity, free[line.equipment_id])
+        for index, line in enumerate(lines)
+        if line.quantity > free[line.equipment_id]
+    }
+
+
+def lock(ids: set[int]) -> dict[int, Equipment]:
+    """Lock the equipment a write touches, in the order of their keys."""
+    equipment = Equipment.objects.select_for_update().filter(pk__in=ids).order_by("pk")
+    return {item.pk: item for item in equipment}
 
 
 def _beyond(equipment: Equipment, asked: int, free: int) -> str:
     """« Barnums 3 × 3 m : 2 demandés, 1 libre sur la période. »"""
-    demanded = ngettext("%(count)d demandé", "%(count)d demandés", asked) % {"count": asked}
-    left = ngettext("%(count)d libre", "%(count)d libres", free) % {"count": free}
-    return f"{equipment.name} : {demanded}, {left} sur la période."
+    demanded = counted(asked, "demandé", "demandés")
+    return f"{equipment.name} : {demanded}, {counted(free, 'libre', 'libres')} sur la période."
 
 
 def _next_number() -> str:

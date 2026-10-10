@@ -1,5 +1,6 @@
 from django.shortcuts import get_object_or_404
 from ninja import Query, Router, Status
+from ninja.pagination import paginate
 
 from core.schemas import ErrorOut, ValidationErrorOut
 from equipment.models import Equipment, Loan
@@ -9,9 +10,14 @@ from equipment.schemas import (
     EquipmentIn,
     EquipmentOut,
     InventoryOut,
+    LoanCountsOut,
     LoanDepositsOut,
+    LoanFilters,
     LoanIn,
+    LoanItemOut,
     LoanOut,
+    LoanReturnIn,
+    LoanReturnOut,
     OccupancyOut,
 )
 from equipment.services.availability import availability_report
@@ -23,7 +29,16 @@ from equipment.services.inventory import (
     ordered_equipment,
     update_equipment,
 )
-from equipment.services.loans import create_loan, loan_deposits, loans, update_loan, with_state
+from equipment.services.lifecycle import cancel, check_out, reopen, return_loan
+from equipment.services.loans import (
+    create_loan,
+    listed_loans,
+    loan_counts,
+    loan_deposits,
+    loans,
+    update_loan,
+    with_state,
+)
 
 router = Router(tags=["equipment"])
 loans_router = Router(tags=["loans"])
@@ -110,6 +125,19 @@ def read_occupancy(request, equipment_id: int):
     return occupancy(get_object_or_404(Equipment, pk=equipment_id))
 
 
+@loans_router.get(
+    "/loans",
+    response={200: list[LoanItemOut], 401: ErrorOut, 403: ErrorOut, 422: ValidationErrorOut},
+    summary="List the loans",
+)
+@paginate
+def list_loans(request, filters: Query[LoanFilters]):
+    """The loans, by page: late, out, to prepare, confirmed, the committee's to
+    come, then those over, the latest first. A state keeps its own.
+    """
+    return filters.filter(listed_loans())
+
+
 @loans_router.post(
     "/loans",
     response={201: LoanOut, 400: ErrorOut, 401: ErrorOut, 403: ErrorOut, 422: ValidationErrorOut},
@@ -123,7 +151,17 @@ def record_loan(request, payload: LoanIn):
 
 
 # Declared before the operations on /loans/{loan_id}: Ninja tries the paths in
-# their order, and the id would take "deposits" for itself.
+# their order, and the id would take "counts" or "deposits" for itself.
+@loans_router.get(
+    "/loans/counts",
+    response={200: LoanCountsOut, 401: ErrorOut, 403: ErrorOut},
+    summary="Count the loans by state",
+)
+def count_loans(request):
+    """How many loans in all, and in each state: the counts of the list's chips."""
+    return loan_counts()
+
+
 @loans_router.get(
     "/loans/deposits",
     response={200: LoanDepositsOut, 401: ErrorOut, 403: ErrorOut},
@@ -153,3 +191,46 @@ def change_loan(request, loan_id: int, payload: LoanIn):
     its days, its own pieces left out.
     """
     return update_loan(get_object_or_404(Loan, pk=loan_id), payload)
+
+
+@loans_router.post(
+    "/loans/{loan_id}/checkout",
+    response={200: LoanOut, **REFUSALS},
+    summary="Hand the equipment of a loan over",
+)
+def checkout(request, loan_id: int):
+    """« Préparer la sortie »: the loan holds its equipment from today, even
+    before its start, and is refused if it is not free by then.
+    """
+    return check_out(get_object_or_404(Loan, pk=loan_id))
+
+
+@loans_router.post(
+    "/loans/{loan_id}/return",
+    response={200: LoanReturnOut, 400: ErrorOut, **REFUSALS},
+    summary="Record the return of a loan",
+)
+def record_return(request, loan_id: int, payload: LoanReturnIn):
+    """« Valider le retour »: what is damaged goes under repair, what is missing
+    is reported. The loans to come that the repairs leave short are named.
+    """
+    return return_loan(get_object_or_404(Loan, pk=loan_id), payload)
+
+
+@loans_router.post(
+    "/loans/{loan_id}/reopen",
+    response={200: LoanOut, **REFUSALS},
+    summary="Reopen a returned loan",
+)
+def reopen_loan(request, loan_id: int):
+    """« Rouvrir »: the return is undone, if the equipment is still free."""
+    return reopen(get_object_or_404(Loan, pk=loan_id))
+
+
+@loans_router.post(
+    "/loans/{loan_id}/cancel",
+    response={200: LoanOut, **REFUSALS},
+    summary="Cancel a loan",
+)
+def cancel_loan(request, loan_id: int):
+    return cancel(get_object_or_404(Loan, pk=loan_id))
