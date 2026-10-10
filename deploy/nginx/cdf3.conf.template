@@ -27,8 +27,9 @@ server {
     add_header Referrer-Policy "same-origin" always;
     proxy_hide_header X-Content-Type-Options;
     proxy_hide_header Referrer-Policy;
-    # Preproduction only (fictitious data): never indexed. Remove for production.
-    add_header X-Robots-Tag "noindex, nofollow" always;
+    # Preproduction only (fictitious data): never indexed. The production's
+    # rendering drops every line that ends with "preprod only".
+    add_header X-Robots-Tag "noindex, nofollow" always;  # preprod only
 
     client_max_body_size 20m;
 
@@ -61,6 +62,11 @@ server {
         internal;
         alias /var/www/cdf3/{{INSTANCE}}/shared/private/;
     }
+
+    # Locations of this instance alone, kept on the server rather than here:
+    # the production's redirects of the site it replaced. A pattern that
+    # matches no file includes nothing, as in the preproduction.
+    include /etc/nginx/snippets/cdf3-{{INSTANCE}}-*.conf;
 
     location / {
         proxy_pass http://cdf3_{{INSTANCE}}_web;

@@ -8,13 +8,14 @@
 #     sudo -u cdf3 cdf3-release-back preprod <commit-sha>
 #
 # Every commit gets its own release directory and virtual environment. The
-# database is migrated before the switch, so migrations must stay compatible
-# with the previous release (see CLAUDE.md). The `current` link is switched
-# atomically, and a release that fails its health check is rolled back.
+# database is dumped, then migrated before the switch, so migrations must stay
+# compatible with the previous release (see CLAUDE.md). The `current` link is
+# switched atomically, and a release that fails its health check is rolled back.
 set -euo pipefail
 
 readonly APP_ROOT=/var/www/cdf3
 readonly KEEP_RELEASES=3
+readonly KEEP_DUMPS=5
 readonly TAG=cdf3-release-back
 
 # Details go to the journal (journalctl -t cdf3-release-back); the caller only
@@ -60,6 +61,7 @@ main() {
 
     (cd "$release" && uv sync --locked --no-dev --quiet)
     manage "$release" check --deploy --fail-level WARNING
+    dump "$base" "$env_file" "$release" "$sha"
     manage "$release" migrate --noinput
     # The cache table the throttles count in; like migrate, it only creates
     # what is missing.
@@ -95,6 +97,27 @@ manage() {
     local release=$1
     shift
     (cd "$release" && DJANGO_SETTINGS_MODULE=config.settings.prod .venv/bin/python manage.py "$@")
+}
+
+# Dump the database before a release migrates it, so that a migration gone
+# wrong on real data can be undone by restoring the dump (deploy/README.md).
+# Nothing is dumped when no migration is pending; the last dumps are kept.
+dump() {
+    local base=$1 env_file=$2 release=$3 sha=$4 database dumps
+    if manage "$release" migrate --check >/dev/null; then
+        return 0
+    fi
+    database=$(sed -n 's/^POSTGRES_DB=//p' "$env_file")
+    dumps=$base/backups
+    install -d -m 700 "$dumps"
+    pg_dump --format=custom --file="$dumps/before-$sha.dump.partial" "$database"
+    mv "$dumps/before-$sha.dump.partial" "$dumps/before-$sha.dump"
+    echo "database dumped to $dumps/before-$sha.dump"
+    find "$dumps" -mindepth 1 -maxdepth 1 -name 'before-*.dump' -printf '%T@ %p\n' |
+        sort -rn | tail -n +$((KEEP_DUMPS + 1)) | cut -d' ' -f2- |
+        while read -r file; do
+            rm -f "$file"
+        done
 }
 
 # Point the `current` link at a release, atomically (rename over the old link).

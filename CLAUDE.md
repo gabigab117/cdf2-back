@@ -222,6 +222,7 @@ def test_loan_over_availability_rejected(api_client):
   - pas de renommage ni de suppression de colonne utilisée dans la même release ;
   - une colonne NOT NULL ajoutée porte un `db_default` en plus de son `default` : la release précédente insère encore des lignes sans elle ;
   - tout `RunPython` déclare un `reverse_code`.
+- **Dump avant migration** : le script de release sauvegarde la base quand une migration attend (`migrate --check`), et en garde les 5 derniers dumps. La restauration est décrite dans `deploy/README.md`.
 - **Limite d'un retour arrière** : la cascade d'une suppression est faite par Django, pas par la base, et le `SET_NULL` aussi. Une release qui rattache des objets à un modèle existant empêche la release précédente, qui ne connaît pas ces tables, de supprimer un objet qui en a : la base refuse la clé étrangère orpheline. C'est le cas des notes, tâches, postes et réservations d'un événement (phase 3), de ses documents (phase 4), d'un document joint à une note, de la réservation de matériel d'un événement et d'un document qui sert de convention signée à un prêt (phase 5). Les variantes `DB_*` de `on_delete` (Django 6.1), que la base applique, n'y changent rien : elles ne se mélangent pas aux variantes de Django dans un même modèle, ni entre modèles liés.
 - **Aucun hook n'a le droit de réécrire une migration.**
   - Les migrations sont exclues de ruff (`extend-exclude`), et les deux hooks ruff tournent avec `--force-exclude`. Piège : sans lui, `extend-exclude` ne s'applique pas aux chemins que pre-commit passe en argument.

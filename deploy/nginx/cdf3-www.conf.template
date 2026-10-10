@@ -1,0 +1,10 @@
+# Comité des fêtes v2, production instance: the www name of {{DOMAIN}}.
+#
+# Rendered from back/deploy/nginx/cdf3-www.conf.template after the instance's
+# site, in the same file; certbot then adds the TLS configuration. Every
+# request is sent to the domain itself, over HTTPS, as the old site did.
+server {
+    listen 80;
+    server_name www.{{DOMAIN}};
+    return 301 https://{{DOMAIN}}$request_uri;
+}
