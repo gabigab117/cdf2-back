@@ -56,9 +56,10 @@ Les fichiers iCalendar sont écrits en heure de Paris (`TZID=Europe/Paris`, avec
 config/          projet Django : settings (base, dev, test, prod), urls, NinjaAPI unique (api.py)
 accounts/        comptes et authentification JWT des membres du bureau (connexion par adresse e-mail), liste des membres (/api/board/members)
 core/            socle commun : santé du service, schémas partagés, traduction des erreurs en réponses 422
-dashboard/       tableaux de bord : celui du bureau (GET /api/board/overview, prochains événements et leur nombre) et celui d'un événement (GET /api/board/events/{id}/dashboard, compteurs de ses onglets), agrégats bornés que chaque domaine enrichit
+dashboard/       tableaux de bord : celui du bureau (GET /api/board/overview, prochains événements et leur nombre) et celui d'un événement (GET /api/board/events/{id}/dashboard, compteurs de ses onglets et bloc « Tâches »), agrégats bornés que chaque domaine enrichit
 events/          événements du comité : programme, « Bon à savoir », API du bureau (/api/board/events), API du site public (/api/public/), fichiers iCalendar et jeu de démonstration (seed_demo)
 notes/           notes du bureau, sur un événement ou générales, avec un niveau de réponses ; seul l'auteur les modifie (/api/board/notes)
+tasks/           tâches du bureau : assignation, échéance, faite ou non, dans l'ordre du bureau (/api/board/tasks)
 tests/           tests pytest, en miroir des apps
 openapi.json     schéma OpenAPI exporté (contrat avec le front)
 ```

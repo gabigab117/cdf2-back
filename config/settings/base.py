@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "dashboard",
     "events",
     "notes",
+    "tasks",
 ]
 
 AUTH_USER_MODEL = "accounts.User"

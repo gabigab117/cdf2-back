@@ -21,6 +21,7 @@ from dashboard.api import router as dashboard_router
 from events.api import public_router as events_public_router
 from events.api import router as events_router
 from notes.api import router as notes_router
+from tasks.api import router as tasks_router
 
 
 def serve_schema_if_enabled(view):
@@ -104,4 +105,5 @@ api.add_router("/board/", events_router)
 api.add_router("/board/", members_router)
 api.add_router("/board/", dashboard_router)
 api.add_router("/board/", notes_router)
+api.add_router("/board/", tasks_router)
 api.add_router("/public/", events_public_router)

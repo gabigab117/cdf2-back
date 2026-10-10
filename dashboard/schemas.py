@@ -1,6 +1,7 @@
 from ninja import Schema
 
 from events.schemas import EventItemOut
+from tasks.schemas import TaskOut
 
 
 class BoardOverviewOut(Schema):
@@ -14,7 +15,14 @@ class BoardOverviewOut(Schema):
 
 
 class EventDashboardOut(Schema):
-    """What an event's page shows of its tabs: their counts."""
+    """What an event's page shows of its tabs: their counts, and its tasks block."""
 
     # Its notes, replies aside.
     notes_count: int
+    # How many of its tasks are done, out of how many.
+    tasks_done: int
+    tasks_total: int
+    # Its next tasks, the one due the soonest first.
+    next_tasks: list[TaskOut]
+    # The tasks done last, in the order they were done.
+    recently_done_tasks: list[TaskOut]

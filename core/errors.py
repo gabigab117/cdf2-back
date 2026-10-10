@@ -37,6 +37,10 @@ _SCHEMA_MESSAGES: dict[str, Promise] = {
     # A date without its time zone: the board never types one, the front end
     # adds it, so the member is only told the date is not valid.
     "timezone_aware": forms.DateTimeField.default_error_messages["invalid"],
+    "date_parsing": forms.DateField.default_error_messages["invalid"],
+    "date_type": forms.DateField.default_error_messages["invalid"],
+    "date_from_datetime_parsing": forms.DateField.default_error_messages["invalid"],
+    "date_from_datetime_inexact": forms.DateField.default_error_messages["invalid"],
     "time_parsing": forms.TimeField.default_error_messages["invalid"],
     "time_type": forms.TimeField.default_error_messages["invalid"],
     "list_type": forms.MultipleChoiceField.default_error_messages["invalid_list"],

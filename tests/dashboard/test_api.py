@@ -9,6 +9,7 @@ from ninja_jwt.tokens import AccessToken
 from tests.accounts.factories import UserFactory
 from tests.events.factories import EventFactory
 from tests.notes.factories import NoteFactory, ReplyFactory
+from tests.tasks.factories import TaskFactory
 
 pytestmark = pytest.mark.django_db
 
@@ -190,4 +191,55 @@ def test_an_events_dashboard_counts_its_notes_replies_aside(board_client):
     ReplyFactory.create_batch(2, parent=note)
     NoteFactory()
 
-    assert board_client.get(event_dashboard_url(event.id)).json() == {"notes_count": 2}
+    assert board_client.get(event_dashboard_url(event.id)).json()["notes_count"] == 2
+
+
+def test_an_events_dashboard_tells_how_far_its_tasks_have_gone(board_client):
+    """
+    Given an event with four open tasks, due on 20, 8 and 12 October and one
+    without a due date, three tasks done on 25, 30 and 28 September, and a task
+    of another event
+    When a member opens the event's page
+    Then its tasks are counted three done out of seven
+    And its block shows the three open ones due the soonest, then the last two
+    done, in the order they were done
+    """
+    event = EventFactory()
+    now = timezone.now()
+    for title, due in [
+        ("Affichettes", 20),
+        ("Devis sono", 8),
+        ("Bénévoles", 12),
+        ("Plus tard", None),
+    ]:
+        TaskFactory(event=event, title=title, due_date=due and dt.date(2026, 10, due))
+    for title, days_ago in [("Bonbons", 15), ("Arrêté", 10), ("Goûter", 12)]:
+        TaskFactory(event=event, title=title, done_at=now - dt.timedelta(days=days_ago))
+    TaskFactory(title="Lots du loto")
+
+    body = board_client.get(event_dashboard_url(event.id)).json()
+
+    assert (body["tasks_done"], body["tasks_total"]) == (3, 7)
+    assert [task["title"] for task in body["next_tasks"]] == [
+        "Devis sono",
+        "Bénévoles",
+        "Affichettes",
+    ]
+    assert [task["title"] for task in body["recently_done_tasks"]] == ["Goûter", "Arrêté"]
+
+
+def test_an_events_dashboard_without_notes_or_tasks(board_client):
+    """
+    Given an event without notes or tasks
+    When a member opens its page
+    Then nothing is counted, and its tasks block is empty
+    """
+    event = EventFactory()
+
+    assert board_client.get(event_dashboard_url(event.id)).json() == {
+        "notes_count": 0,
+        "tasks_done": 0,
+        "tasks_total": 0,
+        "next_tasks": [],
+        "recently_done_tasks": [],
+    }

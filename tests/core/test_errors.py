@@ -8,6 +8,7 @@ CHOICE = "Sélectionnez un choix valide. Ce choix ne fait pas partie de ceux dis
 WHOLE_NUMBER = "Saisissez un nombre entier."
 NUMBER = "Saisissez un nombre."
 DATE_AND_TIME = "Saisissez une date et une heure valides."
+DATE = "Saisissez une date valide."
 TIME = "Saisissez une heure valide."
 VALUE = "Saisissez une valeur valide."
 
@@ -76,6 +77,10 @@ def test_errors_of_a_list_item_are_located_by_their_path():
         ("datetime_parsing", DATE_AND_TIME),
         ("datetime_type", DATE_AND_TIME),
         ("timezone_aware", DATE_AND_TIME),
+        ("date_parsing", DATE),
+        ("date_type", DATE),
+        ("date_from_datetime_parsing", DATE),
+        ("date_from_datetime_inexact", DATE),
         ("time_parsing", TIME),
         ("time_type", TIME),
         ("list_type", "Saisissez une liste de valeurs."),
