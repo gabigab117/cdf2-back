@@ -47,6 +47,7 @@ Règles de développement de ce dépôt, pour les humains comme pour les agents.
 
   Un test du schéma vérifie que toute opération sans `auth=None` déclare 401 et 403.
 - **Schémas et énumérations portent un nom unique dans tout le projet** (`EventCategory`, pas `Category`). Le schéma OpenAPI les range par nom de classe, et un doublon en remplace un autre sans erreur, dans le schéma comme dans les types du front (constaté sur Ninja 1.7.1). Les `TextChoices` se déclarent donc au niveau du module, nommés d'après leur modèle. Un test le vérifie.
+- **Un envoi de fichier** se déclare `file: File[UploadedFile]` et `payload: Form[XxxIn]` (multipart). Ninja aplatit `Form[...]` : une erreur de champ est située `["form", "category"]`, un fichier absent `["file", "file"]`. Les erreurs du service sur le fichier (vide, trop gros, type refusé, doublon) sont rattachées au champ `file`. Le front situe les trois racines (`body`, `form`, `file`) de la même façon.
 - **Le corps JSON d'une opération se déclare `payload: XxxIn`.** Ninja situe une erreur 422 du schéma sous le nom de ce paramètre (`["body", "payload", "email"]`), quand les services la situent directement sous le champ (`["body", "email"]`, voir `core/errors.py`). Le front retire ce nom pour placer les deux sous le même champ du formulaire : un autre nom ferait disparaître ses erreurs de champ.
 - **Énumération facultative** : elle se publie `XxxChoice | None`. La chaîne vide d'un `CharField` n'est pas un choix de l'énumération, et ferait échouer la réponse : le champ est donc `null=True`, avec un `# noqa: DJ001` qui en dit la raison. Les schémas ne laissant entrer que les choix ou `None`, « pas de valeur » n'a qu'une forme (étiquette d'une note).
 - **Erreur sur une ligne d'une liste** : un service la nomme par son chemin pointé (`programme.2.title`), que `core/errors.py` situe comme Ninja (`["body", "programme", 2, "title"]`).
@@ -116,10 +117,17 @@ def test_loan_over_availability_rejected(api_client):
   - Une condition qui traverse une relation multiple, comme les groupes d'un compte (`BOARD_MEMBERS`), renvoie une ligne par objet lié : `.distinct()`, et un test qui construit le doublon (un superuser membre de deux groupes).
 - **Opérations synchrones** (WSGI, gunicorn) : Ninja accepte les vues `async`, mais l'ORM et les services sont synchrones. Pas d'`async def` sans arbitrage. Un traitement long ne bloque jamais un worker : il passera par le framework de tâches de Django, à arbitrer quand il arrivera.
 - **Fichiers : tous privés.**
-  - Ils sont stockés hors racine web, sous un nom UUID ; le nom d'origine est en base.
-  - Ils sont servis par un endpoint qui contrôle l'accès : authentification, ou visibilité publique pour une photo publiée. On utilise `FileResponse` en dev et **nginx `X-Accel-Redirect`** en prod.
-  - Le type est vérifié **sur le contenu** à l'envoi, et la réponse porte le type enregistré, `X-Content-Type-Options: nosniff` et un `Content-Disposition` avec `filename*`.
+  - Ils sont stockés hors racine web (`MEDIA_ROOT`, obligatoire en production), sous un nom UUID ; le nom d'origine est en base.
+  - Ils sont servis par un endpoint qui contrôle l'accès : authentification, ou visibilité publique pour une photo publiée. On utilise `FileResponse` en dev et **nginx `X-Accel-Redirect`** en prod (`PRIVATE_FILES_ACCEL_PREFIX`, `documents/services/serving.py`).
+  - Le type est vérifié **sur le contenu** à l'envoi, et la réponse porte le type enregistré, `X-Content-Type-Options: nosniff` et un `Content-Disposition` écrit par `content_disposition_header` (`filename*` en UTF-8 pour un nom accentué).
   - Aucun dossier n'est servi directement par nginx.
+  - **Images en WebP, par django-imagekit** (`documents/services/files.py`) :
+    - toute image acceptée (JPEG, PNG, HEIC par pillow-heif, WebP) devient un WebP, redressé (`ImageOps.exif_transpose`, l'API publique de Pillow, plutôt que le `Transpose` de pilkit) et réduit à 4 000 px ;
+    - le WebP de Pillow n'écrit ni EXIF ni XMP sans qu'on les lui passe : la position GPS d'une photo ne reste pas ;
+    - un PDF se reconnaît à sa signature `%PDF-` : Python n'a plus de détection par le contenu depuis le retrait d'`imghdr`, et Pillow ne lit pas les PDF.
+  - **Un fichier s'écrit depuis les octets lus** (`ContentFile`) : créé dans le dossier, il en hérite le groupe que nginx lit. Un gros envoi, que Django déplace depuis son fichier temporaire, garderait le groupe de l'API.
+  - Un fichier n'est écrit qu'une fois l'objet validé (`full_clean`), et il est effacé si l'enregistrement échoue : aucun fichier orphelin.
+  - Les tests écrivent leurs fichiers dans un dossier temporaire (fixture automatique `private_files`), jamais dans le dépôt.
 - **Fonctionnalités natives d'abord**, à vérifier dans Context7 **avant** d'écrire, pas après. Ninja n'a pas les réflexes de DRF ; voici leurs équivalents, à connaître avant d'écrire un validateur ou une boucle de requête :
   - **pagination** :
     - `PageNumberPagination` en réglage global (`NINJA_PAGINATION_CLASS`, `NINJA_PAGINATION_PER_PAGE`), posée par le décorateur `@paginate` sur chaque opération qui renvoie une **collection de ressources** ;

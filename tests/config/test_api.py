@@ -216,6 +216,7 @@ def test_schemas_and_choices_have_unique_names():
         "accounts",
         "core",
         "dashboard",
+        "documents",
         "notes",
         "reservations",
         "stations",

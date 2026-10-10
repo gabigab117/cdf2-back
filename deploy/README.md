@@ -21,6 +21,17 @@ L'application tourne sur un VPS Ubuntu 24.04, derrière nginx, une instance par 
 
 - **Utilisateur dédié** : tout tourne sous un utilisateur système (`cdf3`), sans mot de passe, qui n'a accès à aucune autre application du serveur.
 - **Base de données** : PostgreSQL 17, en authentification « peer » par socket local. Aucun mot de passe de base n'existe.
+- **Fichiers privés** (`shared/private/`, les documents déposés) :
+  - `back.env` en donne le chemin à l'API (`MEDIA_ROOT`). Sans lui, la release échoue, plutôt que d'écrire dans son propre dossier ;
+  - seule l'API y écrit : c'est le seul chemin inscriptible de son unité (`ReadWritePaths`) ;
+  - nginx les lit, mais les autres comptes du serveur ne les lisent pas. Le dossier appartient à `cdf3`, groupe `www-data`, en `2750` : le bit setgid fait hériter ce groupe aux fichiers et dossiers créés dedans. Les réglages de production les créent en `640` et `750` :
+
+    ```bash
+    chgrp www-data /var/www/cdf3/<instance>/shared/private
+    chmod 2750 /var/www/cdf3/<instance>/shared/private
+    ```
+
+  - l'API écrit chaque fichier à partir des octets reçus. Un gros envoi, déplacé depuis son fichier temporaire, garderait le groupe `cdf3`, que nginx ne lit pas.
 
 ## Une release
 
@@ -88,7 +99,7 @@ Un push sur `main` dont les contrôles passent se déploie seul, par le job `dep
 | `systemd/cdf3-api@.service` | `/etc/systemd/system/` | gunicorn, une instance par environnement (`cdf3-api@preprod`). Durci : système en lecture seule, mémoire et CPU plafonnés |
 | `systemd/cdf3-flushtokens@.service`, `.timer` | `/etc/systemd/system/` | Purge nocturne des jetons, des sessions de l'admin et du cache, durcie comme l'API |
 | `sudoers/cdf3` | `/etc/sudoers.d/cdf3` (0440, vérifié par `visudo -cf`) | L'utilisateur de l'application ne peut que redémarrer ses propres services |
-| `nginx/cdf3.conf.template` | `/etc/nginx/sites-available/cdf3-<instance>` | Une seule origine : `/api/` et l'admin vers Django, le reste vers Nuxt. Les `{{…}}` sont remplacés à l'installation, puis certbot ajoute le TLS |
+| `nginx/cdf3.conf.template` | `/etc/nginx/sites-available/cdf3-<instance>` | Une seule origine : `/api/` et l'admin vers Django, le reste vers Nuxt. Les fichiers privés passent par l'emplacement interne `/_private/`, que Django désigne par `X-Accel-Redirect` une fois l'accès contrôlé. Les `{{…}}` sont remplacés à l'installation, puis certbot ajoute le TLS |
 
 Le serveur n'exécute jamais ces fichiers depuis le dépôt : il exécute les copies que root a installées. Modifier un script ou une unité ne prend effet qu'après sa réinstallation (suivie de `systemctl daemon-reload` pour une unité). Une étape ajoutée au script de release doit donc être installée **avant** de pousser le code qui en dépend.
 

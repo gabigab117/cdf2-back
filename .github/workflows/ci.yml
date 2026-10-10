@@ -66,6 +66,17 @@ jobs:
       - name: Tests with full coverage
         run: uv run pytest --cov
 
+      # The release runs these checks with the production settings, and fails
+      # on a warning: they run here first, with fictitious values, so that a
+      # build that passes never fails to deploy.
+      - name: Deployment checks
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.prod
+          SECRET_KEY: ci-throwaway-key-for-the-deployment-checks-only-0123456789
+          ALLOWED_HOSTS: example.org
+          MEDIA_ROOT: /tmp/private
+        run: uv run python manage.py check --deploy --fail-level WARNING
+
   deploy:
     name: Deploy to preproduction
     needs: checks

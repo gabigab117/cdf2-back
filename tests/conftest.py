@@ -8,6 +8,15 @@ from tests.accounts.factories import BoardMemberFactory
 # test is rolled back, and its counts with it, so no test inherits another's.
 
 
+@pytest.fixture(autouse=True)
+def private_files(settings, tmp_path):
+    """Every test stores its files in a folder of its own, removed after it: never
+    in the repository's private/ folder.
+    """
+    settings.MEDIA_ROOT = tmp_path / "private"
+    return settings.MEDIA_ROOT
+
+
 @pytest.fixture
 def board_member(db):
     return BoardMemberFactory()
