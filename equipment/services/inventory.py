@@ -167,8 +167,10 @@ def _check_shortage(equipment: Equipment, repair: int) -> None:
     loans = " ; ".join(_loan_label(loan) for loan in shortage.loans)
     raise ValidationError(
         {
-            field: f"Impossible : les prêts en prennent {shortage.taken} le "
-            f"{shortage.day:%d/%m/%Y} ({loans}), {remaining}. {edit}"
+            # The first day short, and the most the loans take from then on,
+            # which may come later.
+            field: f"Impossible : à partir du {shortage.day:%d/%m/%Y}, les prêts en prennent "
+            f"jusqu’à {shortage.taken} ({loans}), {remaining}. {edit}"
         }
     )
 

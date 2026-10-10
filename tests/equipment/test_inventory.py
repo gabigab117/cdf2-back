@@ -219,8 +219,8 @@ def test_a_piece_more_under_repair_is_refused_when_a_loan_would_lack_it(board_cl
     assert response.status_code == 422
     assert response.json() == refusal(
         "repair_quantity",
-        f"Impossible : les prêts en prennent 3 le {ahead(15):%d/%m/%Y} (P-2026-020, Club "
-        "de football), il n’en resterait que 2. Modifiez d’abord ce prêt.",
+        f"Impossible : à partir du {ahead(15):%d/%m/%Y}, les prêts en prennent jusqu’à 3 "
+        "(P-2026-020, Club de football), il n’en resterait que 2. Modifiez d’abord ce prêt.",
     )
     marquees.refresh_from_db()
     assert marquees.repair_quantity == 1
@@ -237,7 +237,8 @@ def test_a_lower_total_is_refused_when_loans_would_lack_pieces(
     Given 4 marquees, two lent from a fortnight ahead, two kept by the committee
     for its Halloween from the day after
     When a member lowers their total to 3, or to none
-    Then it is refused under the total, from the first day short, naming both loans
+    Then it is refused under the total, from the first day short, with the most
+    the loans take later on, naming both loans
     """
     marquees = EquipmentFactory()
     lend(marquees, 2, ahead(15), ahead(17), number="P-2026-020")
@@ -250,8 +251,9 @@ def test_a_lower_total_is_refused_when_loans_would_lack_pieces(
     assert response.status_code == 422
     assert response.json() == refusal(
         "total_quantity",
-        f"Impossible : les prêts en prennent 4 le {ahead(first_day):%d/%m/%Y} (P-2026-020, Club "
-        f"de football ; Halloween des enfants), {remaining}. Modifiez d’abord ces prêts.",
+        f"Impossible : à partir du {ahead(first_day):%d/%m/%Y}, les prêts en prennent jusqu’à 4 "
+        f"(P-2026-020, Club de football ; Halloween des enfants), {remaining}. Modifiez d’abord "
+        "ces prêts.",
     )
 
 
