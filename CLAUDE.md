@@ -123,6 +123,8 @@ def test_loan_over_availability_rejected(api_client):
   - Il le prend sur ses dates effectives : un prêt sorti le tient dès sa remise et, en retard, jusqu'à aujourd'hui (`Least` et `Greatest` en SQL).
   - La quantité prise est le pic journalier, calculé par un balayage des débuts et des fins de prêt, jamais par une boucle sur les jours.
   - Un rendu et un annulé ne prennent rien ; un usage comité prend son matériel comme un prêt.
+  - **Toute écriture qui change ce qui est libre verrouille d'abord** (`select_for_update`) : le prêt, puis les matériels de ses anciennes et nouvelles lignes, par ordre de clé, puis le compteur des numéros de l'année. Le même ordre partout : deux écritures ne s'attendent jamais en cercle, et ce qu'une écriture lit comme libre ne change pas avant qu'elle écrive. L'inventaire verrouille aussi son matériel avant d'en changer les pièces. Un test le vérifie sur les requêtes `FOR UPDATE` (`CaptureQueriesContext`).
+  - **Numéro d'un prêt** (`P-2026-018`) : un compteur par année (`LoanNumberSequence`), verrouillé dans la transaction de création, `get_or_create` compris. Un prêt invalide ne consomme aucun numéro : il est numéroté une fois validé.
 - **Fichiers : tous privés.**
   - Ils sont stockés hors racine web (`MEDIA_ROOT`, obligatoire en production), sous un nom UUID ; le nom d'origine est en base.
   - Ils sont servis par un endpoint qui contrôle l'accès : authentification, ou visibilité publique pour une photo publiée. On utilise `FileResponse` en dev et **nginx `X-Accel-Redirect`** en prod (`PRIVATE_FILES_ACCEL_PREFIX`, `documents/services/serving.py`).

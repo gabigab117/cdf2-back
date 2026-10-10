@@ -19,6 +19,7 @@ from core.api import router as core_router
 from core.errors import schema_error_details, validation_error_details
 from dashboard.api import router as dashboard_router
 from documents.api import router as documents_router
+from equipment.api import loans_router
 from equipment.api import router as equipment_router
 from events.api import public_router as events_public_router
 from events.api import router as events_router
@@ -114,4 +115,5 @@ api.add_router("/board/", stations_router)
 api.add_router("/board/", reservations_router)
 api.add_router("/board/", documents_router)
 api.add_router("/board/", equipment_router)
+api.add_router("/board/", loans_router)
 api.add_router("/public/", events_public_router)

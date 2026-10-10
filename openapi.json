@@ -1874,6 +1874,355 @@
         "title": "LoanConflictOut",
         "type": "object"
       },
+      "LoanDepositOut": {
+        "description": "The cheque a type of borrower leaves by default (A16).",
+        "properties": {
+          "amount": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "borrower_type": {
+            "$ref": "#/components/schemas/LoanBorrowerType"
+          }
+        },
+        "required": [
+          "borrower_type",
+          "amount"
+        ],
+        "title": "LoanDepositOut",
+        "type": "object"
+      },
+      "LoanDepositsOut": {
+        "description": "The default deposit of each type of borrower, in the order of the form.",
+        "properties": {
+          "deposits": {
+            "items": {
+              "$ref": "#/components/schemas/LoanDepositOut"
+            },
+            "title": "Deposits",
+            "type": "array"
+          }
+        },
+        "required": [
+          "deposits"
+        ],
+        "title": "LoanDepositsOut",
+        "type": "object"
+      },
+      "LoanEquipmentOut": {
+        "description": "The equipment of a loan's line.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "unit_value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Value"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "unit_value"
+        ],
+        "title": "LoanEquipmentOut",
+        "type": "object"
+      },
+      "LoanEventOut": {
+        "description": "The event a committee loan keeps its equipment for.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "LoanEventOut",
+        "type": "object"
+      },
+      "LoanIn": {
+        "description": "A loan as the board writes it: whole, every key required.\n\nIts values are checked by the model and the service, whose messages are in\nFrench. A committee loan keeps its equipment for an event: its borrower,\npurpose, phone and deposit are left empty.",
+        "properties": {
+          "borrower_name": {
+            "title": "Borrower Name",
+            "type": "string"
+          },
+          "borrower_type": {
+            "$ref": "#/components/schemas/LoanBorrowerType"
+          },
+          "deposit_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deposit Amount"
+          },
+          "end_date": {
+            "format": "date",
+            "title": "End Date",
+            "type": "string"
+          },
+          "event": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/LoanLineIn"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "notes": {
+            "title": "Notes",
+            "type": "string"
+          },
+          "phone": {
+            "title": "Phone",
+            "type": "string"
+          },
+          "purpose": {
+            "title": "Purpose",
+            "type": "string"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "borrower_type",
+          "borrower_name",
+          "purpose",
+          "phone",
+          "start_date",
+          "end_date",
+          "deposit_amount",
+          "event",
+          "notes",
+          "lines"
+        ],
+        "title": "LoanIn",
+        "type": "object"
+      },
+      "LoanLineIn": {
+        "description": "The pieces of one equipment a loan takes.",
+        "properties": {
+          "equipment": {
+            "title": "Equipment",
+            "type": "integer"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "equipment",
+          "quantity"
+        ],
+        "title": "LoanLineIn",
+        "type": "object"
+      },
+      "LoanLineOut": {
+        "properties": {
+          "damaged_quantity": {
+            "title": "Damaged Quantity",
+            "type": "integer"
+          },
+          "equipment": {
+            "$ref": "#/components/schemas/LoanEquipmentOut"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "missing_quantity": {
+            "title": "Missing Quantity",
+            "type": "integer"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "equipment",
+          "quantity",
+          "damaged_quantity",
+          "missing_quantity"
+        ],
+        "title": "LoanLineOut",
+        "type": "object"
+      },
+      "LoanOut": {
+        "description": "A loan, as its page shows it and its form edits it.",
+        "properties": {
+          "borrower_name": {
+            "title": "Borrower Name",
+            "type": "string"
+          },
+          "borrower_type": {
+            "$ref": "#/components/schemas/LoanBorrowerType"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BoardMemberOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "deposit_amount": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Deposit Amount",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "end_date": {
+            "format": "date",
+            "title": "End Date",
+            "type": "string"
+          },
+          "event": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LoanEventOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/LoanLineOut"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "notes": {
+            "title": "Notes",
+            "type": "string"
+          },
+          "number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Number"
+          },
+          "phone": {
+            "title": "Phone",
+            "type": "string"
+          },
+          "purpose": {
+            "title": "Purpose",
+            "type": "string"
+          },
+          "returned_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Returned At"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/LoanState"
+          },
+          "status": {
+            "$ref": "#/components/schemas/LoanStatus"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "borrower_type",
+          "borrower_name",
+          "display_name",
+          "purpose",
+          "phone",
+          "start_date",
+          "end_date",
+          "status",
+          "state",
+          "deposit_amount",
+          "event",
+          "notes",
+          "lines",
+          "created_by",
+          "created_at",
+          "returned_at"
+        ],
+        "title": "LoanOut",
+        "type": "object"
+      },
       "LoanState": {
         "description": "Where a loan stands today, its pill and its chip: its status, with its\ndates (A14). A committee loan has neither checkout nor return.",
         "enum": [
@@ -1886,6 +2235,17 @@
           "cancelled"
         ],
         "title": "LoanState",
+        "type": "string"
+      },
+      "LoanStatus": {
+        "description": "The statuses a loan records (A14). « À préparer » and « En retard » are\nstates worked out from its dates: see LoanState.",
+        "enum": [
+          "confirmed",
+          "out",
+          "returned",
+          "cancelled"
+        ],
+        "title": "LoanStatus",
         "type": "string"
       },
       "LoginIn": {
@@ -6307,6 +6667,305 @@
         "summary": "Add a type of place to an event",
         "tags": [
           "reservations"
+        ]
+      }
+    },
+    "/api/board/loans": {
+      "post": {
+        "description": "Record a loan, never beyond what is free over its days (A15): a loan to\nsomeone takes the next number of its year.",
+        "operationId": "equipment_api_record_loan",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoanIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanOut"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Record a loan",
+        "tags": [
+          "loans"
+        ]
+      }
+    },
+    "/api/board/loans/deposits": {
+      "get": {
+        "description": "The cheque each type of borrower leaves by default (A16).",
+        "operationId": "equipment_api_read_deposits",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanDepositsOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Read the default deposits",
+        "tags": [
+          "loans"
+        ]
+      }
+    },
+    "/api/board/loans/{loan_id}": {
+      "get": {
+        "operationId": "equipment_api_read_loan",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "loan_id",
+            "required": true,
+            "schema": {
+              "title": "Loan Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Read a loan",
+        "tags": [
+          "loans"
+        ]
+      },
+      "put": {
+        "description": "Rewrite a loan whole, its lines replaced, never beyond what is free over\nits days, its own pieces left out.",
+        "operationId": "equipment_api_change_loan",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "loan_id",
+            "required": true,
+            "schema": {
+              "title": "Loan Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoanIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Change a loan",
+        "tags": [
+          "loans"
         ]
       }
     },

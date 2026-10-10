@@ -24,6 +24,10 @@ OPERATIONS = [
     ("put", f"{EQUIPMENT}/1"),
     ("delete", f"{EQUIPMENT}/1"),
     ("get", f"{EQUIPMENT}/1/occupancy"),
+    ("post", "/api/board/loans"),
+    ("get", "/api/board/loans/deposits"),
+    ("get", "/api/board/loans/1"),
+    ("put", "/api/board/loans/1"),
 ]
 
 
@@ -46,7 +50,7 @@ def period(start, end):
 def test_an_anonymous_visitor_gets_a_401(client, method, path):
     """
     Given a visitor without an access token
-    When they read, add, change or delete equipment, or what is free
+    When they read, add, change or delete equipment or loans, or what is free
     Then the API refuses with a 401
     """
     response = getattr(client, method)(path)
@@ -59,7 +63,7 @@ def test_an_anonymous_visitor_gets_a_401(client, method, path):
 def test_an_account_outside_the_board_gets_a_403(method, path):
     """
     Given an active account outside the board
-    When it reads, adds, changes or deletes equipment, or what is free
+    When it reads, adds, changes or deletes equipment or loans, or what is free
     Then the API refuses with a 403
     """
     response = getattr(client_of(UserFactory()), method)(path)

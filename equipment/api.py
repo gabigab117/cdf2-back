@@ -2,13 +2,16 @@ from django.shortcuts import get_object_or_404
 from ninja import Query, Router, Status
 
 from core.schemas import ErrorOut, ValidationErrorOut
-from equipment.models import Equipment
+from equipment.models import Equipment, Loan
 from equipment.schemas import (
     AvailabilityOut,
     AvailabilityQuery,
     EquipmentIn,
     EquipmentOut,
     InventoryOut,
+    LoanDepositsOut,
+    LoanIn,
+    LoanOut,
     OccupancyOut,
 )
 from equipment.services.availability import availability_report
@@ -20,8 +23,10 @@ from equipment.services.inventory import (
     ordered_equipment,
     update_equipment,
 )
+from equipment.services.loans import create_loan, loan_deposits, loans, update_loan, with_state
 
 router = Router(tags=["equipment"])
+loans_router = Router(tags=["loans"])
 
 # What every operation on an existing equipment may answer besides its success.
 REFUSALS = {401: ErrorOut, 403: ErrorOut, 404: ErrorOut, 422: ValidationErrorOut}
@@ -103,3 +108,48 @@ def read_occupancy(request, equipment_id: int):
     eleven weeks.
     """
     return occupancy(get_object_or_404(Equipment, pk=equipment_id))
+
+
+@loans_router.post(
+    "/loans",
+    response={201: LoanOut, 400: ErrorOut, 401: ErrorOut, 403: ErrorOut, 422: ValidationErrorOut},
+    summary="Record a loan",
+)
+def record_loan(request, payload: LoanIn):
+    """Record a loan, never beyond what is free over its days (A15): a loan to
+    someone takes the next number of its year.
+    """
+    return Status(201, create_loan(payload, request.auth))
+
+
+# Declared before the operations on /loans/{loan_id}: Ninja tries the paths in
+# their order, and the id would take "deposits" for itself.
+@loans_router.get(
+    "/loans/deposits",
+    response={200: LoanDepositsOut, 401: ErrorOut, 403: ErrorOut},
+    summary="Read the default deposits",
+)
+def read_deposits(request):
+    """The cheque each type of borrower leaves by default (A16)."""
+    return loan_deposits()
+
+
+@loans_router.get(
+    "/loans/{loan_id}",
+    response={200: LoanOut, **REFUSALS},
+    summary="Read a loan",
+)
+def read_loan(request, loan_id: int):
+    return with_state(get_object_or_404(loans(), pk=loan_id))
+
+
+@loans_router.put(
+    "/loans/{loan_id}",
+    response={200: LoanOut, 400: ErrorOut, **REFUSALS},
+    summary="Change a loan",
+)
+def change_loan(request, loan_id: int, payload: LoanIn):
+    """Rewrite a loan whole, its lines replaced, never beyond what is free over
+    its days, its own pieces left out.
+    """
+    return update_loan(get_object_or_404(Loan, pk=loan_id), payload)
