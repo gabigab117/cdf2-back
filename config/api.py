@@ -17,6 +17,7 @@ from accounts.services.sessions import (
 )
 from core.api import router as core_router
 from core.errors import schema_error_details, validation_error_details
+from dashboard.api import router as dashboard_router
 from events.api import public_router as events_public_router
 from events.api import router as events_router
 
@@ -100,4 +101,5 @@ api.add_router("/", core_router)
 api.add_router("/auth/", accounts_router)
 api.add_router("/board/", events_router)
 api.add_router("/board/", members_router)
+api.add_router("/board/", dashboard_router)
 api.add_router("/public/", events_public_router)

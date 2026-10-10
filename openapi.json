@@ -73,6 +73,28 @@
         "title": "BoardMemberOut",
         "type": "object"
       },
+      "BoardOverviewOut": {
+        "description": "What the board's dashboard shows.",
+        "properties": {
+          "upcoming_events": {
+            "items": {
+              "$ref": "#/components/schemas/EventItemOut"
+            },
+            "title": "Upcoming Events",
+            "type": "array"
+          },
+          "upcoming_events_count": {
+            "title": "Upcoming Events Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "upcoming_events",
+          "upcoming_events_count"
+        ],
+        "title": "BoardOverviewOut",
+        "type": "object"
+      },
       "ErrorOut": {
         "properties": {
           "detail": {
@@ -1818,6 +1840,54 @@
         "summary": "List the board members",
         "tags": [
           "members"
+        ]
+      }
+    },
+    "/api/board/overview": {
+      "get": {
+        "description": "The dashboard's figures, whole: a bounded aggregate, never paginated.",
+        "operationId": "dashboard_api_overview",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardOverviewOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Board overview",
+        "tags": [
+          "dashboard"
         ]
       }
     },

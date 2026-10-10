@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "ninja_jwt.token_blacklist",
     "accounts",
     "core",
+    "dashboard",
     "events",
 ]
 
