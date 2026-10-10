@@ -75,6 +75,11 @@ jobs:
           SECRET_KEY: ci-throwaway-key-for-the-deployment-checks-only-0123456789
           ALLOWED_HOSTS: example.org
           MEDIA_ROOT: /tmp/private
+          SITE_URL: https://example.org
+          DEFAULT_FROM_EMAIL: Comité des fêtes <comite@example.org>
+          MAILER_HOST: smtp.example.org
+          MAILER_USERNAME: comite@example.org
+          MAILER_PASSWORD: not-a-real-password
         run: uv run python manage.py check --deploy --fail-level WARNING
 
   deploy:

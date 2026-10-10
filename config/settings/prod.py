@@ -24,6 +24,26 @@ PRIVATE_FILES_ACCEL_PREFIX = "/_private/"
 FILE_UPLOAD_PERMISSIONS = 0o640
 FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o750
 
+# The links of the emails, and their sender: no default on the server.
+SITE_URL = env("SITE_URL")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
+
+# The emails go through the SMTP of the association's account (D7): implicit
+# SSL, on port 465 by default. The timeout is short: an email is sent during
+# the request of the deposit, which must not wait long on it.
+MAILERS = {
+    "default": {
+        "BACKEND": "django.core.mail.backends.smtp.EmailBackend",
+        "OPTIONS": {
+            "host": env("MAILER_HOST"),
+            "use_ssl": True,
+            "username": env("MAILER_USERNAME"),
+            "password": env("MAILER_PASSWORD"),
+            "timeout": 10,
+        },
+    },
+}
+
 SILENCED_SYSTEM_CHECKS = [
     # The HTTP to HTTPS redirect is done by nginx, before Django is reached.
     "security.W008",

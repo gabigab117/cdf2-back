@@ -126,6 +126,30 @@ DOCUMENT_MAX_SIZE = env.int("DOCUMENT_MAX_SIZE", default=15 * 1024 * 1024)
 # access (X-Accel-Redirect). None: Django sends them itself, as in development.
 PRIVATE_FILES_ACCEL_PREFIX = None
 
+# The address of the site, for the links of the emails: the API never learns
+# the front end's from a request. Required on the server.
+SITE_URL = env("SITE_URL", default="http://localhost:3000")
+
+# The emails of the application (D7, D8). The console shows them in
+# development, and the tests replace every mailer with an outbox in memory;
+# the server sends them through the association's SMTP (prod.py). No EMAIL_*
+# setting: they are deprecated by MAILERS, which refuses to mix with them.
+MAILERS = {
+    "default": {"BACKEND": "django.core.mail.backends.console.EmailBackend"},
+}
+# The sender: the address of the account the emails go through. Required on the server.
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="Comité des fêtes <comite@example.org>")
+
+# The application's journal (A9: 7 days on the server, by systemd): what the
+# project's loggers report goes to the error stream. Django's own loggers are
+# left as they are.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"journal": {"class": "logging.StreamHandler"}},
+    "loggers": {"documents": {"handlers": ["journal"], "level": "WARNING"}},
+}
+
 # The admin is moved off its well-known path by the environment.
 ADMIN_URL = env("ADMIN_URL")
 

@@ -115,6 +115,7 @@ def test_loan_over_availability_rejected(api_client):
   - **Une requête qui regroupe ses lignes ignore `Meta.ordering`** (`annotate(Count(...))`, depuis Django 3.1) : elle redonne son ordre par `order_by()`, sans quoi les lignes sortent dans l'ordre de la base.
   - **Un booléen annoté qui compare un champ nullable** (« la note est-elle de ce membre ? ») s'écrit `Case(When(author=member, then=Value(True)), default=Value(False))`. Une simple égalité (`ExpressionWrapper(Q(...))`) vaut NULL, et non faux, quand le champ est nul (auteur supprimé) : la réponse échouerait.
   - Une condition qui traverse une relation multiple, comme les groupes d'un compte (`BOARD_MEMBERS`), renvoie une ligne par objet lié : `.distinct()`, et un test qui construit le doublon (un superuser membre de deux groupes).
+  - Deux conditions sur la même relation multiple, comme le groupe « Bureau » et un autre groupe, se posent en deux `filter()` successifs, chacun sa jointure. Dans un seul, elles porteraient sur le même groupe, qui devrait avoir les deux noms (destinataires d'un e-mail, `documents/services/notifications.py`).
 - **Opérations synchrones** (WSGI, gunicorn) : Ninja accepte les vues `async`, mais l'ORM et les services sont synchrones. Pas d'`async def` sans arbitrage. Un traitement long ne bloque jamais un worker : il passera par le framework de tâches de Django, à arbitrer quand il arrivera.
 - **Fichiers : tous privés.**
   - Ils sont stockés hors racine web (`MEDIA_ROOT`, obligatoire en production), sous un nom UUID ; le nom d'origine est en base.
@@ -128,6 +129,14 @@ def test_loan_over_availability_rejected(api_client):
   - **Un fichier s'écrit depuis les octets lus** (`ContentFile`) : créé dans le dossier, il en hérite le groupe que nginx lit. Un gros envoi, que Django déplace depuis son fichier temporaire, garderait le groupe de l'API.
   - Un fichier n'est écrit qu'une fois l'objet validé (`full_clean`), et il est effacé si l'enregistrement échoue : aucun fichier orphelin.
   - Les tests écrivent leurs fichiers dans un dossier temporaire (fixture automatique `private_files`), jamais dans le dépôt.
+- **E-mails** (`documents/services/notifications.py`).
+  - Le réglage `MAILERS` de Django 6.1, jamais un réglage `EMAIL_*` : la console en dev, le SMTP du compte de l'association sur le serveur (SSL implicite, délai de 10 s), une boîte en mémoire dans les tests (`mailoutbox`).
+  - Un e-mail part après la transaction qui le motive (`transaction.on_commit`) : une écriture annulée n'envoie rien.
+  - Un message par destinataire, qui ne voit pas les autres, et tous sur une seule connexion (`mail.mailers.default.send_messages`).
+  - Un échec d'envoi (`OSError`, dont `SMTPException`, une connexion refusée ou un délai dépassé) est écrit au journal, et n'annule pas l'écriture faite.
+  - Un lien d'e-mail se construit sur `SITE_URL` : l'API n'apprend pas l'adresse du front d'une requête.
+  - Le texte nomme l'objet et mène à lui, la page demandant de se connecter. Il ne contient ni fichier ni contenu.
+- **Journal** : `LOGGING` envoie les loggers du projet sur la sortie d'erreur, que systemd garde 7 jours sur le serveur. Ceux de Django restent tels quels (`disable_existing_loggers: False`), et rien ne coupe la propagation, sans quoi `caplog` ne verrait rien.
 - **Fonctionnalités natives d'abord**, à vérifier dans Context7 **avant** d'écrire, pas après. Ninja n'a pas les réflexes de DRF ; voici leurs équivalents, à connaître avant d'écrire un validateur ou une boucle de requête :
   - **pagination** :
     - `PageNumberPagination` en réglage global (`NINJA_PAGINATION_CLASS`, `NINJA_PAGINATION_PER_PAGE`), posée par le décorateur `@paginate` sur chaque opération qui renvoie une **collection de ressources** ;

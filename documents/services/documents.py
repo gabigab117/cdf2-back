@@ -5,6 +5,7 @@ A document awaits review until a member validates it. The minutes of a meeting
 then create the tasks they list: on their event, or general tasks (D10).
 """
 
+from functools import partial
 from pathlib import PurePath
 
 from django.conf import settings
@@ -19,6 +20,7 @@ from accounts.models import User
 from documents.models import Document, DocumentCategory, DocumentStatus
 from documents.schemas import DocumentIn, DocumentUploadIn
 from documents.services.files import read_upload
+from documents.services.notifications import notify_document_upload
 from tasks.models import Task
 from tasks.schemas import TaskIn
 from tasks.services.tasks import create_task
@@ -79,6 +81,8 @@ def upload_document(file: File, data: DocumentUploadIn, member: User) -> Documen
     try:
         with transaction.atomic():
             document.save()
+            # Told once the deposit is done: a deposit undone tells no one (D7).
+            transaction.on_commit(partial(notify_document_upload, document.pk))
     except BaseException:
         document.file.delete(save=False)
         raise
