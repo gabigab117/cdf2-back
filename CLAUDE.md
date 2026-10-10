@@ -56,6 +56,7 @@ Règles de développement de ce dépôt, pour les humains comme pour les agents.
   - elle déclare `response={200: None, …}` et un `openapi_extra` qui donne le type de contenu du 200 (`CALENDAR_FILE` dans `events/api.py`, `XLSX_FILE` dans `reservations/api.py`) ;
   - ses erreurs restent en JSON (`ErrorOut`).
 - **Ordre des routes** : Ninja les essaie dans leur ordre de déclaration, et un paramètre de chemin accepte un point. `/events/{slug}.ics` est donc déclaré avant `/events/{slug}`, qui prendrait sinon `loto-2026.ics` pour une adresse. Un test le vérifie.
+  - Un paramètre déclaré `{task_id}` accepte aussi un mot : sans convertisseur dans le chemin, Ninja ne contrôle son type qu'après avoir choisi la route. `/tasks/general` et `/documents/counts` sont donc déclarés avant `/tasks/{task_id}` et `/documents/{document_id}`. Sinon, la route à paramètre les prend : 405 pour les tâches, dont elle n'a pas de lecture (constaté), 422 pour les documents.
 - Tout changement d'API se signale explicitement : le front doit régénérer ses types. Un changement n'est terminé que quand le front compile avec les nouveaux types.
 
 ## Tests (pytest)
