@@ -60,7 +60,8 @@ class AccountState(models.TextChoices):
     it signs in, or it is deactivated.
     """
 
-    PENDING = "pending", "Invitation envoyée"
+    # « Pending » alone is what awaits the board (« à traiter »).
+    PENDING_INVITATION = "pending_invitation", "Invitation envoyée"
     ACTIVE = "active", "Actif"
     INACTIVE = "inactive", "Désactivé"
 

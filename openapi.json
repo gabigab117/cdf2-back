@@ -107,7 +107,7 @@
       "AccountState": {
         "description": "Where an account stands, worked out: its invitation awaits a password,\nit signs in, or it is deactivated.",
         "enum": [
-          "pending",
+          "pending_invitation",
           "active",
           "inactive"
         ],

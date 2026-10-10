@@ -156,7 +156,7 @@ def test_the_superuser_invites_a_board_member(superuser_client, mailoutbox, sett
             "first_name": "Julie",
             "last_name": "Petit",
             "position": "Secrétaire",
-            "state": "pending",
+            "state": "pending_invitation",
             "is_superuser": False,
             "link_sent_at": DjangoJSONEncoder().default(julie.link_sent_at),
         },
@@ -295,7 +295,7 @@ def test_the_accounts_are_listed_by_name_with_their_state(superuser_client, supe
     response = superuser_client.get(ACCOUNTS)
 
     assert [(item["first_name"], item["state"]) for item in response.json()["items"]] == [
-        ("Anne", AccountState.PENDING),
+        ("Anne", AccountState.PENDING_INVITATION),
         ("Bruno", AccountState.ACTIVE),
         ("Chloé", AccountState.INACTIVE),
         ("Gabriel", AccountState.ACTIVE),

@@ -59,7 +59,10 @@ def accounts() -> QuerySet[User]:
     """
     state = Case(
         When(is_active=False, then=Value(AccountState.INACTIVE)),
-        When(password__startswith=UNUSABLE_PASSWORD_PREFIX, then=Value(AccountState.PENDING)),
+        When(
+            password__startswith=UNUSABLE_PASSWORD_PREFIX,
+            then=Value(AccountState.PENDING_INVITATION),
+        ),
         default=Value(AccountState.ACTIVE),
         output_field=CharField(),
     )
