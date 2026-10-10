@@ -211,5 +211,5 @@ def test_schemas_and_choices_have_unique_names():
         if cls.__module__.split(".")[0] in project_apps
     )
 
-    assert {"events", "accounts", "core", "dashboard"} <= project_apps
+    assert {"events", "accounts", "core", "dashboard", "notes"} <= project_apps
     assert [name for name, count in names.items() if count > 1] == []

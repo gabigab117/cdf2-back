@@ -8,6 +8,7 @@ from ninja_jwt.tokens import AccessToken
 
 from tests.accounts.factories import UserFactory
 from tests.events.factories import EventFactory
+from tests.notes.factories import NoteFactory, ReplyFactory
 
 pytestmark = pytest.mark.django_db
 
@@ -136,3 +137,57 @@ def test_an_empty_board_has_no_event_to_come(board_client):
         "upcoming_events": [],
         "upcoming_events_count": 0,
     }
+
+
+# An event's dashboard
+
+
+def event_dashboard_url(event_id):
+    return f"/api/board/events/{event_id}/dashboard"
+
+
+def test_an_events_dashboard_is_reserved_to_signed_in_members(client):
+    """
+    Given a visitor without a session
+    When they ask for an event's dashboard
+    Then they are refused with a 401
+    """
+    assert client.get(event_dashboard_url(1)).status_code == 401
+
+
+def test_an_events_dashboard_is_refused_to_accounts_outside_the_board():
+    """
+    Given an account outside the board, signed in
+    When it asks for an event's dashboard
+    Then it is refused with a 403
+    """
+    client = Client(headers={"Authorization": f"Bearer {AccessToken.for_user(UserFactory())}"})
+
+    assert client.get(event_dashboard_url(1)).status_code == 403
+
+
+def test_the_dashboard_of_an_unknown_event_is_not_found(board_client):
+    """
+    Given no event of id 987654
+    When a member asks for its dashboard
+    Then the answer is a 404, in French
+    """
+    response = board_client.get(event_dashboard_url(987654))
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Introuvable."}
+
+
+def test_an_events_dashboard_counts_its_notes_replies_aside(board_client):
+    """
+    Given an event with two notes, one of them answered twice, and a note on
+    another event
+    When a member opens the event's page
+    Then its notes are counted two: replies and other events' notes aside
+    """
+    event = EventFactory()
+    note, _ = NoteFactory.create_batch(2, event=event)
+    ReplyFactory.create_batch(2, parent=note)
+    NoteFactory()
+
+    assert board_client.get(event_dashboard_url(event.id)).json() == {"notes_count": 2}

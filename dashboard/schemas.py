@@ -11,3 +11,10 @@ class BoardOverviewOut(Schema):
     upcoming_events: list[EventItemOut]
     # How many events are to come in all, those above included.
     upcoming_events_count: int
+
+
+class EventDashboardOut(Schema):
+    """What an event's page shows of its tabs: their counts."""
+
+    # Its notes, replies aside.
+    notes_count: int
