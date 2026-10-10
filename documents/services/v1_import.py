@@ -25,16 +25,17 @@ from django.utils import timezone
 from documents.models import Document, DocumentCategory, DocumentSource, DocumentStatus
 from documents.services.files import StoredFile, read_upload
 
-# The columns of the CSV, by what they hold.
+# The columns of the CSV, by what they hold, named as in its header. The
+# others it has (the former name, the v1's id) are not taken over.
 FILE = "Nouveau nom"
 TYPE = "Type"
 ISSUER = "Émetteur"
 REFERENCE = "Numéro"
-DATE = "Date"
-AMOUNT = "Montant TTC"
+DATE = "Date du document"
+AMOUNT = "Montant TTC (€)"
 SUBJECT = "Objet"
 REMARK = "Remarque"
-COLLECTION = "Collection"
+COLLECTION = "Collection v1"
 COLUMNS = (FILE, TYPE, ISSUER, REFERENCE, DATE, AMOUNT, SUBJECT, REMARK, COLLECTION)
 
 # The category of each type of the v1 (the README's table).

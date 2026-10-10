@@ -18,6 +18,7 @@ from documents.models import Document, DocumentCategory
 from documents.schemas import DocumentUploadIn
 from documents.services.documents import upload_document
 from documents.services.notifications import DOCUMENT_NOTIFICATION_GROUP
+from documents.services.v1_import import COLUMNS
 from tests.accounts.factories import BoardMemberFactory, UserFactory
 from tests.documents.samples import pdf, upload
 
@@ -187,8 +188,9 @@ def test_the_take_over_of_the_v1_tells_no_one(
     (tmp_path / "facture.pdf").write_bytes(pdf())
     csv_path = tmp_path / "correspondance.csv"
     csv_path.write_text(
-        "Nouveau nom;Type;Émetteur;Numéro;Date;Montant TTC;Objet;Remarque;Collection\n"
-        "facture.pdf;Facture;Animation 60;F-1;05/09/2025;37,57;Sono;;Factures\n",
+        ";".join(COLUMNS)
+        + "\n"
+        + "facture.pdf;Facture;Animation 60;F-1;05/09/2025;37,57;Sono;;Factures\n",
         encoding="utf-8-sig",
     )
 
