@@ -1,17 +1,49 @@
+import datetime as dt
+
 from ninja import Schema
 
+from accounts.schemas import BoardMemberOut
 from events.schemas import EventItemOut
 from tasks.schemas import TaskOut
+
+
+class OverviewEventOut(EventItemOut):
+    """An event of the dashboard's table: a row of the board's list, with how
+    far its tasks have gone and how many notes it has.
+    """
+
+    tasks_done: int
+    tasks_total: int
+    # Its notes, replies aside.
+    notes_count: int
+
+
+class NoteEventOut(Schema):
+    id: int
+    title: str
+
+
+class LatestNoteOut(Schema):
+    """A note of the board, as the dashboard lists the latest."""
+
+    id: int
+    # None once the author's account is deleted.
+    author: BoardMemberOut | None
+    text: str
+    created_at: dt.datetime
+    # None for a general note.
+    event: NoteEventOut | None
 
 
 class BoardOverviewOut(Schema):
     """What the board's dashboard shows."""
 
-    # The next events, the closest first, drafts included as in the sidebar:
-    # the rows of the board's list.
-    upcoming_events: list[EventItemOut]
+    # The next events, the closest first, drafts included as in the sidebar.
+    upcoming_events: list[OverviewEventOut]
     # How many events are to come in all, those above included.
     upcoming_events_count: int
+    # The board's latest notes, every event together, replies aside.
+    latest_notes: list[LatestNoteOut]
 
 
 class EventDashboardOut(Schema):

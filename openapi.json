@@ -117,9 +117,16 @@
       "BoardOverviewOut": {
         "description": "What the board's dashboard shows.",
         "properties": {
+          "latest_notes": {
+            "items": {
+              "$ref": "#/components/schemas/LatestNoteOut"
+            },
+            "title": "Latest Notes",
+            "type": "array"
+          },
           "upcoming_events": {
             "items": {
-              "$ref": "#/components/schemas/EventItemOut"
+              "$ref": "#/components/schemas/OverviewEventOut"
             },
             "title": "Upcoming Events",
             "type": "array"
@@ -131,7 +138,8 @@
         },
         "required": [
           "upcoming_events",
-          "upcoming_events_count"
+          "upcoming_events_count",
+          "latest_notes"
         ],
         "title": "BoardOverviewOut",
         "type": "object"
@@ -669,6 +677,53 @@
         "title": "Input",
         "type": "object"
       },
+      "LatestNoteOut": {
+        "description": "A note of the board, as the dashboard lists the latest.",
+        "properties": {
+          "author": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BoardMemberOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "event": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NoteEventOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "author",
+          "text",
+          "created_at",
+          "event"
+        ],
+        "title": "LatestNoteOut",
+        "type": "object"
+      },
       "LoginIn": {
         "properties": {
           "email": {
@@ -713,6 +768,24 @@
           "position"
         ],
         "title": "MeOut",
+        "type": "object"
+      },
+      "NoteEventOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "NoteEventOut",
         "type": "object"
       },
       "NoteIn": {
@@ -865,6 +938,83 @@
           "pinned"
         ],
         "title": "NoteUpdateIn",
+        "type": "object"
+      },
+      "OverviewEventOut": {
+        "description": "An event of the dashboard's table: a row of the board's list, with how\nfar its tasks have gone and how many notes it has.",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/EventCategory"
+          },
+          "ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "notes_count": {
+            "title": "Notes Count",
+            "type": "integer"
+          },
+          "published": {
+            "title": "Published",
+            "type": "boolean"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "start_label": {
+            "title": "Start Label",
+            "type": "string"
+          },
+          "starts_at": {
+            "format": "date-time",
+            "title": "Starts At",
+            "type": "string"
+          },
+          "tasks_done": {
+            "title": "Tasks Done",
+            "type": "integer"
+          },
+          "tasks_total": {
+            "title": "Tasks Total",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "venue_name": {
+            "title": "Venue Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "slug",
+          "category",
+          "starts_at",
+          "ends_at",
+          "start_label",
+          "venue_name",
+          "published",
+          "tasks_done",
+          "tasks_total",
+          "notes_count"
+        ],
+        "title": "OverviewEventOut",
         "type": "object"
       },
       "PagedBoardMemberOut": {

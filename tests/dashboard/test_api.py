@@ -6,7 +6,7 @@ from django.test import Client
 from django.utils import timezone
 from ninja_jwt.tokens import AccessToken
 
-from tests.accounts.factories import UserFactory
+from tests.accounts.factories import BoardMemberFactory, UserFactory
 from tests.events.factories import EventFactory
 from tests.notes.factories import NoteFactory, ReplyFactory
 from tests.reservations.factories import TicketTypeFactory, reserve
@@ -87,11 +87,11 @@ def test_the_overview_gives_the_next_five_events_and_how_many_are_to_come(board_
     assert body["upcoming_events_count"] == 6
 
 
-def test_an_event_of_the_overview_is_a_row_of_the_list(board_client):
+def test_an_event_of_the_overview_is_a_row_of_the_list_with_its_counts(board_client):
     """
-    Given a published event to come
+    Given a published event to come, without tasks or notes
     When a member opens the dashboard
-    Then the event is written as a row of the board's list
+    Then the event is written as a row of the board's list, with its counts
     """
     halloween = EventFactory(
         title="Halloween",
@@ -113,6 +113,9 @@ def test_an_event_of_the_overview_is_a_row_of_the_list(board_client):
             "start_label": "Ouverture",
             "venue_name": "Salle des fêtes",
             "published": True,
+            "tasks_done": 0,
+            "tasks_total": 0,
+            "notes_count": 0,
         }
     ]
 
@@ -139,7 +142,92 @@ def test_an_empty_board_has_no_event_to_come(board_client):
     assert board_client.get(OVERVIEW).json() == {
         "upcoming_events": [],
         "upcoming_events_count": 0,
+        "latest_notes": [],
     }
+
+
+# Tasks and notes of the events to come
+
+
+def test_each_event_to_come_counts_its_tasks_and_notes(board_client):
+    """
+    Given Halloween with 14 tasks, 9 of them done, and 6 notes, two of them
+    answered, and the loto with nothing yet
+    When a member opens the dashboard
+    Then Halloween counts 9 tasks done out of 14 and 6 notes, the loto none:
+    replies are not notes, and the two counts do not multiply each other
+    """
+    halloween = EventFactory(title="Halloween", starts_at=in_days(2))
+    EventFactory(title="Loto", starts_at=in_days(5))
+    TaskFactory.create_batch(9, event=halloween, done_at=timezone.now())
+    TaskFactory.create_batch(5, event=halloween)
+    for note in NoteFactory.create_batch(6, event=halloween)[:2]:
+        ReplyFactory.create_batch(2, parent=note)
+
+    rows = board_client.get(OVERVIEW).json()["upcoming_events"]
+
+    assert [
+        (row["title"], row["tasks_done"], row["tasks_total"], row["notes_count"]) for row in rows
+    ] == [
+        ("Halloween", 9, 14, 6),
+        ("Loto", 0, 0, 0),
+    ]
+
+
+def test_the_counts_take_a_fixed_number_of_queries(board_client, django_assert_max_num_queries):
+    """
+    Given five events to come, each with tasks and notes
+    When a member opens the dashboard
+    Then the rows, their counts, the count of events and the latest notes take
+    a fixed number of queries
+    """
+    for event in EventFactory.create_batch(5):
+        TaskFactory.create_batch(2, event=event)
+        NoteFactory.create_batch(2, event=event)
+
+    # Authentication (2), the rows, the count of events, the latest notes.
+    with django_assert_max_num_queries(5):
+        board_client.get(OVERVIEW)
+
+
+# Latest notes
+
+
+def test_the_dashboard_shows_the_three_latest_notes_of_any_event(board_client):
+    """
+    Given four notes written in turn, the third a general one, and a reply
+    written last
+    When a member opens the dashboard
+    Then it shows the three latest notes, the latest first, replies aside,
+    each with its author and its event, or none
+    """
+    halloween = EventFactory(title="Halloween des enfants")
+    julie = BoardMemberFactory(first_name="Julie", last_name="Roux")
+    first, second, general, latest = (
+        NoteFactory(event=halloween, author=julie, text="Note 1"),
+        NoteFactory(event=halloween, author=julie, text="Note 2"),
+        NoteFactory(event=None, author=julie, text="Assemblée générale en janvier."),
+        NoteFactory(event=halloween, author=julie, text="Salle réservée de 13 h à 20 h."),
+    )
+    ReplyFactory(parent=first, text="Réponse")
+    latest.refresh_from_db()
+
+    notes = board_client.get(OVERVIEW).json()["latest_notes"]
+
+    assert [note["text"] for note in notes] == [latest.text, general.text, second.text]
+    assert notes[0] == {
+        "id": latest.id,
+        "author": {
+            "id": julie.id,
+            "first_name": "Julie",
+            "last_name": "Roux",
+            "email": julie.email,
+        },
+        "text": "Salle réservée de 13 h à 20 h.",
+        "created_at": iso(latest.created_at),
+        "event": {"id": halloween.id, "title": "Halloween des enfants"},
+    }
+    assert notes[1]["event"] is None
 
 
 # An event's dashboard
