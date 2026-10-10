@@ -205,14 +205,16 @@ def test_the_take_over_of_the_v1_tells_no_one(
         smtplib.SMTPServerDisconnected("Connection unexpectedly closed"),
         ConnectionRefusedError("Connection refused"),
         TimeoutError("timed out"),
+        ValueError("Invalid address ''"),
     ],
-    ids=["hung-up", "refused", "timed-out"],
+    ids=["hung-up", "refused", "timed-out", "no-sender"],
 )
 def test_a_failure_to_send_leaves_the_deposit_done_and_is_written_to_the_journal(
     failure, mailoutbox, django_capture_on_commit_callbacks, monkeypatch, caplog
 ):
     """
-    Given the SMTP server that hangs up, refuses the connection or does not answer
+    Given the SMTP server that hangs up, refuses the connection or does not
+    answer, or a sender left empty, which the SMTP backend refuses to send with
     When a member deposits a document
     Then the deposit is done, the member told nothing of it
     And the failure is written to the application's journal

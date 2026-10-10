@@ -134,7 +134,7 @@ def test_loan_over_availability_rejected(api_client):
   - Le réglage `MAILERS` de Django 6.1, jamais un réglage `EMAIL_*` : la console en dev, le SMTP du compte de l'association sur le serveur (SSL implicite, délai de 10 s), une boîte en mémoire dans les tests (`mailoutbox`).
   - Un e-mail part après la transaction qui le motive (`transaction.on_commit`) : une écriture annulée n'envoie rien.
   - Un message par destinataire, qui ne voit pas les autres, et tous sur une seule connexion (`mail.mailers.default.send_messages`).
-  - Un échec d'envoi (`OSError`, dont `SMTPException`, une connexion refusée ou un délai dépassé) est écrit au journal, et n'annule pas l'écriture faite.
+  - Un échec d'envoi est écrit au journal, et n'annule pas l'écriture faite : une `OSError` (dont `SMTPException`, une connexion refusée ou un délai dépassé), ou la `ValueError` que lève le backend SMTP pour une adresse qu'il ne peut pas employer, comme un expéditeur laissé vide.
   - Un lien d'e-mail se construit sur `SITE_URL` : l'API n'apprend pas l'adresse du front d'une requête.
   - Le texte nomme l'objet et mène à lui, la page demandant de se connecter. Il ne contient ni fichier ni contenu.
 - **Journal** : `LOGGING` envoie les loggers du projet sur la sortie d'erreur, que systemd garde 7 jours sur le serveur. Ceux de Django restent tels quels (`disable_existing_loggers: False`), et rien ne coupe la propagation, sans quoi `caplog` ne verrait rien.

@@ -46,9 +46,10 @@ def notify_document_upload(document_id: int) -> None:
     ]
     try:
         mail.mailers.default.send_messages(messages)
-    except OSError:
+    except (OSError, ValueError):
         # SMTPException is an OSError, and so are a refused connection and a
-        # timeout.
+        # timeout. The SMTP backend raises a ValueError for an address it
+        # cannot send with, such as a sender left empty in the configuration.
         logger.exception("The notification of document %s could not be sent.", document_id)
 
 
