@@ -45,8 +45,8 @@ extend-exclude = ["**/migrations/*"]
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "N", "UP", "B", "C4", "SIM", "DJ", "RUF", "ANN"]
 # French typography: the texts shown to users take the typographic apostrophe,
-# as the front end does.
-allowed-confusables = ["’"]
+# as the front end does, and a multiplication sign in a size (« 3 × 3 m »).
+allowed-confusables = ["’", "×"]
 
 [tool.ruff.lint.per-file-ignores]
 # Type annotations are mandatory on business code only. The framework layer

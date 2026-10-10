@@ -85,6 +85,67 @@
         "title": "AssignmentOut",
         "type": "object"
       },
+      "AvailabilityOut": {
+        "description": "What every equipment offers over a period: a bounded aggregate (A7).",
+        "properties": {
+          "end": {
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EquipmentAvailabilityOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "items"
+        ],
+        "title": "AvailabilityOut",
+        "type": "object"
+      },
+      "AvailabilityQuery": {
+        "description": "The period of a loan, both days counted, and the loan being edited.",
+        "properties": {
+          "end": {
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "exclude_loan": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exclude Loan"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "AvailabilityQuery",
+        "type": "object"
+      },
       "BoardMemberOut": {
         "description": "A board member as the board space names them, the lead of an event.\n\nAn account created without a name, such as with createsuperuser, is named\nafter its email address.",
         "properties": {
@@ -824,6 +885,104 @@
         "title": "DocumentUploadIn",
         "type": "object"
       },
+      "EquipmentAvailabilityOut": {
+        "description": "What one equipment offers over the period.",
+        "properties": {
+          "conflicts": {
+            "items": {
+              "$ref": "#/components/schemas/LoanConflictOut"
+            },
+            "title": "Conflicts",
+            "type": "array"
+          },
+          "equipment": {
+            "$ref": "#/components/schemas/EquipmentOut"
+          },
+          "free": {
+            "title": "Free",
+            "type": "integer"
+          },
+          "taken": {
+            "title": "Taken",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "equipment",
+          "taken",
+          "free",
+          "conflicts"
+        ],
+        "title": "EquipmentAvailabilityOut",
+        "type": "object"
+      },
+      "EquipmentCategory": {
+        "enum": [
+          "furniture",
+          "marquees",
+          "sound_and_light",
+          "kitchen",
+          "street_and_games"
+        ],
+        "title": "EquipmentCategory",
+        "type": "string"
+      },
+      "EquipmentOut": {
+        "description": "An equipment of the inventory.",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/EquipmentCategory"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "repair_note": {
+            "title": "Repair Note",
+            "type": "string"
+          },
+          "repair_quantity": {
+            "title": "Repair Quantity",
+            "type": "integer"
+          },
+          "storage_location": {
+            "title": "Storage Location",
+            "type": "string"
+          },
+          "total_quantity": {
+            "title": "Total Quantity",
+            "type": "integer"
+          },
+          "unit_value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Value"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "category",
+          "storage_location",
+          "total_quantity",
+          "repair_quantity",
+          "unit_value",
+          "repair_note"
+        ],
+        "title": "EquipmentOut",
+        "type": "object"
+      },
       "ErrorOut": {
         "properties": {
           "detail": {
@@ -1482,6 +1641,104 @@
         ],
         "title": "LatestNoteOut",
         "type": "object"
+      },
+      "LoanBorrowerType": {
+        "enum": [
+          "association",
+          "individual",
+          "municipality",
+          "committee"
+        ],
+        "title": "LoanBorrowerType",
+        "type": "string"
+      },
+      "LoanBriefOut": {
+        "description": "A loan, as a line of a list or of a planning names it.",
+        "properties": {
+          "borrower_type": {
+            "$ref": "#/components/schemas/LoanBorrowerType"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "end_date": {
+            "format": "date",
+            "title": "End Date",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Number"
+          },
+          "purpose": {
+            "title": "Purpose",
+            "type": "string"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/LoanState"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "display_name",
+          "purpose",
+          "borrower_type",
+          "state",
+          "start_date",
+          "end_date"
+        ],
+        "title": "LoanBriefOut",
+        "type": "object"
+      },
+      "LoanConflictOut": {
+        "description": "A loan that takes the equipment over the period, and how many pieces.",
+        "properties": {
+          "loan": {
+            "$ref": "#/components/schemas/LoanBriefOut"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "loan",
+          "quantity"
+        ],
+        "title": "LoanConflictOut",
+        "type": "object"
+      },
+      "LoanState": {
+        "description": "Where a loan stands today, its pill and its chip: its status, with its\ndates (A14). A committee loan has neither checkout nor return.",
+        "enum": [
+          "to_prepare",
+          "confirmed",
+          "out",
+          "overdue",
+          "committee",
+          "returned",
+          "cancelled"
+        ],
+        "title": "LoanState",
+        "type": "string"
       },
       "LoginIn": {
         "properties": {
@@ -4049,6 +4306,101 @@
         "summary": "Validate a document",
         "tags": [
           "documents"
+        ]
+      }
+    },
+    "/api/board/equipment/availability": {
+      "get": {
+        "description": "For each equipment: what the loans take of it at their daily peak over\nthe period, what remains free, and those loans. The loan being edited is\nleft out: its own pieces do not stand in its way.",
+        "operationId": "equipment_api_read_availability",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "start",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Start",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "End",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "exclude_loan",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Exclude Loan"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvailabilityOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Tell what equipment is free over a period",
+        "tags": [
+          "equipment"
         ]
       }
     },

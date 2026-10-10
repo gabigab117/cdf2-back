@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "core",
     "dashboard",
     "documents",
+    "equipment",
     "events",
     "notes",
     "reservations",

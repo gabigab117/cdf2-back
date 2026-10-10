@@ -118,6 +118,11 @@ def test_loan_over_availability_rejected(api_client):
   - Une condition qui traverse une relation multiple, comme les groupes d'un compte (`BOARD_MEMBERS`), renvoie une ligne par objet lié : `.distinct()`, et un test qui construit le doublon (un superuser membre de deux groupes).
   - Deux conditions sur la même relation multiple, comme le groupe « Bureau » et un autre groupe, se posent en deux `filter()` successifs, chacun sa jointure. Dans un seul, elles porteraient sur le même groupe, qui devrait avoir les deux noms (destinataires d'un e-mail, `documents/services/notifications.py`).
 - **Opérations synchrones** (WSGI, gunicorn) : Ninja accepte les vues `async`, mais l'ORM et les services sont synchrones. Pas d'`async def` sans arbitrage. Un traitement long ne bloque jamais un worker : il passera par le framework de tâches de Django, à arbitrer quand il arrivera.
+- **Disponibilités du matériel** (`equipment/services/availability.py`) : une seule règle, côté serveur, que tous les écrans lisent.
+  - Un prêt prend son matériel sur ses jours, tous deux comptés : un retour et une sortie le même jour sont en conflit.
+  - Il le prend sur ses dates effectives : un prêt sorti le tient dès sa remise et, en retard, jusqu'à aujourd'hui (`Least` et `Greatest` en SQL).
+  - La quantité prise est le pic journalier, calculé par un balayage des débuts et des fins de prêt, jamais par une boucle sur les jours.
+  - Un rendu et un annulé ne prennent rien ; un usage comité prend son matériel comme un prêt.
 - **Fichiers : tous privés.**
   - Ils sont stockés hors racine web (`MEDIA_ROOT`, obligatoire en production), sous un nom UUID ; le nom d'origine est en base.
   - Ils sont servis par un endpoint qui contrôle l'accès : authentification, ou visibilité publique pour une photo publiée. On utilise `FileResponse` en dev et **nginx `X-Accel-Redirect`** en prod (`PRIVATE_FILES_ACCEL_PREFIX`, `documents/services/serving.py`).
@@ -205,7 +210,7 @@ def test_loan_over_availability_rejected(api_client):
   - pas de renommage ni de suppression de colonne utilisée dans la même release ;
   - une colonne NOT NULL ajoutée porte un `db_default` en plus de son `default` : la release précédente insère encore des lignes sans elle ;
   - tout `RunPython` déclare un `reverse_code`.
-- **Limite d'un retour arrière** : la cascade d'une suppression est faite par Django, pas par la base, et le `SET_NULL` aussi. Une release qui rattache des objets à un modèle existant empêche la release précédente, qui ne connaît pas ces tables, de supprimer un objet qui en a : la base refuse la clé étrangère orpheline. C'est le cas des notes, tâches, postes et réservations d'un événement (phase 3), de ses documents (phase 4), et d'un document joint à une note.
+- **Limite d'un retour arrière** : la cascade d'une suppression est faite par Django, pas par la base, et le `SET_NULL` aussi. Une release qui rattache des objets à un modèle existant empêche la release précédente, qui ne connaît pas ces tables, de supprimer un objet qui en a : la base refuse la clé étrangère orpheline. C'est le cas des notes, tâches, postes et réservations d'un événement (phase 3), de ses documents (phase 4), d'un document joint à une note, et de la réservation de matériel d'un événement (phase 5).
 - **Aucun hook n'a le droit de réécrire une migration.**
   - Les migrations sont exclues de ruff (`extend-exclude`), et les deux hooks ruff tournent avec `--force-exclude`. Piège : sans lui, `extend-exclude` ne s'applique pas aux chemins que pre-commit passe en argument.
   - Les hooks de `ruff-pre-commit` le portent déjà dans leur `entry` amont : ne pas le repasser en `args`, ruff refuse le doublon.
