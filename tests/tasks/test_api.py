@@ -19,6 +19,7 @@ TASKS = "/api/board/tasks"
 # refusal comes before the task is looked up.
 OPERATIONS = [
     ("get", f"{TASKS}?event=1"),
+    ("get", f"{TASKS}/general"),
     ("post", TASKS),
     ("put", f"{TASKS}/1"),
     ("delete", f"{TASKS}/1"),
@@ -174,6 +175,34 @@ def test_listing_the_tasks_reads_their_people_at_once(board_client, django_asser
 
 
 # Writing
+
+
+def test_the_general_tasks_are_those_without_an_event(board_client):
+    """
+    Given two general tasks, the later one due first, and a task of an event
+    When a member lists the general tasks
+    Then they come by page, the one due the soonest first, without the event's
+    """
+    later = TaskFactory(event=None, title="Préparer l’AG", due_date=dt.date(2026, 11, 20))
+    sooner = TaskFactory(event=None, title="Renouveler l’assurance", due_date=dt.date(2026, 11, 15))
+    TaskFactory(title="Valider le devis sono")
+
+    response = board_client.get(f"{TASKS}/general")
+
+    assert response.status_code == 200
+    assert response.json()["count"] == 2
+    assert [task["title"] for task in response.json()["items"]] == [sooner.title, later.title]
+    assert response.json()["items"][0]["event"] is None
+
+
+def test_the_general_tasks_are_not_taken_for_a_task_id(board_client):
+    """
+    Given the path of the general tasks, which reads like the path of a task
+    When a member lists them
+    Then the list answers: the path of a task, which only writes, does not
+    take "general" for an id and refuse the reading
+    """
+    assert board_client.get(f"{TASKS}/general").status_code == 200
 
 
 def test_a_member_creates_a_task_of_an_event(board_client, board_member):

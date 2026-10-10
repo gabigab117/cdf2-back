@@ -1,4 +1,5 @@
-"""The board's tasks, and how far they have gone.
+"""The board's tasks, and how far they have gone: those of an event, or the
+general tasks, which have none (D10).
 
 Open tasks come first, the one due the soonest first, those without a due date
 last; then the tasks done, in the order they were done.
@@ -8,7 +9,6 @@ from django.db.models import Count, F, Q, QuerySet
 from django.utils import timezone
 
 from accounts.models import User
-from events.models import Event
 from tasks.models import Task
 from tasks.schemas import TaskIn
 
@@ -20,28 +20,31 @@ def ordered(tasks: QuerySet[Task]) -> QuerySet[Task]:
     )
 
 
-def event_tasks(event_id: int) -> QuerySet[Task]:
-    """The tasks of an event, in the board's order, with their people."""
+def event_tasks(event_id: int | None) -> QuerySet[Task]:
+    """The tasks of an event, or the general tasks for none, in the board's
+    order, with their people.
+    """
+    # Compared with None, the event matches the tasks that have none (IS NULL).
     tasks = Task.objects.filter(event_id=event_id).select_related("assignee", "created_by")
     return ordered(tasks)
 
 
-def task_counts(event: Event) -> tuple[int, int]:
-    """How many tasks of an event are done, out of how many."""
-    counts = event.tasks.aggregate(
+def task_counts(event_id: int | None) -> tuple[int, int]:
+    """How many tasks of an event, or general tasks, are done, out of how many."""
+    counts = Task.objects.filter(event_id=event_id).aggregate(
         done=Count("pk", filter=Q(done_at__isnull=False)), total=Count("pk")
     )
     return counts["done"], counts["total"]
 
 
-def next_tasks(event: Event, count: int) -> list[Task]:
-    """The open tasks of an event due the soonest."""
-    return list(event_tasks(event.pk).filter(done_at__isnull=True)[:count])
+def next_tasks(event_id: int | None, count: int) -> list[Task]:
+    """The open tasks of an event, or general tasks, due the soonest."""
+    return list(event_tasks(event_id).filter(done_at__isnull=True)[:count])
 
 
-def recently_done_tasks(event: Event, count: int) -> list[Task]:
-    """The tasks of an event done last, in the order they were done."""
-    done = event_tasks(event.pk).filter(done_at__isnull=False).order_by("-done_at", "-pk")
+def recently_done_tasks(event_id: int | None, count: int) -> list[Task]:
+    """The tasks of an event, or general tasks, done last, in the order they were done."""
+    done = event_tasks(event_id).filter(done_at__isnull=False).order_by("-done_at", "-pk")
     return list(reversed(done[:count]))
 
 

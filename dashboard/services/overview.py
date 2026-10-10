@@ -11,6 +11,8 @@ from django.db.models import Count, Q
 from events.models import Event
 from events.services.periods import events_in_period
 from notes.models import Note
+from tasks.models import Task
+from tasks.services.tasks import next_tasks, recently_done_tasks, task_counts
 
 # How many events the dashboard's table shows. It sums up: the board's list
 # holds them all, and the table leads to it when more are to come.
@@ -18,6 +20,21 @@ UPCOMING_EVENTS_COUNT = 5
 
 # How many notes the « Notes du bureau » block shows, every event together.
 LATEST_NOTES_COUNT = 3
+
+# The « Tâches générales » block, like the tasks block of an event's page: the
+# next tasks, then the last ones done, struck through.
+NEXT_GENERAL_TASKS_COUNT = 3
+RECENTLY_DONE_GENERAL_TASKS_COUNT = 2
+
+
+@dataclass(frozen=True)
+class GeneralTasks:
+    """The tasks without an event (D10), as their block shows them."""
+
+    tasks_done: int
+    tasks_total: int
+    next_tasks: list[Task]
+    recently_done_tasks: list[Task]
 
 
 @dataclass(frozen=True)
@@ -27,12 +44,13 @@ class BoardOverview:
     upcoming_events: list[Event]
     upcoming_events_count: int
     latest_notes: list[Note]
+    general_tasks: GeneralTasks
 
 
 def board_overview() -> BoardOverview:
     """The next events, drafts included as in the sidebar, with how far their
     tasks have gone and how many notes they have; how many events are to come;
-    and the board's latest notes.
+    the board's latest notes; and the general tasks.
     """
     upcoming = events_in_period("upcoming")
     # Counted for the rows shown only. The two counts join two lists: distinct
@@ -50,4 +68,15 @@ def board_overview() -> BoardOverview:
             .select_related("author", "event")
             .order_by("-created_at", "-pk")[:LATEST_NOTES_COUNT]
         ),
+        general_tasks=_general_tasks(),
+    )
+
+
+def _general_tasks() -> GeneralTasks:
+    tasks_done, tasks_total = task_counts(None)
+    return GeneralTasks(
+        tasks_done=tasks_done,
+        tasks_total=tasks_total,
+        next_tasks=next_tasks(None, NEXT_GENERAL_TASKS_COUNT),
+        recently_done_tasks=recently_done_tasks(None, RECENTLY_DONE_GENERAL_TASKS_COUNT),
     )

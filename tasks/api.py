@@ -21,6 +21,19 @@ def list_tasks(request, event: int):
     return event_tasks(event)
 
 
+# Declared before the operations on /tasks/{task_id}: Ninja tries the paths in
+# their order, and the id would take "general" for itself, then answer 405.
+@router.get(
+    "/tasks/general",
+    response={200: list[TaskOut], 401: ErrorOut, 403: ErrorOut, 422: ValidationErrorOut},
+    summary="List the general tasks",
+)
+@paginate
+def list_general_tasks(request):
+    """The tasks without an event (D10), by page, in the same order as an event's."""
+    return event_tasks(None)
+
+
 @router.post(
     "/tasks",
     response={

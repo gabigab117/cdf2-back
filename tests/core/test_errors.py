@@ -73,6 +73,8 @@ def test_errors_of_a_list_item_are_located_by_their_path():
         ("float_parsing", NUMBER),
         ("float_type", NUMBER),
         ("finite_number", NUMBER),
+        ("decimal_parsing", NUMBER),
+        ("decimal_type", NUMBER),
         ("datetime_from_date_parsing", DATE_AND_TIME),
         ("datetime_parsing", DATE_AND_TIME),
         ("datetime_type", DATE_AND_TIME),

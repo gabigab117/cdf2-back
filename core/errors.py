@@ -31,6 +31,8 @@ _SCHEMA_MESSAGES: dict[str, Promise] = {
     "float_parsing": forms.FloatField.default_error_messages["invalid"],
     "float_type": forms.FloatField.default_error_messages["invalid"],
     "finite_number": forms.FloatField.default_error_messages["invalid"],
+    "decimal_parsing": forms.DecimalField.default_error_messages["invalid"],
+    "decimal_type": forms.DecimalField.default_error_messages["invalid"],
     "datetime_from_date_parsing": forms.DateTimeField.default_error_messages["invalid"],
     "datetime_parsing": forms.DateTimeField.default_error_messages["invalid"],
     "datetime_type": forms.DateTimeField.default_error_messages["invalid"],

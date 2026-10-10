@@ -22,7 +22,13 @@ DOCUMENTS = "/api/board/documents"
 # Every operation on the documents, the paths of a single document naming any
 # id: a refusal comes before the document is looked up.
 OPERATIONS = [
+    ("get", DOCUMENTS),
     ("post", DOCUMENTS),
+    ("get", f"{DOCUMENTS}/counts"),
+    ("get", f"{DOCUMENTS}/1"),
+    ("put", f"{DOCUMENTS}/1"),
+    ("delete", f"{DOCUMENTS}/1"),
+    ("post", f"{DOCUMENTS}/1/validate"),
     ("get", f"{DOCUMENTS}/1/file"),
 ]
 
@@ -72,7 +78,7 @@ def body(response):
 def test_an_anonymous_visitor_gets_a_401(client, method, path):
     """
     Given a visitor without an access token
-    When they deposit or read a document
+    When they list, deposit, read, correct, validate or delete documents
     Then the API refuses with a 401
     """
     response = getattr(client, method)(path)
@@ -85,7 +91,7 @@ def test_an_anonymous_visitor_gets_a_401(client, method, path):
 def test_an_account_outside_the_board_gets_a_403(method, path):
     """
     Given an active account outside the board
-    When it deposits or reads a document
+    When it lists, deposits, reads, corrects, validates or deletes documents
     Then the API refuses with a 403
     """
     response = getattr(client_of(UserFactory()), method)(path)
@@ -127,6 +133,14 @@ def test_a_member_deposits_a_document_to_review(board_client, board_member, priv
         "due_date": None,
         "paid_on": None,
         "event": {"id": event.id, "title": event.title},
+        "extracted": {
+            "delivery_date": None,
+            "items": "",
+            "abstract": "",
+            "decisions": [],
+            "tasks": [],
+            "key_date": "",
+        },
         "note": "",
         "uploaded_by": member_json(board_member),
         "validated_by": None,

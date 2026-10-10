@@ -117,6 +117,9 @@
       "BoardOverviewOut": {
         "description": "What the board's dashboard shows.",
         "properties": {
+          "general_tasks": {
+            "$ref": "#/components/schemas/GeneralTasksOut"
+          },
           "latest_notes": {
             "items": {
               "$ref": "#/components/schemas/LatestNoteOut"
@@ -139,7 +142,8 @@
         "required": [
           "upcoming_events",
           "upcoming_events_count",
-          "latest_notes"
+          "latest_notes",
+          "general_tasks"
         ],
         "title": "BoardOverviewOut",
         "type": "object"
@@ -174,6 +178,40 @@
         "title": "DocumentCategory",
         "type": "string"
       },
+      "DocumentCountsOut": {
+        "description": "How many documents answer a search, in all and by category, whatever\nthe category shown: the chips of the list.",
+        "properties": {
+          "invoice": {
+            "title": "Invoice",
+            "type": "integer"
+          },
+          "minutes": {
+            "title": "Minutes",
+            "type": "integer"
+          },
+          "misc": {
+            "title": "Misc",
+            "type": "integer"
+          },
+          "order": {
+            "title": "Order",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "invoice",
+          "order",
+          "minutes",
+          "misc"
+        ],
+        "title": "DocumentCountsOut",
+        "type": "object"
+      },
       "DocumentEventOut": {
         "description": "The event a document belongs to.",
         "properties": {
@@ -191,6 +229,356 @@
           "title"
         ],
         "title": "DocumentEventOut",
+        "type": "object"
+      },
+      "DocumentExtractedIn": {
+        "description": "What belongs to one kind of document, whole, every key required: the\nservice keeps the keys of the document's category.",
+        "properties": {
+          "abstract": {
+            "title": "Abstract",
+            "type": "string"
+          },
+          "decisions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Decisions",
+            "type": "array"
+          },
+          "delivery_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivery Date"
+          },
+          "items": {
+            "title": "Items",
+            "type": "string"
+          },
+          "key_date": {
+            "title": "Key Date",
+            "type": "string"
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/ExtractedTaskIn"
+            },
+            "title": "Tasks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "delivery_date",
+          "items",
+          "abstract",
+          "decisions",
+          "tasks",
+          "key_date"
+        ],
+        "title": "DocumentExtractedIn",
+        "type": "object"
+      },
+      "DocumentExtractedOut": {
+        "description": "What belongs to the document's kind: a key of another kind is left empty.",
+        "properties": {
+          "abstract": {
+            "default": "",
+            "title": "Abstract",
+            "type": "string"
+          },
+          "decisions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Decisions",
+            "type": "array"
+          },
+          "delivery_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivery Date"
+          },
+          "items": {
+            "default": "",
+            "title": "Items",
+            "type": "string"
+          },
+          "key_date": {
+            "default": "",
+            "title": "Key Date",
+            "type": "string"
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/ExtractedTaskOut"
+            },
+            "title": "Tasks",
+            "type": "array"
+          }
+        },
+        "title": "DocumentExtractedOut",
+        "type": "object"
+      },
+      "DocumentFilters": {
+        "description": "The documents a search keeps: every filter given applies.",
+        "properties": {
+          "event": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event"
+          },
+          "search": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Search"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DocumentStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "DocumentFilters",
+        "type": "object"
+      },
+      "DocumentIn": {
+        "description": "A document as a member corrects it: whole, every key required.\n\nIts values are checked by the model, whose messages are in French.",
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "category": {
+            "$ref": "#/components/schemas/DocumentCategory"
+          },
+          "document_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Date"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "event": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event"
+          },
+          "extracted": {
+            "$ref": "#/components/schemas/DocumentExtractedIn"
+          },
+          "issuer": {
+            "title": "Issuer",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "paid_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid On"
+          },
+          "reference": {
+            "title": "Reference",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "category",
+          "title",
+          "event",
+          "document_date",
+          "issuer",
+          "reference",
+          "amount",
+          "due_date",
+          "paid_on",
+          "note",
+          "extracted"
+        ],
+        "title": "DocumentIn",
+        "type": "object"
+      },
+      "DocumentItemOut": {
+        "description": "A document as the list shows it.",
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "category": {
+            "$ref": "#/components/schemas/DocumentCategory"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "event": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DocumentEventOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/DocumentStatus"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "category",
+          "status",
+          "event",
+          "amount",
+          "date"
+        ],
+        "title": "DocumentItemOut",
+        "type": "object"
+      },
+      "DocumentListFilters": {
+        "description": "The filters of the list, which also keeps a single category.",
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DocumentCategory"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "event": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event"
+          },
+          "search": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Search"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DocumentStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "DocumentListFilters",
         "type": "object"
       },
       "DocumentOut": {
@@ -254,6 +642,9 @@
                 "type": "null"
               }
             ]
+          },
+          "extracted": {
+            "$ref": "#/components/schemas/DocumentExtractedOut"
           },
           "id": {
             "title": "Id",
@@ -355,6 +746,7 @@
           "due_date",
           "paid_on",
           "event",
+          "extracted",
           "note",
           "uploaded_by",
           "validated_by",
@@ -886,6 +1278,91 @@
         "title": "EventOut",
         "type": "object"
       },
+      "ExtractedTaskIn": {
+        "description": "A task the minutes of a meeting list, to create when they are validated.",
+        "properties": {
+          "assignee": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignee"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "assignee"
+        ],
+        "title": "ExtractedTaskIn",
+        "type": "object"
+      },
+      "ExtractedTaskOut": {
+        "properties": {
+          "assignee": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignee"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "title": "ExtractedTaskOut",
+        "type": "object"
+      },
+      "GeneralTasksOut": {
+        "description": "The tasks without an event (D10), as the dashboard's block shows them.",
+        "properties": {
+          "next_tasks": {
+            "items": {
+              "$ref": "#/components/schemas/TaskOut"
+            },
+            "title": "Next Tasks",
+            "type": "array"
+          },
+          "recently_done_tasks": {
+            "items": {
+              "$ref": "#/components/schemas/TaskOut"
+            },
+            "title": "Recently Done Tasks",
+            "type": "array"
+          },
+          "tasks_done": {
+            "title": "Tasks Done",
+            "type": "integer"
+          },
+          "tasks_total": {
+            "title": "Tasks Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "tasks_done",
+          "tasks_total",
+          "next_tasks",
+          "recently_done_tasks"
+        ],
+        "title": "GeneralTasksOut",
+        "type": "object"
+      },
       "HealthOut": {
         "properties": {
           "database": {
@@ -1287,6 +1764,27 @@
           "count"
         ],
         "title": "PagedBoardMemberOut",
+        "type": "object"
+      },
+      "PagedDocumentItemOut": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "count"
+        ],
+        "title": "PagedDocumentItemOut",
         "type": "object"
       },
       "PagedEventItemOut": {
@@ -2649,6 +3147,153 @@
       }
     },
     "/api/board/documents": {
+      "get": {
+        "description": "The documents, by page, the latest date first: a search keeps those holding\nits words, in their texts, amount or event.",
+        "operationId": "documents_api_list_documents",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/DocumentStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "event",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event"
+            }
+          },
+          {
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/DocumentCategory"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedDocumentItemOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "List the documents",
+        "tags": [
+          "documents"
+        ]
+      },
       "post": {
         "description": "Record a file, as the member classifies it: it awaits review.\n\nThe type is read from the content: a PDF, or an image, converted to WebP.",
         "operationId": "documents_api_upload",
@@ -2770,6 +3415,354 @@
         ]
       }
     },
+    "/api/board/documents/counts": {
+      "get": {
+        "description": "How many documents answer a search, in all and by category, whatever the\ncategory shown: the counts of the list's chips, whole.",
+        "operationId": "documents_api_counts",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/DocumentStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "event",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentCountsOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Count the documents by category",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/api/board/documents/{document_id}": {
+      "delete": {
+        "description": "Delete a document and its file.",
+        "operationId": "documents_api_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Delete a document",
+        "tags": [
+          "documents"
+        ]
+      },
+      "get": {
+        "operationId": "documents_api_read",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Read a document",
+        "tags": [
+          "documents"
+        ]
+      },
+      "put": {
+        "description": "Rewrite a document whole: how it is classified, and its fields.",
+        "operationId": "documents_api_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Correct a document",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
     "/api/board/documents/{document_id}/file": {
       "get": {
         "description": "The file, of the type recorded for it: shown in the browser, or downloaded.",
@@ -2860,6 +3853,84 @@
           }
         ],
         "summary": "Read the file of a document",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/api/board/documents/{document_id}/validate": {
+      "post": {
+        "description": "Validate a document awaiting review: minutes create the tasks they list.",
+        "operationId": "documents_api_validate",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Validate a document",
         "tags": [
           "documents"
         ]
@@ -5394,6 +6465,93 @@
           }
         ],
         "summary": "Create a task",
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
+    "/api/board/tasks/general": {
+      "get": {
+        "description": "The tasks without an event (D10), by page, in the same order as an event's.",
+        "operationId": "tasks_api_list_general_tasks",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedTaskOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "List the general tasks",
         "tags": [
           "tasks"
         ]

@@ -39,14 +39,14 @@ class EventDashboard:
 
 def event_dashboard(event: Event) -> EventDashboard:
     """The counts of an event's tabs, and the tasks its block shows."""
-    tasks_done, tasks_total = task_counts(event)
+    tasks_done, tasks_total = task_counts(event.pk)
     assigned_count, required_count = station_totals(event)
     return EventDashboard(
         notes_count=event.notes.count(),
         tasks_done=tasks_done,
         tasks_total=tasks_total,
-        next_tasks=next_tasks(event, NEXT_TASKS_COUNT),
-        recently_done_tasks=recently_done_tasks(event, RECENTLY_DONE_TASKS_COUNT),
+        next_tasks=next_tasks(event.pk, NEXT_TASKS_COUNT),
+        recently_done_tasks=recently_done_tasks(event.pk, RECENTLY_DONE_TASKS_COUNT),
         assigned_count=assigned_count,
         required_count=required_count,
         reserved_seats=reserved_seats(event),

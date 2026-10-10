@@ -143,6 +143,12 @@ def test_an_empty_board_has_no_event_to_come(board_client):
         "upcoming_events": [],
         "upcoming_events_count": 0,
         "latest_notes": [],
+        "general_tasks": {
+            "tasks_done": 0,
+            "tasks_total": 0,
+            "next_tasks": [],
+            "recently_done_tasks": [],
+        },
     }
 
 
@@ -185,9 +191,38 @@ def test_the_counts_take_a_fixed_number_of_queries(board_client, django_assert_m
         TaskFactory.create_batch(2, event=event)
         NoteFactory.create_batch(2, event=event)
 
-    # Authentication (2), the rows, the count of events, the latest notes.
-    with django_assert_max_num_queries(5):
+    # Authentication (2), the rows, the count of events, the latest notes, then
+    # the general tasks: their counts, the next ones and the last done.
+    with django_assert_max_num_queries(8):
         board_client.get(OVERVIEW)
+
+
+# General tasks
+
+
+def test_the_dashboard_sums_up_the_general_tasks_alone(board_client):
+    """
+    Given four general tasks, one of them done, and a task of an event
+    When a member opens the dashboard
+    Then the general tasks count one done out of four
+    And the block shows the next three, then the one done, never the event's
+    """
+    soon, later, last = (
+        TaskFactory(event=None, title=title, due_date=dt.date(2026, 11, day))
+        for title, day in (("Renouveler l’assurance", 15), ("Préparer l’AG", 20), ("Archiver", 30))
+    )
+    done = TaskFactory(event=None, title="Payer la cotisation", done_at=timezone.now())
+    TaskFactory(title="Valider le devis sono")
+
+    general = board_client.get(OVERVIEW).json()["general_tasks"]
+
+    assert (general["tasks_done"], general["tasks_total"]) == (1, 4)
+    assert [task["title"] for task in general["next_tasks"]] == [
+        soon.title,
+        later.title,
+        last.title,
+    ]
+    assert [task["title"] for task in general["recently_done_tasks"]] == [done.title]
 
 
 # Latest notes

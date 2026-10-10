@@ -35,6 +35,18 @@ class LatestNoteOut(Schema):
     event: NoteEventOut | None
 
 
+class GeneralTasksOut(Schema):
+    """The tasks without an event (D10), as the dashboard's block shows them."""
+
+    # How many are done, out of how many.
+    tasks_done: int
+    tasks_total: int
+    # The next ones, the one due the soonest first.
+    next_tasks: list[TaskOut]
+    # Those done last, in the order they were done.
+    recently_done_tasks: list[TaskOut]
+
+
 class BoardOverviewOut(Schema):
     """What the board's dashboard shows."""
 
@@ -44,6 +56,7 @@ class BoardOverviewOut(Schema):
     upcoming_events_count: int
     # The board's latest notes, every event together, replies aside.
     latest_notes: list[LatestNoteOut]
+    general_tasks: GeneralTasksOut
 
 
 class EventDashboardOut(Schema):
