@@ -8,6 +8,7 @@ takes its number from the counter of its year, locked last.
 """
 
 import datetime as dt
+from dataclasses import dataclass
 from decimal import Decimal
 
 from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
@@ -38,6 +39,9 @@ DEFAULT_DEPOSITS = {
     LoanBorrowerType.COMMITTEE: Decimal("0.00"),
 }
 
+# The planning of the loans: from the Monday of the week before, for nine weeks.
+PLANNING_WEEKS = 9
+
 # The statuses a loan is still written in: a returned loan is reopened first.
 WRITABLE = {LoanStatus.CONFIRMED, LoanStatus.OUT}
 
@@ -55,6 +59,34 @@ def loans() -> QuerySet[Loan]:
 def listed_loans(*, today: dt.date | None = None) -> QuerySet[Loan]:
     """The loans as the list shows them, with their state, in its order."""
     return in_board_order(loans(), today or timezone.localdate())
+
+
+@dataclass(frozen=True)
+class LoanPlanning:
+    """The loans over a window of weeks, as the planning draws them: a bounded
+    aggregate (A7).
+    """
+
+    start: dt.date
+    end: dt.date
+    loans: list[Loan]
+
+
+def loan_planning(*, today: dt.date | None = None) -> LoanPlanning:
+    """The loans, returned ones included, that overlap the window of the
+    planning: from the Monday of the week before, for nine weeks. A cancelled
+    loan holds nothing: it is left out. The first to start first.
+    """
+    today = today or timezone.localdate()
+    start = today - dt.timedelta(days=today.weekday() + 7)
+    end = start + dt.timedelta(weeks=PLANNING_WEEKS, days=-1)
+    overlapping = (
+        with_states(Loan.objects.select_related("event"), today)
+        .exclude(status=LoanStatus.CANCELLED)
+        .filter(start_date__lte=end, end_date__gte=start)
+        .order_by("start_date", "pk")
+    )
+    return LoanPlanning(start, end, list(overlapping))
 
 
 def loan_counts(*, today: dt.date | None = None) -> dict[str, int]:

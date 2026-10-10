@@ -28,6 +28,7 @@ OPERATIONS = [
     ("post", "/api/board/loans"),
     ("get", "/api/board/loans/counts"),
     ("get", "/api/board/loans/deposits"),
+    ("get", "/api/board/loans/planning"),
     ("get", "/api/board/loans/1"),
     ("put", "/api/board/loans/1"),
     ("post", "/api/board/loans/1/checkout"),

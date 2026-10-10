@@ -16,6 +16,7 @@ from equipment.schemas import (
     LoanIn,
     LoanItemOut,
     LoanOut,
+    LoanPlanningOut,
     LoanReturnIn,
     LoanReturnOut,
     OccupancyOut,
@@ -35,6 +36,7 @@ from equipment.services.loans import (
     listed_loans,
     loan_counts,
     loan_deposits,
+    loan_planning,
     loans,
     update_loan,
     with_state,
@@ -151,7 +153,19 @@ def record_loan(request, payload: LoanIn):
 
 
 # Declared before the operations on /loans/{loan_id}: Ninja tries the paths in
-# their order, and the id would take "counts" or "deposits" for itself.
+# their order, and the id would take "counts", "deposits" or "planning" for itself.
+@loans_router.get(
+    "/loans/planning",
+    response={200: LoanPlanningOut, 401: ErrorOut, 403: ErrorOut},
+    summary="Read the planning of the loans",
+)
+def read_planning(request):
+    """The loans over nine weeks, from the Monday of the week before: those of
+    the committee and those returned too, the cancelled left out.
+    """
+    return loan_planning()
+
+
 @loans_router.get(
     "/loans/counts",
     response={200: LoanCountsOut, 401: ErrorOut, 403: ErrorOut},

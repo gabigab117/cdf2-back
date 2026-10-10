@@ -2353,6 +2353,35 @@
         "title": "LoanOut",
         "type": "object"
       },
+      "LoanPlanningOut": {
+        "description": "The loans over the window of the planning, the first to start first: a\nbounded aggregate (A7).",
+        "properties": {
+          "end": {
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "loans": {
+            "items": {
+              "$ref": "#/components/schemas/LoanBriefOut"
+            },
+            "title": "Loans",
+            "type": "array"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "loans"
+        ],
+        "title": "LoanPlanningOut",
+        "type": "object"
+      },
       "LoanReturnIn": {
         "description": "How the equipment of a loan came back: a line not given came back whole.",
         "properties": {
@@ -7189,6 +7218,54 @@
           }
         ],
         "summary": "Read the default deposits",
+        "tags": [
+          "loans"
+        ]
+      }
+    },
+    "/api/board/loans/planning": {
+      "get": {
+        "description": "The loans over nine weeks, from the Monday of the week before: those of\nthe committee and those returned too, the cancelled left out.",
+        "operationId": "equipment_api_read_planning",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoanPlanningOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Read the planning of the loans",
         "tags": [
           "loans"
         ]

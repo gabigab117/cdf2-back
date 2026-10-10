@@ -279,3 +279,13 @@ class LoanReturnOut(Schema):
 
     loan: LoanOut
     shortages: list[ShortageOut]
+
+
+class LoanPlanningOut(Schema):
+    """The loans over the window of the planning, the first to start first: a
+    bounded aggregate (A7).
+    """
+
+    start: dt.date
+    end: dt.date
+    loans: list[LoanBriefOut]
