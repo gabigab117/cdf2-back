@@ -80,8 +80,10 @@ def loan_deposits() -> dict[str, list[dict[str, object]]]:
 
 
 @transaction.atomic
-def create_loan(data: LoanIn, author: User) -> Loan:
-    """Record a loan, numbered if it lends to someone."""
+def create_loan(data: LoanIn, author: User | None) -> Loan:
+    """Record a loan, numbered if it lends to someone, by its author: none for
+    the demonstration.
+    """
     loan = Loan(created_by=author)
     return _write(loan, data)
 

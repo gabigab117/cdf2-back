@@ -79,7 +79,7 @@ uv run pre-commit install         # hooks de qualité à chaque commit
 uv run python manage.py migrate
 uv run python manage.py createcachetable  # table du cache, où le throttling compte les requêtes
 uv run python manage.py createsuperuser
-uv run python manage.py seed_demo         # facultatif : les événements fictifs de la maquette
+uv run python manage.py seed_demo         # facultatif : les événements, le matériel et les prêts fictifs de la maquette
 uv run python manage.py runserver
 ```
 
@@ -88,11 +88,12 @@ uv run python manage.py runserver
 
 ## Données de démonstration
 
-`manage.py seed_demo` écrit les événements fictifs de la maquette, publiés : cinq à venir et quatre passés, avec leur programme et leur « Bon à savoir ». Il sert au développement, à la préproduction et aux parcours de bout en bout du front.
+`manage.py seed_demo` écrit les événements fictifs de la maquette, publiés : cinq à venir et quatre passés, avec leur programme et leur « Bon à savoir ». Il écrit ensuite ses 14 matériels et ses prêts, datés autour du jour comme autour du jour de la maquette : deux rendus, un en cours, un à préparer, deux confirmés, et le matériel que le comité garde pour trois des événements. Il sert au développement, à la préproduction et aux parcours de bout en bout du front.
 
 - **Il n'est permis que si l'environnement pose `DEMO_DATA_ENABLED=true`** (`.env.example` le fait pour le développement local). Aucun fichier de settings ne l'active : il est refusé en production.
 - **Chaque événement revient chaque année au même jour.** Ceux à venir prennent leur prochaine date, aujourd'hui compris, et les passés leur dernière date avant aujourd'hui. La démonstration reste ainsi vivante d'une année sur l'autre.
 - **Il peut être relancé** : un événement déjà écrit est retrouvé par son adresse et réécrit. Relancé après la date d'un événement, il en écrit l'édition suivante, et la précédente reste parmi les événements passés.
+- Les matériels sont retrouvés par leur nom et réécrits ; les prêts de la démonstration sont réécrits, et un prêt saisi à la main reste. Un prêt qui prendrait plus que le libre est laissé de côté, comme l'API le refuserait.
 - Il ne crée aucun compte et ne nomme aucun responsable.
 
 ## Qualité
