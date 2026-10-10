@@ -127,6 +127,7 @@ def test_loan_over_availability_rejected(api_client):
     - pas d'`AnonRateThrottle` sur les endpoints publics : le rendu serveur les appelle tous depuis l'IP du serveur Nuxt, ils seraient étranglés pour tout le monde à la fois ;
     - une sous-classe par usage, avec son propre `scope`. Sinon deux `AnonRateThrottle` partagent le même compteur par IP. Les taux sont dans `NINJA_DEFAULT_THROTTLE_RATES`, lus à l'import ;
     - les compteurs vivent dans le cache par défaut, un `DatabaseCache` partagé par les workers gunicorn (`createcachetable` au déploiement). Un cache en mémoire compterait par worker ;
+    - chaque compteur est nommé d'après l'adresse IP qu'il compte, et le cache en base ne supprime une ligne expirée que lorsqu'elle est relue (ou au-delà de 300 lignes). Le cache est donc vidé chaque nuit (`clear_cache`), comme les sessions expirées de l'admin (`clearsessions`) : aucune adresse ne survit à la nuit ;
     - workers synchrones seulement, sans `--threads` : les throttles gardent un état par requête sur des instances partagées ;
   - **filtres et recherche** : `FilterSchema` + `Query[...]`, avec `FilterLookup` et une liste de lookups pour une recherche multi-champs ;
   - **tri** : pas de natif dans Ninja. On utilise un paramètre `Literal[...]` des tris autorisés (énuméré dans le schéma, donc typé côté front), appliqué par `order_by`. Jamais une chaîne libre passée à `order_by` ;
@@ -160,7 +161,7 @@ def test_loan_over_availability_rejected(api_client):
     Raison du custom : les contrôleurs et routeurs fournis renvoient le refresh dans le corps JSON, ce que la règle du cookie httpOnly interdit. Leur refresh ne vérifie pas non plus que le compte est actif.
 
     Un refresh refusé ne touche pas au cookie : quand deux onglets renouvellent en même temps, la réponse perdante effacerait le cookie neuf.
-  - Throttling strict sur login et refresh. Purge des tokens expirés (`flushexpiredtokens`) planifiée sur le serveur, par un timer systemd (`deploy/`).
+  - Throttling strict sur login et refresh. Purge nocturne planifiée sur le serveur, par un timer systemd (`deploy/`) : tokens expirés (`flushexpiredtokens`), sessions expirées de l'admin (`clearsessions`), cache (`clear_cache`).
   - **Limites acceptées** :
     - pas de détection de la réutilisation d'un refresh volé ;
     - changer de mot de passe ne révoque pas les sessions ouvertes ;
@@ -202,6 +203,7 @@ def test_loan_over_availability_rejected(api_client):
   - On ne stocke que ce qu'une card demande.
   - Aucune donnée personnelle dans un endpoint public.
   - Les durées de conservation sont appliquées par une purge planifiée.
+  - Elles sont publiées sur la page « Données personnelles » du site, que le front rédige : une donnée personnelle ajoutée y est décrite, avec sa durée.
 
 ## Definition of Done (chaque feature)
 
@@ -215,5 +217,6 @@ def test_loan_over_availability_rejected(api_client):
    - `openapi.json` est régénéré et passe `openapi-spec-validator` ;
    - le changement est signalé explicitement, car le front doit régénérer ses types.
 7. **Aucun code custom qui double une fonctionnalité native.** Tout validateur, helper ou boucle de requête écrit à la main suppose qu'on a cherché l'équivalent framework dans Context7 **avant** de l'écrire. S'il est conservé, un commentaire dit pourquoi le natif ne convenait pas.
-8. La CI est verte, et le déploiement en préproduction aussi.
-9. La card correspondante de la roadmap est annotée **✅ Terminé**.
+8. Une donnée personnelle ajoutée, ou une durée de conservation changée, est décrite sur la page « Données personnelles » du front.
+9. La CI est verte, et le déploiement en préproduction aussi.
+10. La card correspondante de la roadmap est annotée **✅ Terminé**.
