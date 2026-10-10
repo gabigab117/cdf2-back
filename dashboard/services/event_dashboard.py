@@ -8,6 +8,7 @@ from every app that attaches records to events.
 from dataclasses import dataclass
 
 from events.models import Event
+from reservations.services.reservations import reserved_seats
 from stations.services.stations import station_totals
 from tasks.models import Task
 from tasks.services.tasks import next_tasks, recently_done_tasks, task_counts
@@ -31,6 +32,9 @@ class EventDashboard:
     # The people at its stations, out of how many they require.
     assigned_count: int
     required_count: int
+    # The places its reservations take, out of its capacity, if any.
+    reserved_seats: int
+    capacity: int | None
 
 
 def event_dashboard(event: Event) -> EventDashboard:
@@ -45,4 +49,6 @@ def event_dashboard(event: Event) -> EventDashboard:
         recently_done_tasks=recently_done_tasks(event, RECENTLY_DONE_TASKS_COUNT),
         assigned_count=assigned_count,
         required_count=required_count,
+        reserved_seats=reserved_seats(event),
+        capacity=event.capacity,
     )

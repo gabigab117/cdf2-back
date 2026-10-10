@@ -9,6 +9,7 @@ from ninja_jwt.tokens import AccessToken
 from tests.accounts.factories import UserFactory
 from tests.events.factories import EventFactory
 from tests.notes.factories import NoteFactory, ReplyFactory
+from tests.reservations.factories import TicketTypeFactory, reserve
 from tests.stations.factories import AssignmentFactory, StationFactory
 from tests.tasks.factories import TaskFactory
 
@@ -245,6 +246,8 @@ def test_an_events_dashboard_without_notes_or_tasks(board_client):
         "recently_done_tasks": [],
         "assigned_count": 0,
         "required_count": 0,
+        "reserved_seats": 0,
+        "capacity": None,
     }
 
 
@@ -265,3 +268,22 @@ def test_an_events_dashboard_counts_the_people_at_its_stations(board_client):
     body = board_client.get(event_dashboard_url(event.id)).json()
 
     assert (body["assigned_count"], body["required_count"]) == (4, 5)
+
+
+def test_an_events_dashboard_counts_its_reserved_places(board_client):
+    """
+    Given a meal of 80 places, with reservations of 6 and 1 places, and a
+    reservation of another event
+    When a member opens the meal's page
+    Then its reservations take 7 places, out of 80
+    """
+    event = EventFactory(capacity=80)
+    adult = TicketTypeFactory(event=event)
+    reserve(event, adulte=(adult, 6))
+    reserve(event, adulte=(adult, 1))
+    other = TicketTypeFactory()
+    reserve(other.event, autre=(other, 3))
+
+    body = board_client.get(event_dashboard_url(event.id)).json()
+
+    assert (body["reserved_seats"], body["capacity"]) == (7, 80)

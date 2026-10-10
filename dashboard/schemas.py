@@ -29,3 +29,6 @@ class EventDashboardOut(Schema):
     # The people at its stations, out of how many they require.
     assigned_count: int
     required_count: int
+    # The places its reservations take, out of its capacity: None for no limit.
+    reserved_seats: int
+    capacity: int | None

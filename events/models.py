@@ -79,6 +79,11 @@ class Event(models.Model):
         related_name="next_editions",
         error_messages={"invalid": "Choisissez un événement existant."},
     )
+    # How many places its reservations may take, or none for no limit. It is
+    # set from the reservations' tab (D1), never with the rest of the event.
+    capacity = models.PositiveIntegerField(
+        "capacité", null=True, blank=True, validators=[MinValueValidator(1)]
+    )
     updated_at = models.DateTimeField("modifié le", auto_now=True)
 
     class Meta:

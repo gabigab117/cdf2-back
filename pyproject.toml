@@ -13,6 +13,7 @@ dependencies = [
     "django-ninja-jwt>=5.4.5",
     "gunicorn>=26.2",
     "icalendar>=7.3",
+    "openpyxl>=3.1.5",
     "psycopg[binary]>=3.3",
 ]
 

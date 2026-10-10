@@ -21,6 +21,7 @@ from dashboard.api import router as dashboard_router
 from events.api import public_router as events_public_router
 from events.api import router as events_router
 from notes.api import router as notes_router
+from reservations.api import router as reservations_router
 from stations.api import router as stations_router
 from tasks.api import router as tasks_router
 
@@ -108,4 +109,5 @@ api.add_router("/board/", dashboard_router)
 api.add_router("/board/", notes_router)
 api.add_router("/board/", tasks_router)
 api.add_router("/board/", stations_router)
+api.add_router("/board/", reservations_router)
 api.add_router("/public/", events_public_router)
