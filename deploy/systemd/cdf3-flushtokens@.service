@@ -1,7 +1,10 @@
-# Purge of the expired refresh tokens of the Comité des fêtes v2 API, one
-# instance per environment, started every night by cdf3-flushtokens@.timer.
+# Nightly purge of the Comité des fêtes v2 API, one instance per environment,
+# started every night by cdf3-flushtokens@.timer: the expired refresh tokens,
+# the expired sessions of the Django admin, then the cache, whose throttle
+# counters are each named after the address they count. Neither the sessions
+# nor the database cache delete their expired rows by themselves.
 [Unit]
-Description=Comité des fêtes v2 token purge (%i)
+Description=Comité des fêtes v2 nightly purge (%i)
 Documentation=https://github.com/gabigab117/cdf2-back
 After=postgresql.service
 Wants=postgresql.service
@@ -14,7 +17,10 @@ WorkingDirectory=/var/www/cdf3/%i/back/current
 EnvironmentFile=/var/www/cdf3/%i/shared/back.env
 # manage.py defaults to the development settings.
 Environment=DJANGO_SETTINGS_MODULE=config.settings.prod
+# Run in turn: a purge that fails stops the next ones and fails the unit.
 ExecStart=/var/www/cdf3/%i/back/current/.venv/bin/python manage.py flushexpiredtokens
+ExecStart=/var/www/cdf3/%i/back/current/.venv/bin/python manage.py clearsessions
+ExecStart=/var/www/cdf3/%i/back/current/.venv/bin/python manage.py clear_cache
 
 # Confined like the API, without any writable path: the purge only talks to
 # PostgreSQL, over its local socket.

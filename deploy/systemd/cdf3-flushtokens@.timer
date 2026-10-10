@@ -1,6 +1,6 @@
 # Starts cdf3-flushtokens@<instance>.service every night.
 [Unit]
-Description=Comité des fêtes v2 nightly token purge (%i)
+Description=Comité des fêtes v2 nightly purge (%i)
 
 [Timer]
 OnCalendar=*-*-* 04:00

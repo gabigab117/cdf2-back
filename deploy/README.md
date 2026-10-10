@@ -40,18 +40,23 @@ Les migrations passent avant la bascule. Elles doivent donc rester compatibles a
 
 Le détail de chaque déploiement va dans le journal du serveur (`journalctl -t cdf3-release-back`). L'appelant ne reçoit qu'une ligne de statut, car les journaux d'une CI publique sont lisibles par tous.
 
-## Purge des jetons expirés
+## Purge nocturne
 
-Les refresh tokens émis et révoqués restent en base jusqu'à leur expiration (7 jours). La commande `flushexpiredtokens` de ninja-jwt supprime ensuite ceux qui ont expiré.
-- [`cdf3-flushtokens@.timer`](systemd/cdf3-flushtokens@.timer) la lance chaque nuit, par [`cdf3-flushtokens@.service`](systemd/cdf3-flushtokens@.service), sous l'utilisateur de l'application.
-- Le timer n'est installé qu'une fois en place une release qui contient la commande :
+Trois sortes de lignes restent en base après avoir servi. Aucune ne s'efface d'elle-même :
+- **les refresh tokens**, émis et révoqués, jusqu'à leur expiration (7 jours). La commande `flushexpiredtokens` de ninja-jwt supprime ceux qui ont expiré ;
+- **les sessions de l'admin Django**, après leur expiration (2 semaines). La commande `clearsessions` de Django les supprime ;
+- **les compteurs du throttling**, chacun nommé d'après l'adresse IP qu'il compte. Le cache en base n'efface une ligne expirée que lorsqu'elle est relue. La commande `clear_cache` (`core/management/commands/`) vide le cache, qui ne contient qu'eux.
 
-  ```bash
-  install -m 0644 /var/www/cdf3/<instance>/back/current/deploy/systemd/cdf3-flushtokens@.{service,timer} /etc/systemd/system/
-  systemctl daemon-reload
-  systemctl start cdf3-flushtokens@<instance>.service      # un premier passage, à vérifier dans le journal
-  systemctl enable --now cdf3-flushtokens@<instance>.timer
-  ```
+[`cdf3-flushtokens@.timer`](systemd/cdf3-flushtokens@.timer) lance les trois chaque nuit, dans cet ordre, par [`cdf3-flushtokens@.service`](systemd/cdf3-flushtokens@.service), sous l'utilisateur de l'application. Une purge qui échoue arrête les suivantes et fait échouer l'unité.
+
+Le timer n'est installé, ou réinstallé après une modification de l'unité, qu'une fois en place une release qui contient les commandes :
+
+```bash
+install -m 0644 /var/www/cdf3/<instance>/back/current/deploy/systemd/cdf3-flushtokens@.{service,timer} /etc/systemd/system/
+systemctl daemon-reload
+systemctl start cdf3-flushtokens@<instance>.service      # un premier passage, à vérifier dans le journal
+systemctl enable --now cdf3-flushtokens@<instance>.timer
+```
 
 ## Déploiement continu
 
@@ -81,7 +86,7 @@ Un push sur `main` dont les contrôles passent se déploie seul, par le job `dep
 |---|---|---|
 | `release-back.sh` | `/usr/local/bin/cdf3-release-back` | Release de l'API |
 | `systemd/cdf3-api@.service` | `/etc/systemd/system/` | gunicorn, une instance par environnement (`cdf3-api@preprod`). Durci : système en lecture seule, mémoire et CPU plafonnés |
-| `systemd/cdf3-flushtokens@.service`, `.timer` | `/etc/systemd/system/` | Purge nocturne des jetons expirés, durcie comme l'API |
+| `systemd/cdf3-flushtokens@.service`, `.timer` | `/etc/systemd/system/` | Purge nocturne des jetons, des sessions de l'admin et du cache, durcie comme l'API |
 | `sudoers/cdf3` | `/etc/sudoers.d/cdf3` (0440, vérifié par `visudo -cf`) | L'utilisateur de l'application ne peut que redémarrer ses propres services |
 | `nginx/cdf3.conf.template` | `/etc/nginx/sites-available/cdf3-<instance>` | Une seule origine : `/api/` et l'admin vers Django, le reste vers Nuxt. Les `{{…}}` sont remplacés à l'installation, puis certbot ajoute le TLS |
 

@@ -36,7 +36,7 @@ Ce dépôt contient l'API. Le front (Nuxt 4) est dans [cdf2-front](https://githu
   - Un appel sans identité valable reçoit un 401, un compte hors bureau un 403.
   - Désactiver un compte ou le retirer du groupe prend effet à la requête suivante.
 - **Throttling** par IP de la connexion et du renouvellement. Les compteurs sont dans un cache en base, partagé par les workers.
-- **Purge** chaque nuit des jetons expirés (`flushexpiredtokens`, timer systemd dans [`deploy/`](deploy/README.md)).
+- **Purge** chaque nuit, par un timer systemd ([`deploy/`](deploy/README.md)) : les jetons expirés (`flushexpiredtokens`), les sessions expirées de l'admin (`clearsessions`), puis le cache, dont chaque compteur nomme une adresse IP (`clear_cache`).
 
 ## Site public
 
