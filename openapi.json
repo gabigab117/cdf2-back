@@ -14,6 +14,106 @@
         "title": "AccessTokenOut",
         "type": "object"
       },
+      "AccountIn": {
+        "description": "The account of a board member the superuser invites.",
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "first_name": {
+            "title": "First Name",
+            "type": "string"
+          },
+          "last_name": {
+            "title": "Last Name",
+            "type": "string"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BoardPosition"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "email",
+          "first_name",
+          "last_name"
+        ],
+        "title": "AccountIn",
+        "type": "object"
+      },
+      "AccountOut": {
+        "description": "An account, as the accounts page lists it.",
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "first_name": {
+            "title": "First Name",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_superuser": {
+            "title": "Is Superuser",
+            "type": "boolean"
+          },
+          "last_name": {
+            "title": "Last Name",
+            "type": "string"
+          },
+          "link_sent_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link Sent At"
+          },
+          "position": {
+            "title": "Position",
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/AccountState"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "first_name",
+          "last_name",
+          "position",
+          "state",
+          "is_superuser",
+          "link_sent_at"
+        ],
+        "title": "AccountOut",
+        "type": "object"
+      },
+      "AccountState": {
+        "description": "Where an account stands, worked out: its invitation awaits a password,\nit signs in, or it is deactivated.",
+        "enum": [
+          "pending",
+          "active",
+          "inactive"
+        ],
+        "title": "AccountState",
+        "type": "string"
+      },
       "AgendaOut": {
         "description": "What the site shows around its agenda.",
         "properties": {
@@ -232,6 +332,19 @@
         ],
         "title": "BoardOverviewOut",
         "type": "object"
+      },
+      "BoardPosition": {
+        "description": "The positions of the board (decision of 10/10/2026): a closed list.",
+        "enum": [
+          "president",
+          "vice_president",
+          "treasurer",
+          "assistant_treasurer",
+          "secretary",
+          "assistant_secretary"
+        ],
+        "title": "BoardPosition",
+        "type": "string"
       },
       "CapacityIn": {
         "properties": {
@@ -1771,6 +1884,24 @@
         "title": "InventoryTotalsOut",
         "type": "object"
       },
+      "InvitationOut": {
+        "description": "An account, and whether the email of its link went out.",
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/AccountOut"
+          },
+          "sent": {
+            "title": "Sent",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "account",
+          "sent"
+        ],
+        "title": "InvitationOut",
+        "type": "object"
+      },
       "LatestNoteOut": {
         "description": "A note of the board, as the dashboard lists the latest.",
         "properties": {
@@ -2595,6 +2726,10 @@
             "title": "First Name",
             "type": "string"
           },
+          "is_superuser": {
+            "title": "Is Superuser",
+            "type": "boolean"
+          },
           "last_name": {
             "title": "Last Name",
             "type": "string"
@@ -2608,7 +2743,8 @@
           "email",
           "first_name",
           "last_name",
-          "position"
+          "position",
+          "is_superuser"
         ],
         "title": "MeOut",
         "type": "object"
@@ -2935,6 +3071,27 @@
         "title": "OverviewEventOut",
         "type": "object"
       },
+      "PagedAccountOut": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AccountOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "count"
+        ],
+        "title": "PagedAccountOut",
+        "type": "object"
+      },
       "PagedBoardMemberOut": {
         "properties": {
           "count": {
@@ -3101,6 +3258,68 @@
           "count"
         ],
         "title": "PagedTaskOut",
+        "type": "object"
+      },
+      "PasswordIn": {
+        "description": "The password a member chooses from their link, typed twice.",
+        "properties": {
+          "confirmation": {
+            "title": "Confirmation",
+            "type": "string"
+          },
+          "password": {
+            "title": "Password",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          },
+          "uid": {
+            "title": "Uid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "uid",
+          "token",
+          "password",
+          "confirmation"
+        ],
+        "title": "PasswordIn",
+        "type": "object"
+      },
+      "PasswordLinkIn": {
+        "description": "The link a member received, as the page read it after its \"#\".",
+        "properties": {
+          "token": {
+            "title": "Token",
+            "type": "string"
+          },
+          "uid": {
+            "title": "Uid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "uid",
+          "token"
+        ],
+        "title": "PasswordLinkIn",
+        "type": "object"
+      },
+      "PasswordLinkOut": {
+        "description": "The account a link leads to, by its email address.",
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "PasswordLinkOut",
         "type": "object"
       },
       "PendingDocumentsOut": {
@@ -4174,6 +4393,10 @@
       "BoardMemberAuth": {
         "scheme": "bearer",
         "type": "http"
+      },
+      "SuperuserAuth": {
+        "scheme": "bearer",
+        "type": "http"
       }
     }
   },
@@ -4348,6 +4571,132 @@
         ]
       }
     },
+    "/api/auth/password": {
+      "post": {
+        "description": "Record the password chosen from a link, which then holds no more. No\nsession opens: the member signs in, their address filled in.",
+        "operationId": "accounts_api_choose_password",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasswordLinkOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "summary": "Choose a password",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/password-link": {
+      "post": {
+        "description": "The account a link leads to, while the link holds: the page names it.",
+        "operationId": "accounts_api_check_password_link",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordLinkIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasswordLinkOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "summary": "Check a link to choose a password",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/auth/refresh": {
       "post": {
         "description": "Exchange the refresh cookie for a new access token and a new cookie.",
@@ -4415,6 +4764,247 @@
         "summary": "Renew the session",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/board/accounts": {
+      "get": {
+        "description": "Every account, with its state, by name.",
+        "operationId": "accounts_api_list_accounts",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedAccountOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "SuperuserAuth": []
+          }
+        ],
+        "summary": "List the accounts",
+        "tags": [
+          "accounts"
+        ]
+      },
+      "post": {
+        "description": "Make the account of a board member, who chooses their password from the\nlink the email gives. The answer tells whether the email went out.",
+        "operationId": "accounts_api_invite_member",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationOut"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "SuperuserAuth": []
+          }
+        ],
+        "summary": "Invite a board member",
+        "tags": [
+          "accounts"
+        ]
+      }
+    },
+    "/api/board/accounts/{account_id}/link": {
+      "post": {
+        "description": "« Envoyer un nouveau lien »: an invitation again, or a password forgotten.",
+        "operationId": "accounts_api_send_new_link",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "title": "Account Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "SuperuserAuth": []
+          }
+        ],
+        "summary": "Send a new link",
+        "tags": [
+          "accounts"
         ]
       }
     },

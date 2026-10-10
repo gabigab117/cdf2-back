@@ -17,6 +17,8 @@ PUBLIC_OPERATIONS = {
     ("post", "/api/auth/login"),
     ("post", "/api/auth/refresh"),
     ("post", "/api/auth/logout"),
+    ("post", "/api/auth/password-link"),
+    ("post", "/api/auth/password"),
     ("get", "/api/public/events"),
     ("get", "/api/public/events/{slug}"),
     ("get", "/api/public/events/{slug}.ics"),

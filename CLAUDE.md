@@ -106,6 +106,7 @@ def test_loan_over_availability_rejected(api_client):
   - Une classe d'auth lève `AuthorizationError` (403) pour un utilisateur connecté sans le droit. Renvoyer `None` produirait un 401, faux pour quelqu'un de connecté.
   - Tout échec d'authentification donne le même 401 : jeton absent, invalide ou expiré, compte inconnu ou inactif. Un compte actif hors bureau reçoit un 403. Les messages, en français, sont posés par les handlers de `config/api.py`.
   - Pas de contrôle d'autorisation en `if request.user…` dans le corps d'une opération.
+  - **Les comptes du bureau sont au seul superuser** (5.9) : leur routeur porte `SuperuserAuth`, sous-classe de `BoardMemberAuth`. Un membre du bureau qui n'est pas superuser reçoit un 403 à lui (`NotSuperuserError`), « Accès réservé à l'administrateur des comptes. ». Ninja choisit le handler d'une exception d'après sa classe la plus précise : ce 403-là passe avant celui des membres.
 - **Un objet inaccessible n'existe pas** : queryset filtré par utilisateur et par portée avant toute lecture (`get_object_or_404(<queryset filtré>, pk=...)`) → 404, jamais 403. Exemple : seul l'auteur d'une note peut la modifier. Le 404 répond « Introuvable. » (handler de `config/api.py`) : Ninja, lui, répond en anglais.
 - **Endpoints publics** (ceux que lisent les pages publiques rendues côté serveur) : `auth=None`, lecture seule, sous `/api/public/`, avec des **schémas de sortie dédiés** sans aucune donnée personnelle. Jamais de schéma interne réutilisé pour un endpoint public : un champ ajouté pour l'usage interne fuiterait.
   - Le routeur du site (`public_router`, dans `events/api.py`) est monté sur `/public/`. Chaque opération y déclare `auth=None` une à une : une opération ajoutée sans y penser reste privée.
@@ -141,7 +142,8 @@ def test_loan_over_availability_rejected(api_client):
   - Le réglage `MAILERS` de Django 6.1, jamais un réglage `EMAIL_*` : la console en dev, le SMTP du compte de l'association sur le serveur (SSL implicite, délai de 10 s), une boîte en mémoire dans les tests (`mailoutbox`).
   - Un e-mail part après la transaction qui le motive (`transaction.on_commit`) : une écriture annulée n'envoie rien.
   - Un message par destinataire, qui ne voit pas les autres, et tous sur une seule connexion (`mail.mailers.default.send_messages`).
-  - Un échec d'envoi est écrit au journal, et n'annule pas l'écriture faite : une `OSError` (dont `SMTPException`, une connexion refusée ou un délai dépassé), ou la `ValueError` que lève le backend SMTP pour une adresse qu'il ne peut pas employer, comme un expéditeur laissé vide.
+  - Un échec d'envoi est écrit au journal, et n'annule pas l'écriture faite : une `OSError` (dont `SMTPException`, une connexion refusée ou un délai dépassé), ou la `ValueError` que lève le backend SMTP pour une adresse qu'il ne peut pas employer, comme un expéditeur laissé vide. Ces deux exceptions forment `MAIL_FAILURES` (`core/services/mail.py`), que chaque envoi attrape.
+  - L'e-mail d'un lien de mot de passe (5.9) part hors transaction, le compte enregistré : son échec est en plus **dit au superuser** (`sent: false`), qui renvoie un lien.
   - Un lien d'e-mail se construit sur `SITE_URL` : l'API n'apprend pas l'adresse du front d'une requête.
   - Le texte nomme l'objet et mène à lui, la page demandant de se connecter. Il ne contient ni fichier ni contenu.
 - **Journal** : `LOGGING` envoie les loggers du projet sur la sortie d'erreur, que systemd garde 7 jours sur le serveur. Ceux de Django restent tels quels (`disable_existing_loggers: False`), et rien ne coupe la propagation, sans quoi `caplog` ne verrait rien.
@@ -192,6 +194,12 @@ def test_loan_over_availability_rejected(api_client):
     Raison du custom : les contrôleurs et routeurs fournis renvoient le refresh dans le corps JSON, ce que la règle du cookie httpOnly interdit. Leur refresh ne vérifie pas non plus que le compte est actif.
 
     Un refresh refusé ne touche pas au cookie : quand deux onglets renouvellent en même temps, la réponse perdante effacerait le cookie neuf.
+  - **Choisir son mot de passe** (invitation et mot de passe oublié, 5.9, `accounts/services/invitations.py`) :
+    - le lien porte le jeton natif de Django (`default_token_generator`) et l'identifiant encodé (`urlsafe_base64_encode`), après un `#` : un navigateur n'envoie jamais le fragment, qui reste hors du journal de nginx et des `Referer`. Aucun modèle d'invitation : le jeton tient l'empreinte du mot de passe et de la dernière connexion, il ne sert qu'une fois, pendant `PASSWORD_RESET_TIMEOUT` (7 jours) ;
+    - le compte invité a un mot de passe inutilisable (`set_unusable_password`) : il ne se connecte pas avant d'avoir choisi le sien ;
+    - l'enregistrement relit le compte sous verrou (`select_for_update`), puis revérifie le jeton : de deux envois du même lien, le second trouve son jeton usé ;
+    - `validate_password` juge le mot de passe avec le compte (trop proche d'un nom ou de l'adresse) ;
+    - les deux opérations publiques (`/auth/password-link`, `/auth/password`) ont chacune leur throttle et leur `scope`.
   - Throttling strict sur login et refresh. Purge nocturne planifiée sur le serveur, par un timer systemd (`deploy/`) : tokens expirés (`flushexpiredtokens`), sessions expirées de l'admin (`clearsessions`), cache (`clear_cache`).
   - **Limites acceptées** :
     - pas de détection de la réutilisation d'un refresh volé ;

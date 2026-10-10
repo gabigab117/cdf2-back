@@ -1,7 +1,7 @@
 import factory
 from django.contrib.auth.models import Group
 
-from accounts.models import User
+from accounts.models import BoardPosition, User
 from accounts.services.roles import BOARD_GROUP
 
 PASSWORD = "a-long-password-2026"
@@ -26,7 +26,7 @@ class BoardMemberFactory(UserFactory):
         # Adding the group does not require saving the account again.
         skip_postgeneration_save = True
 
-    position = "Trésorière"
+    position = BoardPosition.TREASURER
 
     @factory.post_generation
     def board_group(self, create, extracted, **kwargs):

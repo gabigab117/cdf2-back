@@ -42,6 +42,29 @@ class UserManager(BaseUserManager):
         return self._create_user(email, password, **extra_fields)
 
 
+# Named after their model rather than nested in it: the OpenAPI document names an
+# enumeration after its class (see events/models.py).
+class BoardPosition(models.TextChoices):
+    """The positions of the board (decision of 10/10/2026): a closed list."""
+
+    PRESIDENT = "president", "Président·e"
+    VICE_PRESIDENT = "vice_president", "Vice-président·e"
+    TREASURER = "treasurer", "Trésorier·e"
+    ASSISTANT_TREASURER = "assistant_treasurer", "Trésorier·e adjoint·e"
+    SECRETARY = "secretary", "Secrétaire"
+    ASSISTANT_SECRETARY = "assistant_secretary", "Secrétaire adjoint·e"
+
+
+class AccountState(models.TextChoices):
+    """Where an account stands, worked out: its invitation awaits a password,
+    it signs in, or it is deactivated.
+    """
+
+    PENDING = "pending", "Invitation envoyée"
+    ACTIVE = "active", "Actif"
+    INACTIVE = "inactive", "Désactivé"
+
+
 class User(AbstractUser):
     """An account, signed in with an email address.
 
@@ -49,7 +72,11 @@ class User(AbstractUser):
     """
 
     username = None
-    email = models.EmailField(_("email address"), unique=True)
+    email = models.EmailField(
+        _("email address"),
+        unique=True,
+        error_messages={"unique": "Un compte existe déjà avec cette adresse."},
+    )
     position = models.CharField(
         "fonction",
         max_length=100,
@@ -58,8 +85,12 @@ class User(AbstractUser):
         # Also set in the database, so that the previous release, which does not
         # know the column, can still create accounts (see CLAUDE.md).
         db_default="",
+        choices=BoardPosition.choices,
         help_text="Affichée dans l'espace bureau. Elle ne donne aucun droit.",
     )
+    # When the last link to choose a password went out: an invitation, or a
+    # password forgotten (5.9). None while none did.
+    link_sent_at = models.DateTimeField("lien envoyé le", null=True, blank=True)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []

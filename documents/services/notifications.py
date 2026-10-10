@@ -16,6 +16,7 @@ from django.utils import timezone
 
 from accounts.models import User
 from accounts.services.roles import board_members
+from core.services.mail import MAIL_FAILURES
 from documents.models import Document
 
 # Created by the migration documents/0002_document_notification_group.
@@ -46,10 +47,7 @@ def notify_document_upload(document_id: int) -> None:
     ]
     try:
         mail.mailers.default.send_messages(messages)
-    except (OSError, ValueError):
-        # SMTPException is an OSError, and so are a refused connection and a
-        # timeout. The SMTP backend raises a ValueError for an address it
-        # cannot send with, such as a sender left empty in the configuration.
+    except MAIL_FAILURES:
         logger.exception("The notification of document %s could not be sent.", document_id)
 
 

@@ -371,9 +371,10 @@ def test_the_refresh_cookie_reaches_the_endpoints_that_read_it():
 
 def test_me_describes_the_signed_in_board_member(board_client, board_member):
     """
-    Given a signed-in board member
+    Given a signed-in board member, the treasurer
     When they ask who they are
-    Then the answer gives their email address, names and position
+    Then the answer gives their email address, names, the label of their
+    position, and that they are not the superuser
     """
     response = board_client.get(ME)
 
@@ -382,7 +383,8 @@ def test_me_describes_the_signed_in_board_member(board_client, board_member):
         "email": board_member.email,
         "first_name": "Camille",
         "last_name": "Martin",
-        "position": "Trésorière",
+        "position": "Trésorier·e",
+        "is_superuser": False,
     }
 
 

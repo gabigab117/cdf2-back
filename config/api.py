@@ -7,9 +7,9 @@ from ninja import NinjaAPI
 from ninja.errors import AuthenticationError, AuthorizationError, Throttled
 from ninja.errors import ValidationError as SchemaValidationError
 
-from accounts.api import members_router
-from accounts.api import router as accounts_router
-from accounts.auth import BoardMemberAuth
+from accounts.api import accounts_router, members_router
+from accounts.api import router as auth_router
+from accounts.auth import BoardMemberAuth, NotSuperuserError
 from accounts.services.sessions import (
     InvalidCredentialsError,
     InvalidSessionError,
@@ -90,6 +90,13 @@ def forbidden(request, exc):
     )
 
 
+@api.exception_handler(NotSuperuserError)
+def not_superuser(request, exc):
+    return api.create_response(
+        request, {"detail": "Accès réservé à l’administrateur des comptes."}, status=403
+    )
+
+
 @api.exception_handler(Http404)
 def not_found(request, exc):
     # Ninja's own answer is in English: "Not Found".
@@ -105,9 +112,10 @@ def throttled(request, exc):
 
 
 api.add_router("/", core_router)
-api.add_router("/auth/", accounts_router)
+api.add_router("/auth/", auth_router)
 api.add_router("/board/", events_router)
 api.add_router("/board/", members_router)
+api.add_router("/board/", accounts_router)
 api.add_router("/board/", dashboard_router)
 api.add_router("/board/", notes_router)
 api.add_router("/board/", tasks_router)

@@ -4,7 +4,7 @@ from django.contrib.auth.models import Group
 from django.urls import reverse
 from ninja_jwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 
-from accounts.models import User
+from accounts.models import BoardPosition, User
 from accounts.services.roles import BOARD_GROUP, is_board_member
 
 pytestmark = pytest.mark.django_db
@@ -24,7 +24,7 @@ def test_admin_creates_a_board_member_account(admin_client):
             "email": "Marc.D@example.fr",
             "first_name": "Marc",
             "last_name": "D.",
-            "position": "Secrétaire",
+            "position": "secretary",
             "groups": [Group.objects.get(name=BOARD_GROUP).pk],
             "usable_password": "true",
             "password1": "a-long-password-2026",
@@ -34,7 +34,7 @@ def test_admin_creates_a_board_member_account(admin_client):
 
     assert response.status_code == 302
     user = User.objects.get(email="marc.d@example.fr")
-    assert user.position == "Secrétaire"
+    assert user.position == BoardPosition.SECRETARY
     assert is_board_member(user)
 
 

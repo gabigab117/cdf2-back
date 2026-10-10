@@ -28,3 +28,21 @@ class BoardMemberAuth(JWTAuth):
         if not is_board_member(user):
             raise AuthorizationError
         return user
+
+
+class NotSuperuserError(AuthorizationError):
+    """A board member who is not the superuser, on the accounts page: its own
+    403, which config/api.py words.
+    """
+
+
+class SuperuserAuth(BoardMemberAuth):
+    """The accounts of the board (5.9): the superuser alone invites the members
+    and sends them their links.
+    """
+
+    def authenticate(self, request: HttpRequest, token: str) -> User | None:
+        user = super().authenticate(request, token)
+        if user is not None and not user.is_superuser:
+            raise NotSuperuserError
+        return user

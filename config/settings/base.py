@@ -131,6 +131,10 @@ PRIVATE_FILES_ACCEL_PREFIX = None
 # the front end's from a request. Required on the server.
 SITE_URL = env("SITE_URL", default="http://localhost:3000")
 
+# How long the link to choose a password holds (5.9): a board member does not
+# always read their emails within Django's 3 days.
+PASSWORD_RESET_TIMEOUT = 7 * 24 * 60 * 60
+
 # The emails of the application (D7, D8). The console shows them in
 # development, and the tests replace every mailer with an outbox in memory;
 # the server sends them through the association's SMTP (prod.py). No EMAIL_*
@@ -148,7 +152,10 @@ LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "handlers": {"journal": {"class": "logging.StreamHandler"}},
-    "loggers": {"documents": {"handlers": ["journal"], "level": "WARNING"}},
+    "loggers": {
+        "accounts": {"handlers": ["journal"], "level": "WARNING"},
+        "documents": {"handlers": ["journal"], "level": "WARNING"},
+    },
 }
 
 # The admin is moved off its well-known path by the environment.
@@ -188,6 +195,10 @@ REFRESH_COOKIE_SECURE = True
 NINJA_DEFAULT_THROTTLE_RATES = {
     "login": "5/min",
     "refresh": "20/min",
+    # The page where a member chooses their password: checking its link, then
+    # recording the password.
+    "password_link": "10/min",
+    "set_password": "5/min",
 }
 
 # The throttles count requests in the cache, which every gunicorn worker must
