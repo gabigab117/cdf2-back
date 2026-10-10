@@ -2,7 +2,7 @@ import datetime as dt
 from decimal import Decimal
 from typing import Annotated
 
-from ninja import Field, FilterLookup, FilterSchema, Schema
+from ninja import FilterLookup, FilterSchema, Schema
 
 from accounts.schemas import BoardMemberOut
 from core.schemas import InputSchema
@@ -135,18 +135,29 @@ class DocumentCountsOut(Schema):
 class ExtractedTaskOut(Schema):
     title: str
     # The id of the board member it is to be assigned to, or none.
-    assignee: int | None = None
+    assignee: int | None
 
 
 class DocumentExtractedOut(Schema):
-    """What belongs to the document's kind: a key of another kind is left empty."""
+    """What belongs to the document's kind: a key of another kind reads empty."""
 
-    delivery_date: dt.date | None = None
-    items: str = ""
-    abstract: str = ""
-    decisions: list[str] = Field(default_factory=list)
-    tasks: list[ExtractedTaskOut] = Field(default_factory=list)
-    key_date: str = ""
+    delivery_date: dt.date | None
+    items: str
+    abstract: str
+    decisions: list[str]
+    tasks: list[ExtractedTaskOut]
+    key_date: str
+
+
+# Every key of the extracted data, empty: a document stores those of its kind alone.
+EMPTY_EXTRACTED = {
+    "delivery_date": None,
+    "items": "",
+    "abstract": "",
+    "decisions": [],
+    "tasks": [],
+    "key_date": "",
+}
 
 
 class DocumentOut(Schema):
@@ -177,3 +188,7 @@ class DocumentOut(Schema):
     validated_by: BoardMemberOut | None
     validated_at: dt.datetime | None
     created_at: dt.datetime
+
+    @staticmethod
+    def resolve_extracted(document):
+        return EMPTY_EXTRACTED | document.extracted

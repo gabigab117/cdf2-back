@@ -285,10 +285,9 @@
         "type": "object"
       },
       "DocumentExtractedOut": {
-        "description": "What belongs to the document's kind: a key of another kind is left empty.",
+        "description": "What belongs to the document's kind: a key of another kind reads empty.",
         "properties": {
           "abstract": {
-            "default": "",
             "title": "Abstract",
             "type": "string"
           },
@@ -312,12 +311,10 @@
             "title": "Delivery Date"
           },
           "items": {
-            "default": "",
             "title": "Items",
             "type": "string"
           },
           "key_date": {
-            "default": "",
             "title": "Key Date",
             "type": "string"
           },
@@ -329,6 +326,14 @@
             "type": "array"
           }
         },
+        "required": [
+          "delivery_date",
+          "items",
+          "abstract",
+          "decisions",
+          "tasks",
+          "key_date"
+        ],
         "title": "DocumentExtractedOut",
         "type": "object"
       },
@@ -1323,7 +1328,8 @@
           }
         },
         "required": [
-          "title"
+          "title",
+          "assignee"
         ],
         "title": "ExtractedTaskOut",
         "type": "object"
