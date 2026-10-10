@@ -7,6 +7,8 @@ from every app that attaches records to events.
 
 from dataclasses import dataclass
 
+from documents.models import Document
+from documents.services.documents import listed_documents
 from events.models import Event
 from reservations.services.reservations import reserved_seats
 from stations.services.stations import station_totals
@@ -17,6 +19,10 @@ from tasks.services.tasks import next_tasks, recently_done_tasks, task_counts
 # struck through, as in the mockup.
 NEXT_TASKS_COUNT = 3
 RECENTLY_DONE_TASKS_COUNT = 2
+
+# The « Documents liés » block beside the notes: the latest, then a link to the
+# documents' tab.
+RELATED_DOCUMENTS_COUNT = 5
 
 
 @dataclass(frozen=True)
@@ -35,6 +41,9 @@ class EventDashboard:
     # The places its reservations take, out of its capacity, if any.
     reserved_seats: int
     capacity: int | None
+    documents_count: int
+    # Its latest documents, in the order of the list.
+    documents: list[Document]
 
 
 def event_dashboard(event: Event) -> EventDashboard:
@@ -51,4 +60,6 @@ def event_dashboard(event: Event) -> EventDashboard:
         required_count=required_count,
         reserved_seats=reserved_seats(event),
         capacity=event.capacity,
+        documents_count=event.documents.count(),
+        documents=list(listed_documents().filter(event=event)[:RELATED_DOCUMENTS_COUNT]),
     )

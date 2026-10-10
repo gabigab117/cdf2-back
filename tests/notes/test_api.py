@@ -1,6 +1,7 @@
 import datetime as dt
 
 import pytest
+from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.test import Client
 from django.utils import timezone
@@ -8,6 +9,7 @@ from ninja_jwt.tokens import AccessToken
 
 from notes.models import Note
 from tests.accounts.factories import BoardMemberFactory, UserFactory
+from tests.documents.factories import DocumentFactory
 from tests.events.factories import EventFactory
 from tests.notes.factories import NoteFactory, ReplyFactory
 
@@ -173,6 +175,7 @@ def test_a_listed_note_holds_its_author_tag_pin_and_replies(board_client, board_
                 "editable": True,
                 "tag": "budget",
                 "pinned": True,
+                "document": None,
                 "replies": [
                     {
                         "id": reply.id,
@@ -241,15 +244,19 @@ def test_listing_the_notes_reads_their_authors_and_replies_at_once(
     board_client, django_assert_max_num_queries
 ):
     """
-    Given an event with five notes, each answered twice
+    Given an event with five notes, each with an attachment and answered twice
     When the board lists the event's notes
-    Then the notes, their authors and their replies take a fixed number of queries
+    Then the notes, their authors, attachments and replies take a fixed number
+    of queries
     """
     event = EventFactory()
     for note in NoteFactory.create_batch(5, event=event):
+        note.document = DocumentFactory()
+        note.save()
         ReplyFactory.create_batch(2, parent=note)
 
-    # Authentication (2), count and page of notes, replies with their authors.
+    # Authentication (2), count and page of notes with their authors and
+    # attachments, replies with their authors.
     with django_assert_max_num_queries(5):
         response = board_client.get(NOTES, {"event": event.id})
 
@@ -271,6 +278,72 @@ def test_the_notes_are_listed_for_an_event_only(board_client):
 
 
 # Writing
+
+
+def test_a_note_joins_the_document_deposited_with_it(board_client):
+    """
+    Given a document deposited as the attachment of a note
+    When the note is written with it
+    Then the note names it by its id, title and file, as its chip shows it
+    """
+    event = EventFactory()
+    document = DocumentFactory(title="Compte rendu — 24 sept.", original_name="CR-reunion.pdf")
+
+    response = send(board_client, "post", NOTES, note_payload(event) | {"document": document.id})
+
+    assert response.json()["document"] == {
+        "id": document.id,
+        "title": "Compte rendu — 24 sept.",
+        "original_name": "CR-reunion.pdf",
+    }
+
+
+def test_a_note_cannot_join_an_unknown_document(board_client):
+    """
+    Given no document of that id
+    When a note is written with it as its attachment
+    Then the note is refused under its document, in French
+    """
+    response = send(
+        board_client, "post", NOTES, note_payload(EventFactory()) | {"document": 999_999}
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == [
+        {
+            "type": "validation_error",
+            "loc": ["body", "document"],
+            "msg": "Choisissez un document existant.",
+        }
+    ]
+
+
+def test_a_note_keeps_its_text_once_its_document_is_deleted(board_client, board_member):
+    """
+    Given a note whose attachment is then deleted
+    When the notes of its event are listed
+    Then the note keeps its text, without an attachment
+    """
+    note = NoteFactory(author=board_member, document=DocumentFactory())
+
+    note.document.delete()
+
+    [listed] = board_client.get(NOTES, {"event": note.event_id}).json()["items"]
+    assert (listed["text"], listed["document"]) == (note.text, None)
+
+
+def test_a_reply_has_no_attachment():
+    """
+    Given a reply given an attachment
+    When it is checked
+    Then it is refused: only a note joins a document
+    """
+    reply = ReplyFactory.build(parent=NoteFactory(), document=DocumentFactory())
+
+    with pytest.raises(ValidationError) as caught:
+        reply.full_clean(exclude={"author"})
+
+    assert caught.value.messages == ["Une réponse n’a pas de pièce jointe."]
 
 
 def test_a_member_writes_a_note_on_an_event(board_client, board_member):
@@ -303,6 +376,7 @@ def test_a_member_writes_a_note_on_an_event(board_client, board_member):
         "editable": True,
         "tag": "logistics",
         "pinned": False,
+        "document": None,
         "replies": [],
     }
 

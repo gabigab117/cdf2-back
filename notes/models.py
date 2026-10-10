@@ -2,6 +2,7 @@ from django.conf import settings
 from django.db import models
 from django.db.models import Q
 
+from documents.models import Document
 from events.models import Event
 
 
@@ -58,6 +59,17 @@ class Note(models.Model):
         limit_choices_to={"parent__isnull": True},
         error_messages={"invalid": "On ne répond qu’à une note, pas à une réponse."},
     )
+    # A file joined to a note is a document of the board: deleted, the note
+    # keeps its text.
+    document = models.ForeignKey(
+        Document,
+        verbose_name="pièce jointe",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="notes",
+        error_messages={"invalid": "Choisissez un document existant."},
+    )
     created_at = models.DateTimeField("écrite le", auto_now_add=True)
     updated_at = models.DateTimeField("modifiée le", auto_now=True)
 
@@ -70,6 +82,11 @@ class Note(models.Model):
                 | Q(event__isnull=True, tag__isnull=True, pinned=False),
                 name="note_reply_without_event_tag_or_pin",
                 violation_error_message="Une réponse n’a ni événement, ni étiquette, ni épingle.",
+            ),
+            models.CheckConstraint(
+                condition=Q(parent__isnull=True) | Q(document__isnull=True),
+                name="note_reply_without_document",
+                violation_error_message="Une réponse n’a pas de pièce jointe.",
             ),
         ]
 

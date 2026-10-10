@@ -6,7 +6,9 @@ from django.test import Client
 from django.utils import timezone
 from ninja_jwt.tokens import AccessToken
 
+from documents.models import Document, DocumentCategory, DocumentStatus
 from tests.accounts.factories import BoardMemberFactory, UserFactory
+from tests.documents.factories import DocumentFactory
 from tests.events.factories import EventFactory
 from tests.notes.factories import NoteFactory, ReplyFactory
 from tests.reservations.factories import TicketTypeFactory, reserve
@@ -25,6 +27,11 @@ def in_days(days):
 def iso(moment):
     """A time as the API writes it: to the millisecond, as Django's JSON does."""
     return DjangoJSONEncoder().default(moment)
+
+
+def deposited(document, moment):
+    """Date a document's deposit, its creation time being set by the database."""
+    Document.objects.filter(pk=document.pk).update(created_at=moment)
 
 
 def listed_titles(client):
@@ -149,6 +156,14 @@ def test_an_empty_board_has_no_event_to_come(board_client):
             "next_tasks": [],
             "recently_done_tasks": [],
         },
+        "pending": {
+            "total": 0,
+            "documents": {
+                "counts": {"total": 0, "invoice": 0, "order": 0, "minutes": 0, "misc": 0},
+                "items": [],
+            },
+        },
+        "recent_documents": [],
     }
 
 
@@ -191,10 +206,79 @@ def test_the_counts_take_a_fixed_number_of_queries(board_client, django_assert_m
         TaskFactory.create_batch(2, event=event)
         NoteFactory.create_batch(2, event=event)
 
-    # Authentication (2), the rows, the count of events, the latest notes, then
-    # the general tasks: their counts, the next ones and the last done.
-    with django_assert_max_num_queries(8):
+    # Authentication (2), the rows, the count of events, the latest notes, the
+    # general tasks (their counts, the next ones and the last done), then the
+    # documents: those to review (counts and latest), and the recent ones.
+    with django_assert_max_num_queries(11):
         board_client.get(OVERVIEW)
+
+
+# Documents
+
+
+def test_the_dashboard_tells_the_documents_to_review(board_client):
+    """
+    Given two invoices and minutes to review, deposited in turn, the latest
+    deposited being the oldest paper, and a validated order
+    When a member opens the dashboard
+    Then three documents await, counted by category, the latest deposited first,
+    whatever the date of the paper
+    """
+    first = DocumentFactory(document_date=dt.date(2026, 9, 28))
+    minutes = DocumentFactory(category=DocumentCategory.MINUTES, document_date=dt.date(2026, 9, 1))
+    last = DocumentFactory(document_date=dt.date(2026, 8, 15))
+    DocumentFactory(
+        category=DocumentCategory.ORDER,
+        status=DocumentStatus.VALIDATED,
+        validated_at=timezone.now(),
+    )
+    for document, minutes_ago in ((first, 30), (minutes, 20), (last, 10)):
+        deposited(document, timezone.now() - dt.timedelta(minutes=minutes_ago))
+
+    pending = board_client.get(OVERVIEW).json()["pending"]
+
+    assert pending["total"] == 3
+    assert pending["documents"]["counts"] == {
+        "total": 3,
+        "invoice": 2,
+        "order": 0,
+        "minutes": 1,
+        "misc": 0,
+    }
+    assert [item["title"] for item in pending["documents"]["items"]] == [
+        last.title,
+        minutes.title,
+        first.title,
+    ]
+
+
+def test_the_dashboard_lists_ten_documents_to_review_at_most(board_client):
+    """
+    Given twelve documents to review
+    When a member opens the dashboard
+    Then the panel lists ten of them, and counts twelve
+    """
+    DocumentFactory.create_batch(12)
+
+    pending = board_client.get(OVERVIEW).json()["pending"]
+
+    assert len(pending["documents"]["items"]) == 10
+    assert pending["documents"]["counts"]["total"] == 12
+
+
+def test_the_dashboard_shows_the_first_documents_of_the_list(board_client):
+    """
+    Given five documents, dated in turn
+    When a member opens the dashboard
+    Then the « Documents récents » block shows the four latest, as the list orders them
+    """
+    documents = [
+        DocumentFactory(document_date=dt.date(2026, 9, day)) for day in (2, 13, 21, 25, 28)
+    ]
+
+    recent = board_client.get(OVERVIEW).json()["recent_documents"]
+
+    assert [item["title"] for item in recent] == [doc.title for doc in reversed(documents[1:])]
 
 
 # General tasks
@@ -371,7 +455,51 @@ def test_an_events_dashboard_without_notes_or_tasks(board_client):
         "required_count": 0,
         "reserved_seats": 0,
         "capacity": None,
+        "documents_count": 0,
+        "documents": [],
     }
+
+
+def test_an_events_dashboard_shows_its_latest_documents(board_client):
+    """
+    Given an event with six documents, dated in turn, and a document of another event
+    When a member opens its page
+    Then six are counted, and the block shows the five latest
+    """
+    event = EventFactory()
+    documents = [
+        DocumentFactory(event=event, document_date=dt.date(2026, 9, day))
+        for day in (1, 5, 9, 13, 17, 21)
+    ]
+    DocumentFactory(event=EventFactory())
+
+    dashboard = board_client.get(event_dashboard_url(event.id)).json()
+
+    assert dashboard["documents_count"] == 6
+    assert [item["title"] for item in dashboard["documents"]] == [
+        doc.title for doc in reversed(documents[1:])
+    ]
+
+
+def test_an_events_dashboard_takes_a_fixed_number_of_queries(
+    board_client, django_assert_max_num_queries
+):
+    """
+    Given an event with notes, tasks, stations, reservations and documents
+    When a member opens its page
+    Then its figures take a fixed number of queries
+    """
+    event = EventFactory()
+    NoteFactory.create_batch(2, event=event)
+    TaskFactory.create_batch(2, event=event)
+    StationFactory.create_batch(2, event=event)
+    DocumentFactory.create_batch(2, event=event)
+
+    # Authentication (2), the event, then its task counts, stations and their
+    # people (2), notes, next and last done tasks with their people (2), seats,
+    # and documents (count and latest).
+    with django_assert_max_num_queries(12):
+        board_client.get(event_dashboard_url(event.id))
 
 
 def test_an_events_dashboard_counts_the_people_at_its_stations(board_client):

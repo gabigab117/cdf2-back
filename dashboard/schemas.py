@@ -3,6 +3,7 @@ import datetime as dt
 from ninja import Schema
 
 from accounts.schemas import BoardMemberOut
+from documents.schemas import DocumentCountsOut, DocumentItemOut
 from events.schemas import EventItemOut
 from tasks.schemas import TaskOut
 
@@ -47,6 +48,22 @@ class GeneralTasksOut(Schema):
     recently_done_tasks: list[TaskOut]
 
 
+class PendingDocumentsOut(Schema):
+    """The documents awaiting review: how many, by category, and the latest."""
+
+    counts: DocumentCountsOut
+    # The latest deposited, at most ten: the count leads to them all.
+    items: list[DocumentItemOut]
+
+
+class PendingOut(Schema):
+    """What awaits the board (A6): the bell's panel, the sidebar's badges."""
+
+    # Every item awaiting, whatever its kind: the bell shows a dot if any.
+    total: int
+    documents: PendingDocumentsOut
+
+
 class BoardOverviewOut(Schema):
     """What the board's dashboard shows."""
 
@@ -57,6 +74,9 @@ class BoardOverviewOut(Schema):
     # The board's latest notes, every event together, replies aside.
     latest_notes: list[LatestNoteOut]
     general_tasks: GeneralTasksOut
+    pending: PendingOut
+    # The first documents of the list.
+    recent_documents: list[DocumentItemOut]
 
 
 class EventDashboardOut(Schema):
@@ -77,3 +97,6 @@ class EventDashboardOut(Schema):
     # The places its reservations take, out of its capacity: None for no limit.
     reserved_seats: int
     capacity: int | None
+    documents_count: int
+    # Its latest documents, in the order of the list.
+    documents: list[DocumentItemOut]

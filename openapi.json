@@ -127,6 +127,16 @@
             "title": "Latest Notes",
             "type": "array"
           },
+          "pending": {
+            "$ref": "#/components/schemas/PendingOut"
+          },
+          "recent_documents": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentItemOut"
+            },
+            "title": "Recent Documents",
+            "type": "array"
+          },
           "upcoming_events": {
             "items": {
               "$ref": "#/components/schemas/OverviewEventOut"
@@ -143,7 +153,9 @@
           "upcoming_events",
           "upcoming_events_count",
           "latest_notes",
-          "general_tasks"
+          "general_tasks",
+          "pending",
+          "recent_documents"
         ],
         "title": "BoardOverviewOut",
         "type": "object"
@@ -854,6 +866,17 @@
             ],
             "title": "Capacity"
           },
+          "documents": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentItemOut"
+            },
+            "title": "Documents",
+            "type": "array"
+          },
+          "documents_count": {
+            "title": "Documents Count",
+            "type": "integer"
+          },
           "next_tasks": {
             "items": {
               "$ref": "#/components/schemas/TaskOut"
@@ -898,7 +921,9 @@
           "assigned_count",
           "required_count",
           "reserved_seats",
-          "capacity"
+          "capacity",
+          "documents_count",
+          "documents"
         ],
         "title": "EventDashboardOut",
         "type": "object"
@@ -1504,6 +1529,30 @@
         "title": "MeOut",
         "type": "object"
       },
+      "NoteDocumentOut": {
+        "description": "The document a note joins, as its chip names it.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "original_name": {
+            "title": "Original Name",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "original_name"
+        ],
+        "title": "NoteDocumentOut",
+        "type": "object"
+      },
       "NoteEventOut": {
         "properties": {
           "id": {
@@ -1525,6 +1574,17 @@
       "NoteIn": {
         "description": "A note as a member writes it. Its values are checked by the model.",
         "properties": {
+          "document": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document"
+          },
           "event": {
             "anyOf": [
               {
@@ -1565,7 +1625,7 @@
         "type": "object"
       },
       "NoteOut": {
-        "description": "A note of the board, with its replies.",
+        "description": "A note of the board, with its attachment and its replies.",
         "properties": {
           "author": {
             "anyOf": [
@@ -1581,6 +1641,16 @@
             "format": "date-time",
             "title": "Created At",
             "type": "string"
+          },
+          "document": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NoteDocumentOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "editable": {
             "title": "Editable",
@@ -1630,6 +1700,7 @@
           "editable",
           "tag",
           "pinned",
+          "document",
           "replies"
         ],
         "title": "NoteOut",
@@ -1896,6 +1967,45 @@
           "count"
         ],
         "title": "PagedTaskOut",
+        "type": "object"
+      },
+      "PendingDocumentsOut": {
+        "description": "The documents awaiting review: how many, by category, and the latest.",
+        "properties": {
+          "counts": {
+            "$ref": "#/components/schemas/DocumentCountsOut"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "counts",
+          "items"
+        ],
+        "title": "PendingDocumentsOut",
+        "type": "object"
+      },
+      "PendingOut": {
+        "description": "What awaits the board (A6): the bell's panel, the sidebar's badges.",
+        "properties": {
+          "documents": {
+            "$ref": "#/components/schemas/PendingDocumentsOut"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "documents"
+        ],
+        "title": "PendingOut",
         "type": "object"
       },
       "PracticalInfoIcon": {

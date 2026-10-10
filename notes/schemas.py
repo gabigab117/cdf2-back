@@ -15,6 +15,9 @@ class NoteIn(InputSchema):
     text: str
     tag: NoteTag | None
     pinned: bool
+    # The id of the document deposited as its attachment. Left out, none: the
+    # notes written before attachments existed send no such key.
+    document: int | None = None
 
 
 class NoteUpdateIn(InputSchema):
@@ -45,9 +48,18 @@ class ReplyOut(Schema):
     editable: bool
 
 
+class NoteDocumentOut(Schema):
+    """The document a note joins, as its chip names it."""
+
+    id: int
+    title: str
+    original_name: str
+
+
 class NoteOut(ReplyOut):
-    """A note of the board, with its replies."""
+    """A note of the board, with its attachment and its replies."""
 
     tag: NoteTag | None
     pinned: bool
+    document: NoteDocumentOut | None
     replies: list[ReplyOut]

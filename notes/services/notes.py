@@ -21,7 +21,7 @@ def member_notes(member: User) -> QuerySet[Note]:
         .order_by("created_at", "pk")
     )
     return (
-        Note.objects.select_related("author")
+        Note.objects.select_related("author", "document")
         .annotate(editable=_written_by(member))
         .prefetch_related(Prefetch("replies", queryset=replies))
     )
@@ -43,9 +43,14 @@ def notes_to_reply_to() -> QuerySet[Note]:
 
 
 def create_note(data: NoteIn, author: User) -> Note:
-    """Record a note of a member, on an event or general."""
+    """Record a note of a member, on an event or general, with its attachment if any."""
     note = Note(
-        event_id=data.event, author=author, text=data.text, tag=data.tag, pinned=data.pinned
+        event_id=data.event,
+        author=author,
+        text=data.text,
+        tag=data.tag,
+        pinned=data.pinned,
+        document_id=data.document,
     )
     return _save(note, author)
 
