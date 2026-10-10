@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from ninja import Schema
 
+from core.schemas import InputSchema
 from equipment.models import EquipmentCategory, LoanBorrowerType, LoanState
 
 
@@ -13,6 +14,21 @@ class AvailabilityQuery(Schema):
     end: dt.date
     # The id of the loan being edited: the pieces it takes are not counted.
     exclude_loan: int | None = None
+
+
+class EquipmentIn(InputSchema):
+    """An equipment as the board writes it: whole, every key required.
+
+    Its values are checked by the model, whose messages are in French.
+    """
+
+    name: str
+    category: EquipmentCategory
+    storage_location: str
+    total_quantity: int
+    repair_quantity: int
+    unit_value: Decimal | None
+    repair_note: str
 
 
 class EquipmentOut(Schema):
@@ -70,3 +86,43 @@ class AvailabilityOut(Schema):
     start: dt.date
     end: dt.date
     items: list[EquipmentAvailabilityOut]
+
+
+class InventoryTotalsOut(Schema):
+    """The figures under the inventory's title."""
+
+    references: int
+    # The equipment some pieces of which are taken today.
+    taken_today: int
+    pieces_under_repair: int
+
+
+class EquipmentCountsOut(Schema):
+    """How many equipment each category holds: the chips of the inventory."""
+
+    total: int
+    furniture: int
+    marquees: int
+    sound_and_light: int
+    kitchen: int
+    street_and_games: int
+
+
+class InventoryOut(Schema):
+    """What each equipment offers today, in the inventory's order: a bounded
+    aggregate (A7).
+    """
+
+    day: dt.date
+    items: list[EquipmentAvailabilityOut]
+    totals: InventoryTotalsOut
+    counts: EquipmentCountsOut
+
+
+class OccupancyOut(Schema):
+    """The loans that take an equipment over the weeks to come."""
+
+    start: dt.date
+    end: dt.date
+    # The first to start first.
+    loans: list[LoanConflictOut]

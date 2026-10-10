@@ -927,6 +927,99 @@
         "title": "EquipmentCategory",
         "type": "string"
       },
+      "EquipmentCountsOut": {
+        "description": "How many equipment each category holds: the chips of the inventory.",
+        "properties": {
+          "furniture": {
+            "title": "Furniture",
+            "type": "integer"
+          },
+          "kitchen": {
+            "title": "Kitchen",
+            "type": "integer"
+          },
+          "marquees": {
+            "title": "Marquees",
+            "type": "integer"
+          },
+          "sound_and_light": {
+            "title": "Sound And Light",
+            "type": "integer"
+          },
+          "street_and_games": {
+            "title": "Street And Games",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "furniture",
+          "marquees",
+          "sound_and_light",
+          "kitchen",
+          "street_and_games"
+        ],
+        "title": "EquipmentCountsOut",
+        "type": "object"
+      },
+      "EquipmentIn": {
+        "description": "An equipment as the board writes it: whole, every key required.\n\nIts values are checked by the model, whose messages are in French.",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/EquipmentCategory"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "repair_note": {
+            "title": "Repair Note",
+            "type": "string"
+          },
+          "repair_quantity": {
+            "title": "Repair Quantity",
+            "type": "integer"
+          },
+          "storage_location": {
+            "title": "Storage Location",
+            "type": "string"
+          },
+          "total_quantity": {
+            "title": "Total Quantity",
+            "type": "integer"
+          },
+          "unit_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Value"
+          }
+        },
+        "required": [
+          "name",
+          "category",
+          "storage_location",
+          "total_quantity",
+          "repair_quantity",
+          "unit_value",
+          "repair_note"
+        ],
+        "title": "EquipmentIn",
+        "type": "object"
+      },
       "EquipmentOut": {
         "description": "An equipment of the inventory.",
         "properties": {
@@ -1595,6 +1688,61 @@
         "title": "Input",
         "type": "object"
       },
+      "InventoryOut": {
+        "description": "What each equipment offers today, in the inventory's order: a bounded\naggregate (A7).",
+        "properties": {
+          "counts": {
+            "$ref": "#/components/schemas/EquipmentCountsOut"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EquipmentAvailabilityOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/InventoryTotalsOut"
+          }
+        },
+        "required": [
+          "day",
+          "items",
+          "totals",
+          "counts"
+        ],
+        "title": "InventoryOut",
+        "type": "object"
+      },
+      "InventoryTotalsOut": {
+        "description": "The figures under the inventory's title.",
+        "properties": {
+          "pieces_under_repair": {
+            "title": "Pieces Under Repair",
+            "type": "integer"
+          },
+          "references": {
+            "title": "References",
+            "type": "integer"
+          },
+          "taken_today": {
+            "title": "Taken Today",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "references",
+          "taken_today",
+          "pieces_under_repair"
+        ],
+        "title": "InventoryTotalsOut",
+        "type": "object"
+      },
       "LatestNoteOut": {
         "description": "A note of the board, as the dashboard lists the latest.",
         "properties": {
@@ -2000,6 +2148,35 @@
           "pinned"
         ],
         "title": "NoteUpdateIn",
+        "type": "object"
+      },
+      "OccupancyOut": {
+        "description": "The loans that take an equipment over the weeks to come.",
+        "properties": {
+          "end": {
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "loans": {
+            "items": {
+              "$ref": "#/components/schemas/LoanConflictOut"
+            },
+            "title": "Loans",
+            "type": "array"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "loans"
+        ],
+        "title": "OccupancyOut",
         "type": "object"
       },
       "OverviewEventOut": {
@@ -4309,6 +4486,129 @@
         ]
       }
     },
+    "/api/board/equipment": {
+      "get": {
+        "description": "What each equipment offers today, by category: its pieces, those taken\ntoday and those under repair, with the figures of the inventory.",
+        "operationId": "equipment_api_read_inventory",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Read today's inventory",
+        "tags": [
+          "equipment"
+        ]
+      },
+      "post": {
+        "operationId": "equipment_api_create",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EquipmentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EquipmentOut"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Add equipment",
+        "tags": [
+          "equipment"
+        ]
+      }
+    },
     "/api/board/equipment/availability": {
       "get": {
         "description": "For each equipment: what the loans take of it at their daily peak over\nthe period, what remains free, and those loans. The loan being edited is\nleft out: its own pieces do not stand in its way.",
@@ -4399,6 +4699,251 @@
           }
         ],
         "summary": "Tell what equipment is free over a period",
+        "tags": [
+          "equipment"
+        ]
+      }
+    },
+    "/api/board/equipment/{equipment_id}": {
+      "delete": {
+        "description": "Delete an equipment no loan names.",
+        "operationId": "equipment_api_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "equipment_id",
+            "required": true,
+            "schema": {
+              "title": "Equipment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Delete equipment",
+        "tags": [
+          "equipment"
+        ]
+      },
+      "put": {
+        "description": "Rewrite an equipment whole, such as the pieces put back in service.\n\nFewer pieces offered are refused if a loan to come would then lack some.",
+        "operationId": "equipment_api_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "equipment_id",
+            "required": true,
+            "schema": {
+              "title": "Equipment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EquipmentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EquipmentOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Change equipment",
+        "tags": [
+          "equipment"
+        ]
+      }
+    },
+    "/api/board/equipment/{equipment_id}/occupancy": {
+      "get": {
+        "description": "The loans that take an equipment, from the Monday of this week, for\neleven weeks.",
+        "operationId": "equipment_api_read_occupancy",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "equipment_id",
+            "required": true,
+            "schema": {
+              "title": "Equipment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OccupancyOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Read the occupancy of equipment",
         "tags": [
           "equipment"
         ]
