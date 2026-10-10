@@ -9,6 +9,7 @@ from ninja_jwt.tokens import AccessToken
 from tests.accounts.factories import UserFactory
 from tests.events.factories import EventFactory
 from tests.notes.factories import NoteFactory, ReplyFactory
+from tests.stations.factories import AssignmentFactory, StationFactory
 from tests.tasks.factories import TaskFactory
 
 pytestmark = pytest.mark.django_db
@@ -242,4 +243,25 @@ def test_an_events_dashboard_without_notes_or_tasks(board_client):
         "tasks_total": 0,
         "next_tasks": [],
         "recently_done_tasks": [],
+        "assigned_count": 0,
+        "required_count": 0,
     }
+
+
+def test_an_events_dashboard_counts_the_people_at_its_stations(board_client):
+    """
+    Given an event whose two stations require 2 and 3 people, the first with
+    three volunteers and the second with one, and a station of another event
+    When a member opens the event's page
+    Then its stations count 4 people out of 5 required
+    """
+    event = EventFactory()
+    first = StationFactory(event=event, required_count=2)
+    second = StationFactory(event=event, required_count=3)
+    AssignmentFactory.create_batch(3, station=first)
+    AssignmentFactory(station=second)
+    AssignmentFactory()
+
+    body = board_client.get(event_dashboard_url(event.id)).json()
+
+    assert (body["assigned_count"], body["required_count"]) == (4, 5)

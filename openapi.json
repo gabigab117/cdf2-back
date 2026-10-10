@@ -44,6 +44,47 @@
         "title": "AgendaOut",
         "type": "object"
       },
+      "AssignmentIn": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "role"
+        ],
+        "title": "AssignmentIn",
+        "type": "object"
+      },
+      "AssignmentOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "role"
+        ],
+        "title": "AssignmentOut",
+        "type": "object"
+      },
       "BoardMemberOut": {
         "description": "A board member as the board space names them, the lead of an event.\n\nAn account created without a name, such as with createsuperuser, is named\nafter its email address.",
         "properties": {
@@ -122,6 +163,10 @@
       "EventDashboardOut": {
         "description": "What an event's page shows of its tabs: their counts, and its tasks block.",
         "properties": {
+          "assigned_count": {
+            "title": "Assigned Count",
+            "type": "integer"
+          },
           "next_tasks": {
             "items": {
               "$ref": "#/components/schemas/TaskOut"
@@ -140,6 +185,10 @@
             "title": "Recently Done Tasks",
             "type": "array"
           },
+          "required_count": {
+            "title": "Required Count",
+            "type": "integer"
+          },
           "tasks_done": {
             "title": "Tasks Done",
             "type": "integer"
@@ -154,7 +203,9 @@
           "tasks_done",
           "tasks_total",
           "next_tasks",
-          "recently_done_tasks"
+          "recently_done_tasks",
+          "assigned_count",
+          "required_count"
         ],
         "title": "EventDashboardOut",
         "type": "object"
@@ -1294,6 +1345,130 @@
         "title": "ReplyOut",
         "type": "object"
       },
+      "StationBoardOut": {
+        "description": "The stations of an event and their totals: a bounded aggregate.",
+        "properties": {
+          "assigned_count": {
+            "title": "Assigned Count",
+            "type": "integer"
+          },
+          "complete": {
+            "title": "Complete",
+            "type": "boolean"
+          },
+          "open_places": {
+            "title": "Open Places",
+            "type": "integer"
+          },
+          "required_count": {
+            "title": "Required Count",
+            "type": "integer"
+          },
+          "stations": {
+            "items": {
+              "$ref": "#/components/schemas/StationOut"
+            },
+            "title": "Stations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "stations",
+          "required_count",
+          "assigned_count",
+          "open_places",
+          "complete"
+        ],
+        "title": "StationBoardOut",
+        "type": "object"
+      },
+      "StationIn": {
+        "description": "A station as the board writes it. Its values are checked by the model.",
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "required_count": {
+            "title": "Required Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "required_count"
+        ],
+        "title": "StationIn",
+        "type": "object"
+      },
+      "StationOrderIn": {
+        "properties": {
+          "stations": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Stations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "stations"
+        ],
+        "title": "StationOrderIn",
+        "type": "object"
+      },
+      "StationOut": {
+        "description": "A station, the people at it, and whether there are enough of them.",
+        "properties": {
+          "assigned_count": {
+            "title": "Assigned Count",
+            "type": "integer"
+          },
+          "assignments": {
+            "items": {
+              "$ref": "#/components/schemas/AssignmentOut"
+            },
+            "title": "Assignments",
+            "type": "array"
+          },
+          "complete": {
+            "title": "Complete",
+            "type": "boolean"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "required_count": {
+            "title": "Required Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "required_count",
+          "assigned_count",
+          "complete",
+          "assignments"
+        ],
+        "title": "StationOut",
+        "type": "object"
+      },
       "TaskIn": {
         "description": "A task as the board writes it: whole, every key required.\n\nA key left out never erases a value. The values themselves are checked by\nthe model, whose messages are in French.",
         "properties": {
@@ -1725,6 +1900,76 @@
         "summary": "Renew the session",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/board/assignments/{assignment_id}": {
+      "delete": {
+        "operationId": "stations_api_unassign",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "title": "Assignment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Take a volunteer off a station",
+        "tags": [
+          "stations"
         ]
       }
     },
@@ -2260,6 +2505,278 @@
         "summary": "Dashboard of an event",
         "tags": [
           "dashboard"
+        ]
+      }
+    },
+    "/api/board/events/{event_id}/stations": {
+      "get": {
+        "description": "The stations of an event and their totals, whole: a bounded aggregate.",
+        "operationId": "stations_api_board",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StationBoardOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Stations of an event",
+        "tags": [
+          "stations"
+        ]
+      },
+      "post": {
+        "description": "Add a station after the event's others.",
+        "operationId": "stations_api_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StationIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StationOut"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Add a station to an event",
+        "tags": [
+          "stations"
+        ]
+      }
+    },
+    "/api/board/events/{event_id}/stations/order": {
+      "put": {
+        "description": "Give the event's stations a new order: each of them, once.",
+        "operationId": "stations_api_reorder",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "title": "Event Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StationOrderIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StationBoardOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Reorder the stations of an event",
+        "tags": [
+          "stations"
         ]
       }
     },
@@ -2832,6 +3349,269 @@
         "summary": "Board overview",
         "tags": [
           "dashboard"
+        ]
+      }
+    },
+    "/api/board/stations/{station_id}": {
+      "delete": {
+        "description": "Delete a station, with the people at it.",
+        "operationId": "stations_api_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "station_id",
+            "required": true,
+            "schema": {
+              "title": "Station Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Delete a station",
+        "tags": [
+          "stations"
+        ]
+      },
+      "put": {
+        "operationId": "stations_api_update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "station_id",
+            "required": true,
+            "schema": {
+              "title": "Station Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StationIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StationOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Update a station",
+        "tags": [
+          "stations"
+        ]
+      }
+    },
+    "/api/board/stations/{station_id}/assignments": {
+      "post": {
+        "operationId": "stations_api_assign",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "station_id",
+            "required": true,
+            "schema": {
+              "title": "Station Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignmentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentOut"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Put a volunteer at a station",
+        "tags": [
+          "stations"
         ]
       }
     },

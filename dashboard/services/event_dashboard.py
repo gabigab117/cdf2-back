@@ -8,6 +8,7 @@ from every app that attaches records to events.
 from dataclasses import dataclass
 
 from events.models import Event
+from stations.services.stations import station_totals
 from tasks.models import Task
 from tasks.services.tasks import next_tasks, recently_done_tasks, task_counts
 
@@ -27,15 +28,21 @@ class EventDashboard:
     tasks_total: int
     next_tasks: list[Task]
     recently_done_tasks: list[Task]
+    # The people at its stations, out of how many they require.
+    assigned_count: int
+    required_count: int
 
 
 def event_dashboard(event: Event) -> EventDashboard:
     """The counts of an event's tabs, and the tasks its block shows."""
     tasks_done, tasks_total = task_counts(event)
+    assigned_count, required_count = station_totals(event)
     return EventDashboard(
         notes_count=event.notes.count(),
         tasks_done=tasks_done,
         tasks_total=tasks_total,
         next_tasks=next_tasks(event, NEXT_TASKS_COUNT),
         recently_done_tasks=recently_done_tasks(event, RECENTLY_DONE_TASKS_COUNT),
+        assigned_count=assigned_count,
+        required_count=required_count,
     )

@@ -26,3 +26,6 @@ class EventDashboardOut(Schema):
     next_tasks: list[TaskOut]
     # The tasks done last, in the order they were done.
     recently_done_tasks: list[TaskOut]
+    # The people at its stations, out of how many they require.
+    assigned_count: int
+    required_count: int
