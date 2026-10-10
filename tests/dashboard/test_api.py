@@ -9,6 +9,7 @@ from ninja_jwt.tokens import AccessToken
 from documents.models import Document, DocumentCategory, DocumentStatus
 from tests.accounts.factories import BoardMemberFactory, UserFactory
 from tests.documents.factories import DocumentFactory
+from tests.equipment.factories import CommitteeLoanFactory, LoanFactory, LoanLineFactory
 from tests.events.factories import EventFactory
 from tests.notes.factories import NoteFactory, ReplyFactory
 from tests.reservations.factories import TicketTypeFactory, reserve
@@ -162,8 +163,11 @@ def test_an_empty_board_has_no_event_to_come(board_client):
                 "counts": {"total": 0, "invoice": 0, "order": 0, "minutes": 0, "misc": 0},
                 "items": [],
             },
+            "loans": {"overdue": 0, "to_prepare": 0, "items": []},
         },
         "recent_documents": [],
+        "loans": {"out_count": 0, "to_prepare_count": 0, "next_return": None},
+        "loan_movements": [],
     }
 
 
@@ -197,19 +201,25 @@ def test_each_event_to_come_counts_its_tasks_and_notes(board_client):
 
 def test_the_counts_take_a_fixed_number_of_queries(board_client, django_assert_max_num_queries):
     """
-    Given five events to come, each with tasks and notes
+    Given five events to come, each with tasks and notes, and loans out and to
+    prepare, each with its lines
     When a member opens the dashboard
-    Then the rows, their counts, the count of events and the latest notes take
-    a fixed number of queries
+    Then the rows, their counts, the count of events, the latest notes and the
+    loans take a fixed number of queries
     """
     for event in EventFactory.create_batch(5):
         TaskFactory.create_batch(2, event=event)
         NoteFactory.create_batch(2, event=event)
+    for days in (-1, 2, 4):
+        lent = LoanFactory(start_date=in_days(days).date(), end_date=in_days(days + 1).date())
+        LoanLineFactory.create_batch(2, loan=lent)
 
     # Authentication (2), the rows, the count of events, the latest notes, the
-    # general tasks (their counts, the next ones and the last done), then the
-    # documents: those to review (counts and latest), and the recent ones.
-    with django_assert_max_num_queries(11):
+    # general tasks (their counts, the next ones and the last done), the
+    # documents: those to review (counts and latest), and the recent ones; then
+    # the loans: their counts, the next return, the fortnight's movements with
+    # their lines (2), and those to list in the bell.
+    with django_assert_max_num_queries(16):
         board_client.get(OVERVIEW)
 
 
@@ -457,6 +467,8 @@ def test_an_events_dashboard_without_notes_or_tasks(board_client):
         "capacity": None,
         "documents_count": 0,
         "documents": [],
+        "equipment_count": 0,
+        "committee_loan": None,
     }
 
 
@@ -494,11 +506,12 @@ def test_an_events_dashboard_takes_a_fixed_number_of_queries(
     TaskFactory.create_batch(2, event=event)
     StationFactory.create_batch(2, event=event)
     DocumentFactory.create_batch(2, event=event)
+    LoanLineFactory.create_batch(3, loan=CommitteeLoanFactory(event=event))
 
     # Authentication (2), the event, then its task counts, stations and their
     # people (2), notes, next and last done tasks with their people (2), seats,
-    # and documents (count and latest).
-    with django_assert_max_num_queries(12):
+    # documents (count and latest), and its reservation with its lines (2).
+    with django_assert_max_num_queries(14):
         board_client.get(event_dashboard_url(event.id))
 
 

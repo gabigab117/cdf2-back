@@ -1,9 +1,11 @@
 import datetime as dt
+from typing import Literal
 
 from ninja import Schema
 
 from accounts.schemas import BoardMemberOut
 from documents.schemas import DocumentCountsOut, DocumentItemOut
+from equipment.schemas import LoanBriefOut, LoanItemOut
 from events.schemas import EventItemOut
 from tasks.schemas import TaskOut
 
@@ -56,12 +58,42 @@ class PendingDocumentsOut(Schema):
     items: list[DocumentItemOut]
 
 
+class PendingLoansOut(Schema):
+    """The loans that call for the board: late, then to prepare."""
+
+    overdue: int
+    to_prepare: int
+    # The first ten, as the list orders them: the counts lead to them all.
+    items: list[LoanBriefOut]
+
+
 class PendingOut(Schema):
     """What awaits the board (A6): the bell's panel, the sidebar's badges."""
 
     # Every item awaiting, whatever its kind: the bell shows a dot if any.
     total: int
     documents: PendingDocumentsOut
+    loans: PendingLoansOut
+
+
+class LoanedEquipmentOut(Schema):
+    """The KPI « Matériel prêté »."""
+
+    # The loans out, late ones included.
+    out_count: int
+    to_prepare_count: int
+    # The loan out due back first, a late one before all: none when nothing is out.
+    next_return: LoanBriefOut | None
+
+
+class LoanMovementOut(Schema):
+    """The next step of a loan within the fortnight: the checkout of a loan
+    confirmed, or the return of a loan out.
+    """
+
+    kind: Literal["checkout", "return"]
+    day: dt.date
+    loan: LoanItemOut
 
 
 class BoardOverviewOut(Schema):
@@ -77,6 +109,9 @@ class BoardOverviewOut(Schema):
     pending: PendingOut
     # The first documents of the list.
     recent_documents: list[DocumentItemOut]
+    loans: LoanedEquipmentOut
+    # The checkouts and returns of the fortnight, the earliest first, at most eight.
+    loan_movements: list[LoanMovementOut]
 
 
 class EventDashboardOut(Schema):
@@ -100,3 +135,6 @@ class EventDashboardOut(Schema):
     documents_count: int
     # Its latest documents, in the order of the list.
     documents: list[DocumentItemOut]
+    # The lines of the equipment it keeps, and that reservation: none if it keeps none.
+    equipment_count: int
+    committee_loan: LoanItemOut | None

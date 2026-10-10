@@ -4,12 +4,17 @@ The dashboard reads from every app: it sits above them, so that none depends
 on another for its figures.
 """
 
+import datetime as dt
 from dataclasses import dataclass
 
 from django.db.models import Count, Q
+from django.utils import timezone
 
 from documents.models import Document, DocumentStatus
 from documents.services.documents import document_counts, listed_documents
+from equipment.models import Loan, LoanState
+from equipment.services.board import LoanMovement, loan_movements, next_return, pending_loans
+from equipment.services.loans import loan_counts
 from events.models import Event
 from events.services.periods import events_in_period
 from notes.models import Note
@@ -45,14 +50,37 @@ class PendingDocuments:
 
 
 @dataclass(frozen=True)
+class PendingLoans:
+    """The loans that call for the board: how many are late, how many to
+    prepare, and the first of them.
+    """
+
+    overdue: int
+    to_prepare: int
+    items: list[Loan]
+
+
+@dataclass(frozen=True)
 class Pending:
     """What awaits the board (A6): the bell's panel and the sidebar's badges.
-    The phases 5 to 7 add their own: loans, stock, receipts.
+    The phases 6 and 7 add their own: stock, receipts.
     """
 
     # Every item awaiting, whatever its kind: the bell shows a dot if any.
     total: int
     documents: PendingDocuments
+    loans: PendingLoans
+
+
+@dataclass(frozen=True)
+class LoanedEquipment:
+    """The KPI « Matériel prêté »: the loans out, late ones included, the
+    first due back, and how many are to prepare.
+    """
+
+    out_count: int
+    to_prepare_count: int
+    next_return: Loan | None
 
 
 @dataclass(frozen=True)
@@ -75,14 +103,19 @@ class BoardOverview:
     general_tasks: GeneralTasks
     pending: Pending
     recent_documents: list[Document]
+    loans: LoanedEquipment
+    loan_movements: list[LoanMovement]
 
 
 def board_overview() -> BoardOverview:
     """The next events, drafts included as in the sidebar, with how far their
     tasks have gone and how many notes they have; how many events are to come;
-    the board's latest notes; the general tasks; what awaits the board; and
-    the latest documents.
+    the board's latest notes; the general tasks; what awaits the board; the
+    latest documents; and the loans: those out, and the fortnight's checkouts
+    and returns.
     """
+    today = timezone.localdate()
+    by_state = loan_counts(today=today)
     upcoming = events_in_period("upcoming")
     # Counted for the rows shown only. The two counts join two lists: distinct
     # keeps each from multiplying the other.
@@ -100,18 +133,30 @@ def board_overview() -> BoardOverview:
             .order_by("-created_at", "-pk")[:LATEST_NOTES_COUNT]
         ),
         general_tasks=_general_tasks(),
-        pending=_pending(),
+        pending=_pending(by_state, today),
         recent_documents=list(listed_documents()[:RECENT_DOCUMENTS_COUNT]),
+        loans=LoanedEquipment(
+            out_count=by_state[LoanState.OUT] + by_state[LoanState.OVERDUE],
+            to_prepare_count=by_state[LoanState.TO_PREPARE],
+            next_return=next_return(today),
+        ),
+        loan_movements=loan_movements(today),
     )
 
 
-def _pending() -> Pending:
+def _pending(loans_by_state: dict[str, int], today: dt.date) -> Pending:
     to_review = listed_documents().filter(status=DocumentStatus.TO_REVIEW)
     counts = document_counts(to_review)
     latest = to_review.order_by("-created_at", "-pk")[:PENDING_DOCUMENTS_COUNT]
+    loans = PendingLoans(
+        overdue=loans_by_state[LoanState.OVERDUE],
+        to_prepare=loans_by_state[LoanState.TO_PREPARE],
+        items=pending_loans(today),
+    )
     return Pending(
-        total=counts["total"],
+        total=counts["total"] + loans.overdue + loans.to_prepare,
         documents=PendingDocuments(counts=counts, items=list(latest)),
+        loans=loans,
     )
 
 

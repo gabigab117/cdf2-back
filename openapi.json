@@ -188,6 +188,16 @@
             "title": "Latest Notes",
             "type": "array"
           },
+          "loan_movements": {
+            "items": {
+              "$ref": "#/components/schemas/LoanMovementOut"
+            },
+            "title": "Loan Movements",
+            "type": "array"
+          },
+          "loans": {
+            "$ref": "#/components/schemas/LoanedEquipmentOut"
+          },
           "pending": {
             "$ref": "#/components/schemas/PendingOut"
           },
@@ -216,7 +226,9 @@
           "latest_notes",
           "general_tasks",
           "pending",
-          "recent_documents"
+          "recent_documents",
+          "loans",
+          "loan_movements"
         ],
         "title": "BoardOverviewOut",
         "type": "object"
@@ -1118,6 +1130,16 @@
             ],
             "title": "Capacity"
           },
+          "committee_loan": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LoanItemOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "documents": {
             "items": {
               "$ref": "#/components/schemas/DocumentItemOut"
@@ -1127,6 +1149,10 @@
           },
           "documents_count": {
             "title": "Documents Count",
+            "type": "integer"
+          },
+          "equipment_count": {
+            "title": "Equipment Count",
             "type": "integer"
           },
           "next_tasks": {
@@ -1175,7 +1201,9 @@
           "reserved_seats",
           "capacity",
           "documents_count",
-          "documents"
+          "documents",
+          "equipment_count",
+          "committee_loan"
         ],
         "title": "EventDashboardOut",
         "type": "object"
@@ -2248,6 +2276,34 @@
         "title": "LoanLineOut",
         "type": "object"
       },
+      "LoanMovementOut": {
+        "description": "The next step of a loan within the fortnight: the checkout of a loan\nconfirmed, or the return of a loan out.",
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "checkout",
+              "return"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "loan": {
+            "$ref": "#/components/schemas/LoanItemOut"
+          }
+        },
+        "required": [
+          "kind",
+          "day",
+          "loan"
+        ],
+        "title": "LoanMovementOut",
+        "type": "object"
+      },
       "LoanOut": {
         "description": "A loan, as its page shows it and its form edits it.",
         "properties": {
@@ -2480,6 +2536,36 @@
         ],
         "title": "LoanStatus",
         "type": "string"
+      },
+      "LoanedEquipmentOut": {
+        "description": "The KPI « Matériel prêté ».",
+        "properties": {
+          "next_return": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LoanBriefOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "out_count": {
+            "title": "Out Count",
+            "type": "integer"
+          },
+          "to_prepare_count": {
+            "title": "To Prepare Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "out_count",
+          "to_prepare_count",
+          "next_return"
+        ],
+        "title": "LoanedEquipmentOut",
+        "type": "object"
       },
       "LoginIn": {
         "properties": {
@@ -3038,11 +3124,41 @@
         "title": "PendingDocumentsOut",
         "type": "object"
       },
+      "PendingLoansOut": {
+        "description": "The loans that call for the board: late, then to prepare.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LoanBriefOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "overdue": {
+            "title": "Overdue",
+            "type": "integer"
+          },
+          "to_prepare": {
+            "title": "To Prepare",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "overdue",
+          "to_prepare",
+          "items"
+        ],
+        "title": "PendingLoansOut",
+        "type": "object"
+      },
       "PendingOut": {
         "description": "What awaits the board (A6): the bell's panel, the sidebar's badges.",
         "properties": {
           "documents": {
             "$ref": "#/components/schemas/PendingDocumentsOut"
+          },
+          "loans": {
+            "$ref": "#/components/schemas/PendingLoansOut"
           },
           "total": {
             "title": "Total",
@@ -3051,7 +3167,8 @@
         },
         "required": [
           "total",
-          "documents"
+          "documents",
+          "loans"
         ],
         "title": "PendingOut",
         "type": "object"

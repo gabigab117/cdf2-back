@@ -7,8 +7,12 @@ from every app that attaches records to events.
 
 from dataclasses import dataclass
 
+from django.utils import timezone
+
 from documents.models import Document
 from documents.services.documents import listed_documents
+from equipment.models import Loan
+from equipment.services.board import event_reservation
 from events.models import Event
 from reservations.services.reservations import reserved_seats
 from stations.services.stations import station_totals
@@ -44,12 +48,18 @@ class EventDashboard:
     documents_count: int
     # Its latest documents, in the order of the list.
     documents: list[Document]
+    # The lines of the equipment it keeps, and that reservation, if any.
+    equipment_count: int
+    committee_loan: Loan | None
 
 
 def event_dashboard(event: Event) -> EventDashboard:
-    """The counts of an event's tabs, and the tasks its block shows."""
+    """The counts of an event's tabs, the tasks its block shows, and the
+    equipment it keeps.
+    """
     tasks_done, tasks_total = task_counts(event.pk)
     assigned_count, required_count = station_totals(event)
+    reservation = event_reservation(event, timezone.localdate())
     return EventDashboard(
         notes_count=event.notes.count(),
         tasks_done=tasks_done,
@@ -62,4 +72,6 @@ def event_dashboard(event: Event) -> EventDashboard:
         capacity=event.capacity,
         documents_count=event.documents.count(),
         documents=list(listed_documents().filter(event=event)[:RELATED_DOCUMENTS_COUNT]),
+        equipment_count=len(reservation.lines.all()) if reservation else 0,
+        committee_loan=reservation,
     )
