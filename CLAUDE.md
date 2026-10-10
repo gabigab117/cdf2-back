@@ -48,6 +48,7 @@ Règles de développement de ce dépôt, pour les humains comme pour les agents.
   Un test du schéma vérifie que toute opération sans `auth=None` déclare 401 et 403.
 - **Schémas et énumérations portent un nom unique dans tout le projet** (`EventCategory`, pas `Category`). Le schéma OpenAPI les range par nom de classe, et un doublon en remplace un autre sans erreur, dans le schéma comme dans les types du front (constaté sur Ninja 1.7.1). Les `TextChoices` se déclarent donc au niveau du module, nommés d'après leur modèle. Un test le vérifie.
 - **Le corps JSON d'une opération se déclare `payload: XxxIn`.** Ninja situe une erreur 422 du schéma sous le nom de ce paramètre (`["body", "payload", "email"]`), quand les services la situent directement sous le champ (`["body", "email"]`, voir `core/errors.py`). Le front retire ce nom pour placer les deux sous le même champ du formulaire : un autre nom ferait disparaître ses erreurs de champ.
+- **Énumération facultative** : elle se publie `XxxChoice | None`. La chaîne vide d'un `CharField` n'est pas un choix de l'énumération, et ferait échouer la réponse : le champ est donc `null=True`, avec un `# noqa: DJ001` qui en dit la raison. Les schémas ne laissant entrer que les choix ou `None`, « pas de valeur » n'a qu'une forme (étiquette d'une note).
 - **Erreur sur une ligne d'une liste** : un service la nomme par son chemin pointé (`programme.2.title`), que `core/errors.py` situe comme Ninja (`["body", "programme", 2, "title"]`).
 - **Réponse non JSON**, comme un fichier iCalendar :
   - l'opération renvoie une `HttpResponse`, que Ninja transmet telle quelle ;
@@ -108,6 +109,8 @@ def test_loan_over_availability_rejected(api_client):
   - Un test vérifie qu'aucun schéma d'une réponse publique ne sert aussi une opération privée, les énumérations mises à part.
   - **Une URL absolue tirée de la requête** (`build_absolute_uri`) ne vaut que pour ce que le navigateur ou l'agenda du visiteur appelle à travers nginx, comme les fichiers iCalendar. Le rendu serveur de Nuxt appelle l'API avec `Host: 127.0.0.1` : une réponse JSON qu'il lit donne des chemins relatifs.
 - **Requêtes optimisées par défaut** : `select_related` / `prefetch_related` sur toute liste. Pas de N+1.
+  - Un test le prouve sur toute liste qui lit des objets liés, par la fixture native `django_assert_max_num_queries` de pytest-django.
+  - **Un booléen annoté qui compare un champ nullable** (« la note est-elle de ce membre ? ») s'écrit `Case(When(author=member, then=Value(True)), default=Value(False))`. Une simple égalité (`ExpressionWrapper(Q(...))`) vaut NULL, et non faux, quand le champ est nul (auteur supprimé) : la réponse échouerait.
   - Une condition qui traverse une relation multiple, comme les groupes d'un compte (`BOARD_MEMBERS`), renvoie une ligne par objet lié : `.distinct()`, et un test qui construit le doublon (un superuser membre de deux groupes).
 - **Opérations synchrones** (WSGI, gunicorn) : Ninja accepte les vues `async`, mais l'ORM et les services sont synchrones. Pas d'`async def` sans arbitrage. Un traitement long ne bloque jamais un worker : il passera par le framework de tâches de Django, à arbitrer quand il arrivera.
 - **Fichiers : tous privés.**
@@ -182,6 +185,7 @@ def test_loan_over_availability_rejected(api_client):
   - pas de renommage ni de suppression de colonne utilisée dans la même release ;
   - une colonne NOT NULL ajoutée porte un `db_default` en plus de son `default` : la release précédente insère encore des lignes sans elle ;
   - tout `RunPython` déclare un `reverse_code`.
+- **Limite d'un retour arrière** : la cascade d'une suppression est faite par Django, pas par la base. Une release qui rattache des objets à un modèle existant (notes, tâches, postes et réservations d'un événement, en phase 3) empêche la release précédente, qui ne connaît pas ces tables, de supprimer un objet qui en a : la base refuse la clé étrangère orpheline.
 - **Aucun hook n'a le droit de réécrire une migration.**
   - Les migrations sont exclues de ruff (`extend-exclude`), et les deux hooks ruff tournent avec `--force-exclude`. Piège : sans lui, `extend-exclude` ne s'applique pas aux chemins que pre-commit passe en argument.
   - Les hooks de `ruff-pre-commit` le portent déjà dans leur `entry` amont : ne pas le repasser en `args`, ruff refuse le doublon.
