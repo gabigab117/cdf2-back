@@ -13,19 +13,20 @@ L'application tourne sur un VPS Ubuntu 24.04, derrière nginx, une instance par 
 ├── front/
 │   ├── releases/<sha>/      serveur Nitro construit par la CI
 │   └── current -> releases/<sha>
-├── backups/                 dumps de la base, faits avant une migration (0700)
+├── backups/                 dumps de la base, faits avant une migration (0750)
 └── shared/
-    ├── back.env, front.env  configuration et secrets (0600)
+    ├── back.env, front.env  configuration et secrets (0660)
     ├── static/              fichiers statiques collectés, servis par nginx
     └── private/             fichiers privés, servis par nginx après contrôle de Django
 ```
 
 - **Utilisateur dédié** : tout tourne sous un utilisateur système (`cdf3`), sans mot de passe, qui n'a accès à aucune autre application du serveur.
+- **Administration** : le compte d'administration du serveur est membre du groupe `cdf3`. Il lit tout, `.env` et dumps compris, et modifie les `.env` sans sudo. `manage.py` et `psql` passent par `sudo -u cdf3` : la base n'accepte que l'utilisateur de l'application.
 - **Base de données** : PostgreSQL 17, en authentification « peer » par socket local. Aucun mot de passe de base n'existe.
 - **Fichiers privés** (`shared/private/`, les documents déposés) :
   - `back.env` en donne le chemin à l'API (`MEDIA_ROOT`). Sans lui, la release échoue, plutôt que d'écrire dans son propre dossier ;
   - seule l'API y écrit : c'est le seul chemin inscriptible de son unité (`ReadWritePaths`) ;
-  - nginx les lit, mais les autres comptes du serveur ne les lisent pas. Le dossier appartient à `cdf3`, groupe `www-data`, en `2750` : le bit setgid fait hériter ce groupe aux fichiers et dossiers créés dedans. Les réglages de production les créent en `640` et `750` :
+  - nginx les lit, comme le compte d'administration, membre du groupe `www-data` ; les autres comptes du serveur ne les lisent pas. Le dossier appartient à `cdf3`, groupe `www-data`, en `2750` : le bit setgid fait hériter ce groupe aux fichiers et dossiers créés dedans. Les réglages de production les créent en `640` et `750` :
 
     ```bash
     chgrp www-data /var/www/cdf3/<instance>/shared/private
@@ -55,7 +56,7 @@ Le détail de chaque déploiement va dans le journal du serveur (`journalctl -t 
 ## Dump avant migration
 
 Avant de migrer, le script de release fait un dump de la base, s'il reste une migration à appliquer (`migrate --check`). Une migration ratée sur des données réelles se défait ainsi sans restaurer tout le serveur.
-- Le dump va dans `/var/www/cdf3/<instance>/backups/before-<sha>.dump` (format personnalisé de `pg_dump`). Seul l'utilisateur de l'application le lit.
+- Le dump va dans `/var/www/cdf3/<instance>/backups/before-<sha>.dump` (format personnalisé de `pg_dump`). Seuls l'utilisateur de l'application et son groupe, où figure le compte d'administration, le lisent.
 - Les 5 derniers sont gardés.
 
 **Restaurer** l'état d'avant une release :

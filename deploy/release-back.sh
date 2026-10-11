@@ -109,7 +109,9 @@ dump() {
     fi
     database=$(sed -n 's/^POSTGRES_DB=//p' "$env_file")
     dumps=$base/backups
-    install -d -m 700 "$dumps"
+    # The group of the application reads them: the server's administration
+    # account belongs to it.
+    install -d -m 750 "$dumps"
     pg_dump --format=custom --file="$dumps/before-$sha.dump.partial" "$database"
     mv "$dumps/before-$sha.dump.partial" "$dumps/before-$sha.dump"
     echo "database dumped to $dumps/before-$sha.dump"
