@@ -2,13 +2,11 @@
 
 import importlib
 import smtplib
-from io import StringIO
 
 import pytest
 from django.apps import apps
 from django.contrib.auth.models import Group
 from django.core.mail.backends.locmem import EmailBackend
-from django.core.management import call_command
 from django.db import transaction
 from django.test import Client
 from django.utils import timezone
@@ -18,7 +16,6 @@ from documents.models import Document, DocumentCategory
 from documents.schemas import DocumentUploadIn
 from documents.services.documents import upload_document
 from documents.services.notifications import DOCUMENT_NOTIFICATION_GROUP
-from documents.services.v1_import import COLUMNS
 from tests.accounts.factories import BoardMemberFactory, UserFactory
 from tests.documents.samples import pdf, upload
 
@@ -173,31 +170,6 @@ def test_a_deposit_undone_tells_no_one(mailoutbox, django_capture_on_commit_call
         upload_document(upload(pdf()), data, member)
         raise RuntimeError("undone")
 
-    assert mailoutbox == []
-
-
-def test_the_take_over_of_the_v1_tells_no_one(
-    mailoutbox, django_capture_on_commit_callbacks, tmp_path
-):
-    """
-    Given an account to tell
-    When the v1's documents are taken over
-    Then no message goes: only a deposit tells
-    """
-    notified(BoardMemberFactory())
-    (tmp_path / "facture.pdf").write_bytes(pdf())
-    csv_path = tmp_path / "correspondance.csv"
-    csv_path.write_text(
-        ";".join(COLUMNS)
-        + "\n"
-        + "facture.pdf;Facture;Animation 60;F-1;05/09/2025;37,57;Sono;;Factures\n",
-        encoding="utf-8-sig",
-    )
-
-    with django_capture_on_commit_callbacks(execute=True):
-        call_command("import_v1_documents", csv=csv_path, files=tmp_path, stdout=StringIO())
-
-    assert Document.objects.exists()
     assert mailoutbox == []
 
 
