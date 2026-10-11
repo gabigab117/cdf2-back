@@ -56,12 +56,6 @@ class Equipment(models.Model):
     """
 
     name = models.CharField("nom", max_length=120)
-    # No longer used (D12). They stay until the next release, which drops their
-    # columns: the release before this one still reads them while this one
-    # migrates (CLAUDE.md, « Migrations »).
-    category = models.CharField(max_length=20, blank=True)
-    storage_location = models.CharField(max_length=120, blank=True)
-    unit_value = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     # Zero for equipment gone, whose loans keep it in their history: it cannot
     # be deleted.
     total_quantity = models.PositiveIntegerField("quantité totale")
