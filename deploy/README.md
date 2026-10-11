@@ -73,7 +73,15 @@ Trois sortes de lignes restent en base après avoir servi. Aucune ne s'efface d'
 - **les sessions de l'admin Django**, après leur expiration (2 semaines). La commande `clearsessions` de Django les supprime ;
 - **les compteurs du throttling**, chacun nommé d'après l'adresse IP qu'il compte. Le cache en base n'efface une ligne expirée que lorsqu'elle est relue. La commande `clear_cache` (`core/management/commands/`) vide le cache, qui ne contient qu'eux.
 
-[`cdf3-flushtokens@.timer`](systemd/cdf3-flushtokens@.timer) lance les trois chaque nuit, dans cet ordre, par [`cdf3-flushtokens@.service`](systemd/cdf3-flushtokens@.service), sous l'utilisateur de l'application. Une purge qui échoue arrête les suivantes et fait échouer l'unité.
+S'y ajoutent **les données personnelles dont la durée de conservation est passée**. La commande `purge_personal_data` (`core/management/commands/`) les efface :
+- le téléphone d'un emprunteur, 3 mois après le retour du matériel ;
+- le nom d'un emprunteur particulier, remplacé par « Nom effacé », et les remarques de son prêt, 1 an après ;
+- le nom et la remarque d'une réservation, 3 mois après son événement ;
+- le nom d'un bénévole, 2 ans après son événement.
+
+Un prêt annulé compte depuis sa date de retour prévue, un événement depuis son dernier jour. Les lignes restent, et les totaux avec elles. La commande n'écrit que des nombres dans le journal, jamais un nom.
+
+[`cdf3-flushtokens@.timer`](systemd/cdf3-flushtokens@.timer) lance les quatre chaque nuit, dans cet ordre, par [`cdf3-flushtokens@.service`](systemd/cdf3-flushtokens@.service), sous l'utilisateur de l'application. Une purge qui échoue arrête les suivantes et fait échouer l'unité : celle des données personnelles passe donc en dernier, sans retarder les autres.
 
 Le timer n'est installé, ou réinstallé après une modification de l'unité, qu'une fois en place une release qui contient les commandes :
 
@@ -115,7 +123,7 @@ Un push sur `main` dont les contrôles passent se déploie seul, par le job `dep
 |---|---|---|
 | `release-back.sh` | `/usr/local/bin/cdf3-release-back` | Release de l'API |
 | `systemd/cdf3-api@.service` | `/etc/systemd/system/` | gunicorn, une instance par environnement (`cdf3-api@preprod`). Durci : système en lecture seule, mémoire et CPU plafonnés |
-| `systemd/cdf3-flushtokens@.service`, `.timer` | `/etc/systemd/system/` | Purge nocturne des jetons, des sessions de l'admin et du cache, durcie comme l'API |
+| `systemd/cdf3-flushtokens@.service`, `.timer` | `/etc/systemd/system/` | Purge nocturne des jetons, des sessions de l'admin, du cache et des données personnelles, durcie comme l'API |
 | `sudoers/cdf3` | `/etc/sudoers.d/cdf3` (0440, vérifié par `visudo -cf`) | L'utilisateur de l'application ne peut que redémarrer ses propres services |
 | `nginx/cdf3.conf.template` | `/etc/nginx/sites-available/cdf3-<instance>` | Une seule origine : `/api/` et l'admin vers Django, le reste vers Nuxt. Les fichiers privés passent par l'emplacement interne `/_private/`, que Django désigne par `X-Accel-Redirect` une fois l'accès contrôlé. Les `{{…}}` sont remplacés à l'installation, puis certbot ajoute le TLS. En production, le rendu retire les lignes marquées `preprod only` (le `noindex`) |
 | `nginx/cdf3-www.conf.template` | à la suite du précédent, en production | Le nom `www` du domaine redirige vers le domaine (301) |

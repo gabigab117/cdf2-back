@@ -3,7 +3,7 @@ import datetime as dt
 import pytest
 from django.utils import timezone
 
-from events.services.periods import events_in_period
+from events.services.periods import events_in_period, events_over_by
 from tests.events.factories import EventFactory
 
 pytestmark = pytest.mark.django_db
@@ -62,3 +62,26 @@ def test_upcoming_events_come_the_next_first_and_the_others_the_latest_first():
     assert titles("upcoming") == ["D+1 a", "D+1 b", "D+2", "D+3"]
     assert titles("past") == ["D-1", "D-2"]
     assert titles(None) == ["D+3", "D+2", "D+1 b", "D+1 a", "D-1", "D-2"]
+
+
+def test_an_event_is_over_by_the_end_of_its_last_day():
+    """
+    Given an event that ended on 15 March, one without an end that started on
+    15 March at half past eleven at night, one running from 14 to 16 March, and
+    one that ended at half past midnight on 16 March in Paris, still 15 March in
+    UTC
+    When the events over by 15 March are listed
+    Then the first two are, the last two are not
+    """
+
+    def paris(day, hour, minute=0):
+        return timezone.make_aware(dt.datetime(2027, 3, day, hour, minute))
+
+    EventFactory(title="Ended", starts_at=paris(15, 14), ends_at=paris(15, 18))
+    EventFactory(title="Started", starts_at=paris(15, 23, 30))
+    EventFactory(title="Running", starts_at=paris(14, 10), ends_at=paris(16, 18))
+    EventFactory(title="Past midnight", starts_at=paris(15, 20), ends_at=paris(16, 0, 30))
+
+    over = events_over_by(dt.date(2027, 3, 15))
+
+    assert sorted(event.title for event in over) == ["Ended", "Started"]

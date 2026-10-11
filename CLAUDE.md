@@ -201,7 +201,7 @@ def test_loan_over_availability_rejected(api_client):
     - l'enregistrement relit le compte sous verrou (`select_for_update`), puis revérifie le jeton : de deux envois du même lien, le second trouve son jeton usé ;
     - `validate_password` juge le mot de passe avec le compte (trop proche d'un nom ou de l'adresse) ;
     - les deux opérations publiques (`/auth/password-link`, `/auth/password`) ont chacune leur throttle et leur `scope`.
-  - Throttling strict sur login et refresh. Purge nocturne planifiée sur le serveur, par un timer systemd (`deploy/`) : tokens expirés (`flushexpiredtokens`), sessions expirées de l'admin (`clearsessions`), cache (`clear_cache`).
+  - Throttling strict sur login et refresh. Purge nocturne planifiée sur le serveur, par un timer systemd (`deploy/`) : tokens expirés (`flushexpiredtokens`), sessions expirées de l'admin (`clearsessions`), cache (`clear_cache`), puis données personnelles (`purge_personal_data`, voir « Données personnelles »).
   - **Limites acceptées** :
     - pas de détection de la réutilisation d'un refresh volé ;
     - changer de mot de passe ne révoque pas les sessions ouvertes ;
@@ -244,7 +244,10 @@ def test_loan_over_availability_rejected(api_client):
 - **Données personnelles (RGPD)**
   - On ne stocke que ce qu'une card demande.
   - Aucune donnée personnelle dans un endpoint public.
-  - Les durées de conservation sont appliquées par une purge planifiée.
+  - Les durées de conservation sont appliquées chaque nuit par `purge_personal_data`, dans l'unité de purge (`deploy/`). Un service par app (`services/purge.py`) fait un seul `update()` par règle :
+    - les délais se comptent en mois du calendrier (`relativedelta`) depuis le jour du retour à Paris, la date de retour prévue d'un prêt annulé, ou le dernier jour de l'événement (`events_over_by`). En fin de mois, ils finissent le lendemain : un retour du 30 novembre s'efface le 1er mars ;
+    - un nom effacé devient « Nom effacé » (`ERASED_NAME`) : un prêt à un tiers, une réservation et un bénévole en gardent un, et leurs lignes restent, totaux compris ;
+    - la commande n'écrit que des nombres dans le journal.
   - Elles sont publiées sur la page « Données personnelles » du site, que le front rédige : une donnée personnelle ajoutée y est décrite, avec sa durée.
 
 ## Definition of Done (chaque feature)

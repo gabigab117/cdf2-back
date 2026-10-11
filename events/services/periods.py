@@ -25,6 +25,13 @@ def events_in_period(period: Period | None) -> QuerySet[Event]:
     return events.exclude(not_over) if period == "past" else events
 
 
+def events_over_by(day: dt.date) -> QuerySet[Event]:
+    """The events over by the end of a day: their last day is that one, or
+    before. The retention periods of A9 count from it.
+    """
+    return Event.objects.exclude(_not_over_on(day + dt.timedelta(days=1)))
+
+
 def _not_over_on(day: dt.date) -> Q:
     start_of_day = timezone.make_aware(dt.datetime.combine(day, dt.time.min))
     return Q(ends_at__gte=start_of_day) | Q(ends_at__isnull=True, starts_at__gte=start_of_day)

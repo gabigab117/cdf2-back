@@ -45,6 +45,7 @@ dependencies = [
     { name = "pillow" },
     { name = "pillow-heif" },
     { name = "psycopg", extra = ["binary"] },
+    { name = "python-dateutil" },
 ]
 
 [package.dev-dependencies]
@@ -71,6 +72,7 @@ requires-dist = [
     { name = "pillow", specifier = ">=12.3" },
     { name = "pillow-heif", specifier = ">=1.8" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.3" },
+    { name = "python-dateutil", specifier = ">=2.9" },
 ]
 
 [package.metadata.requires-dev]

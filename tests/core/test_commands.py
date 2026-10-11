@@ -1,10 +1,20 @@
+import datetime as dt
 from io import StringIO
 
 import pytest
+from dateutil.relativedelta import relativedelta
 from django.conf import settings
 from django.core.cache import cache
 from django.core.management import call_command
 from django.db import connection
+from django.utils import timezone
+
+from core.text import ERASED_NAME
+from equipment.models import LoanBorrowerType, LoanStatus
+from tests.equipment.factories import LoanFactory
+from tests.events.factories import EventFactory
+from tests.reservations.factories import ReservationFactory
+from tests.stations.factories import AssignmentFactory, StationFactory
 
 pytestmark = pytest.mark.django_db
 
@@ -33,3 +43,46 @@ def test_the_nightly_purge_leaves_no_throttle_counter_behind():
     call_command("clear_cache", stdout=StringIO())
 
     assert cache_rows() == 0
+
+
+def test_the_nightly_purge_erases_the_personal_data_past_its_retention():
+    """
+    Given a loan to a person returned a year ago today, a reservation of an
+    event three months ago, and a volunteer at an event two years ago
+    When `manage.py purge_personal_data` runs, as it does every night
+    Then their personal data is erased
+    And the command tells how many, without a name
+    """
+    today = timezone.localdate()
+
+    def event_on(day):
+        return EventFactory(starts_at=timezone.make_aware(dt.datetime.combine(day, dt.time(14))))
+
+    returned = timezone.make_aware(dt.datetime.combine(today - relativedelta(years=1), dt.time(18)))
+    loan = LoanFactory(
+        borrower_type=LoanBorrowerType.INDIVIDUAL,
+        borrower_name="M. Petit",
+        phone="01 23 45 67 89",
+        status=LoanStatus.RETURNED,
+        returned_at=returned,
+        start_date=returned.date() - dt.timedelta(days=2),
+        end_date=returned.date(),
+    )
+    reservation = ReservationFactory(
+        event=event_on(today - relativedelta(months=3)), name="Famille Martin"
+    )
+    volunteer = AssignmentFactory(
+        station=StationFactory(event=event_on(today - relativedelta(years=2))), name="Claire"
+    )
+    out = StringIO()
+
+    call_command("purge_personal_data", stdout=out)
+
+    for erased in (loan, reservation, volunteer):
+        erased.refresh_from_db()
+    assert (loan.borrower_name, loan.phone) == (ERASED_NAME, "")
+    assert (reservation.name, volunteer.name) == (ERASED_NAME, ERASED_NAME)
+    assert out.getvalue() == (
+        "Personal data erased. Phones: 1. Borrowers' names: 1. Reservations: 1. "
+        "Volunteers' names: 1.\n"
+    )

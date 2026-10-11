@@ -1,8 +1,9 @@
 # Nightly purge of the Comité des fêtes v2 API, one instance per environment,
 # started every night by cdf3-flushtokens@.timer: the expired refresh tokens,
-# the expired sessions of the Django admin, then the cache, whose throttle
-# counters are each named after the address they count. Neither the sessions
-# nor the database cache delete their expired rows by themselves.
+# the expired sessions of the Django admin, the cache, whose throttle counters
+# are each named after the address they count, then the personal data whose
+# retention period is over. Neither the sessions nor the database cache delete
+# their expired rows by themselves.
 [Unit]
 Description=Comité des fêtes v2 nightly purge (%i)
 Documentation=https://github.com/gabigab117/cdf2-back
@@ -21,6 +22,7 @@ Environment=DJANGO_SETTINGS_MODULE=config.settings.prod
 ExecStart=/var/www/cdf3/%i/back/current/.venv/bin/python manage.py flushexpiredtokens
 ExecStart=/var/www/cdf3/%i/back/current/.venv/bin/python manage.py clearsessions
 ExecStart=/var/www/cdf3/%i/back/current/.venv/bin/python manage.py clear_cache
+ExecStart=/var/www/cdf3/%i/back/current/.venv/bin/python manage.py purge_personal_data
 
 # Confined like the API, without any writable path: the purge only talks to
 # PostgreSQL, over its local socket.
