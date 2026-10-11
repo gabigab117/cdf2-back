@@ -136,6 +136,7 @@ def test_loan_over_availability_rejected(api_client):
     - le WebP de Pillow n'écrit ni EXIF ni XMP sans qu'on les lui passe : la position GPS d'une photo ne reste pas ;
     - un PDF se reconnaît à sa signature `%PDF-` : Python n'a plus de détection par le contenu depuis le retrait d'`imghdr`, et Pillow ne lit pas les PDF.
   - **Un fichier s'écrit depuis les octets lus** (`ContentFile`) : créé dans le dossier, il en hérite le groupe que nginx lit. Un gros envoi, que Django déplace depuis son fichier temporaire, garderait le groupe de l'API.
+  - **Aucun `FILE_UPLOAD_DIRECTORY_PERMISSIONS`** : Django 6.1 applique ce mode par un `chmod` après la création du dossier, ce qui efface le bit setgid hérité de `private/`. Les fichiers du dossier prendraient alors le groupe de l'API, et nginx ne les servirait plus (constaté en production le 11/10/2026).
   - Un fichier n'est écrit qu'une fois l'objet validé (`full_clean`), et il est effacé si l'enregistrement échoue : aucun fichier orphelin.
   - Les tests écrivent leurs fichiers dans un dossier temporaire (fixture automatique `private_files`), jamais dans le dépôt.
 - **E-mails** (`documents/services/notifications.py`).

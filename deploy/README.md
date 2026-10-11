@@ -26,7 +26,7 @@ L'application tourne sur un VPS Ubuntu 24.04, derrière nginx, une instance par 
 - **Fichiers privés** (`shared/private/`, les documents déposés) :
   - `back.env` en donne le chemin à l'API (`MEDIA_ROOT`). Sans lui, la release échoue, plutôt que d'écrire dans son propre dossier ;
   - seule l'API y écrit : c'est le seul chemin inscriptible de son unité (`ReadWritePaths`) ;
-  - nginx les lit, comme le compte d'administration, membre du groupe `www-data` ; les autres comptes du serveur ne les lisent pas. Le dossier appartient à `cdf3`, groupe `www-data`, en `2750` : le bit setgid fait hériter ce groupe aux fichiers et dossiers créés dedans. Les réglages de production les créent en `640` et `750` :
+  - nginx les lit, comme le compte d'administration, membre du groupe `www-data` ; les autres comptes du serveur ne les lisent pas. Le dossier appartient à `cdf3`, groupe `www-data`, en `2750` : le bit setgid fait hériter ce groupe aux fichiers et dossiers créés dedans. Les réglages de production créent les fichiers en `640`, et n'imposent aucun mode aux dossiers : Django 6.1 l'appliquerait par un `chmod`, qui efface le bit setgid du dossier créé. Ses fichiers prendraient alors le groupe `cdf3`, illisible pour nginx :
 
     ```bash
     chgrp www-data /var/www/cdf3/<instance>/shared/private

@@ -20,9 +20,12 @@ NINJA_NUM_PROXIES = 1
 MEDIA_ROOT = Path(env("MEDIA_ROOT"))
 # nginx's internal location for them (deploy/nginx/cdf3.conf.template).
 PRIVATE_FILES_ACCEL_PREFIX = "/_private/"
-# Readable by the API's user and by nginx's group alone (deploy/README.md).
+# Readable by the API's user and by nginx's group alone (deploy/README.md): a
+# file takes the group of its folder. No FILE_UPLOAD_DIRECTORY_PERMISSIONS:
+# Django 6.1 applies that mode with a chmod after mkdir, which drops the setgid
+# bit a new folder inherits from private/. Its files would then take the API's
+# group, which nginx cannot read (the v1 documents taken over, 11/10/2026).
 FILE_UPLOAD_PERMISSIONS = 0o640
-FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o750
 
 # The links of the emails, and their sender: no default on the server.
 SITE_URL = env("SITE_URL")
