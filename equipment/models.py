@@ -17,14 +17,6 @@ LOAN_MAX_DAYS = 31
 
 # Named after their model rather than nested in it: the OpenAPI document names an
 # enumeration after its class (see events/models.py).
-class EquipmentCategory(models.TextChoices):
-    FURNITURE = "furniture", "Mobilier"
-    MARQUEES = "marquees", "Barnums"
-    SOUND_AND_LIGHT = "sound_and_light", "Son et lumière"
-    KITCHEN = "kitchen", "Cuisine"
-    STREET_AND_GAMES = "street_and_games", "Voirie et jeux"
-
-
 class LoanBorrowerType(models.TextChoices):
     ASSOCIATION = "association", "Association"
     INDIVIDUAL = "individual", "Particulier"
@@ -64,22 +56,17 @@ class Equipment(models.Model):
     """
 
     name = models.CharField("nom", max_length=120)
-    category = models.CharField("catégorie", max_length=20, choices=EquipmentCategory.choices)
-    storage_location = models.CharField("rangement", max_length=120, blank=True)
+    # No longer used (D12). They stay until the next release, which drops their
+    # columns: the release before this one still reads them while this one
+    # migrates (CLAUDE.md, « Migrations »).
+    category = models.CharField(max_length=20, blank=True)
+    storage_location = models.CharField(max_length=120, blank=True)
+    unit_value = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     # Zero for equipment gone, whose loans keep it in their history: it cannot
     # be deleted.
     total_quantity = models.PositiveIntegerField("quantité totale")
     # Pieces out of use until they are mended: never lent.
     repair_quantity = models.PositiveIntegerField("en réparation", default=0)
-    # What replacing one piece would cost: the value of a loan's equipment.
-    unit_value = models.DecimalField(
-        "valeur de remplacement",
-        max_digits=8,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        validators=[MinValueValidator(Decimal(0))],
-    )
     repair_note = models.TextField("note de réparation", blank=True)
 
     class Meta:

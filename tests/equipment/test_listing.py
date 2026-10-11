@@ -128,11 +128,7 @@ def test_a_member_lists_the_loans_of_a_state(board_client):
                 "lines": [
                     {
                         "id": late.lines.get().id,
-                        "equipment": {
-                            "id": marquees.id,
-                            "name": "Barnums 3 × 3 m",
-                            "unit_value": "250.00",
-                        },
+                        "equipment": {"id": marquees.id, "name": "Barnums 3 × 3 m"},
                         "quantity": 2,
                         "damaged_quantity": 0,
                         "missing_quantity": 0,

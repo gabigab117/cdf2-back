@@ -5,7 +5,7 @@ from ninja import FilterSchema, Schema
 
 from accounts.schemas import BoardMemberOut
 from core.schemas import InputSchema
-from equipment.models import EquipmentCategory, LoanBorrowerType, LoanState, LoanStatus
+from equipment.models import LoanBorrowerType, LoanState, LoanStatus
 
 
 class AvailabilityQuery(Schema):
@@ -24,11 +24,8 @@ class EquipmentIn(InputSchema):
     """
 
     name: str
-    category: EquipmentCategory
-    storage_location: str
     total_quantity: int
     repair_quantity: int
-    unit_value: Decimal | None
     repair_note: str
 
 
@@ -37,13 +34,9 @@ class EquipmentOut(Schema):
 
     id: int
     name: str
-    category: EquipmentCategory
-    storage_location: str
     total_quantity: int
     # Pieces out of use until mended: never lent.
     repair_quantity: int
-    # What replacing one piece would cost, if known.
-    unit_value: Decimal | None
     repair_note: str
 
 
@@ -98,26 +91,12 @@ class InventoryTotalsOut(Schema):
     pieces_under_repair: int
 
 
-class EquipmentCountsOut(Schema):
-    """How many equipment each category holds: the chips of the inventory."""
-
-    total: int
-    furniture: int
-    marquees: int
-    sound_and_light: int
-    kitchen: int
-    street_and_games: int
-
-
 class InventoryOut(Schema):
-    """What each equipment offers today, in the inventory's order: a bounded
-    aggregate (A7).
-    """
+    """What each equipment offers today, by name: a bounded aggregate (A7)."""
 
     day: dt.date
     items: list[EquipmentAvailabilityOut]
     totals: InventoryTotalsOut
-    counts: EquipmentCountsOut
 
 
 class OccupancyOut(Schema):
@@ -177,8 +156,6 @@ class LoanEquipmentOut(Schema):
 
     id: int
     name: str
-    # What replacing one piece would cost, if known: the value of the loan.
-    unit_value: Decimal | None
 
 
 class LoanLineOut(Schema):

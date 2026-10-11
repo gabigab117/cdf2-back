@@ -9,7 +9,6 @@ from django.utils import timezone
 
 from equipment.models import (
     Equipment,
-    EquipmentCategory,
     Loan,
     LoanLine,
     LoanNumberSequence,
@@ -63,9 +62,7 @@ def test_two_equipment_never_share_a_name_whatever_its_case():
     Then it is refused, on the form
     """
     EquipmentFactory(name="Barnums 3 × 3 m")
-    duplicate = Equipment(
-        name="barnums 3 × 3 M", category=EquipmentCategory.MARQUEES, total_quantity=2
-    )
+    duplicate = Equipment(name="barnums 3 × 3 M", total_quantity=2)
 
     assert errors_of(duplicate) == {"__all__": ["Un matériel porte déjà ce nom."]}
 
@@ -76,12 +73,7 @@ def test_pieces_under_repair_never_outnumber_the_equipment():
     When three are said to be under repair
     Then it is refused under the quantity under repair, and by the database
     """
-    benches = Equipment(
-        name="Bancs pliants",
-        category=EquipmentCategory.FURNITURE,
-        total_quantity=2,
-        repair_quantity=3,
-    )
+    benches = Equipment(name="Bancs pliants", total_quantity=2, repair_quantity=3)
 
     assert errors_of(benches) == {
         "repair_quantity": ["La quantité en réparation dépasse la quantité totale."]
@@ -96,7 +88,7 @@ def test_a_quantity_left_out_is_its_own_fields_error():
     When it is checked
     Then the quantity alone is reported, as required
     """
-    benches = Equipment(name="Bancs pliants", category=EquipmentCategory.FURNITURE)
+    benches = Equipment(name="Bancs pliants")
 
     assert errors_of(benches) == {
         "total_quantity": ["Ce champ ne peut pas contenir la valeur nulle."]

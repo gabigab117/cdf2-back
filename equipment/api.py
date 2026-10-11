@@ -28,7 +28,6 @@ from equipment.services.inventory import (
     delete_equipment,
     inventory,
     occupancy,
-    ordered_equipment,
     update_equipment,
 )
 from equipment.services.lifecycle import cancel, check_out, reopen, return_loan
@@ -56,8 +55,8 @@ REFUSALS = {401: ErrorOut, 403: ErrorOut, 404: ErrorOut, 422: ValidationErrorOut
     summary="Read today's inventory",
 )
 def read_inventory(request):
-    """What each equipment offers today, by category: its pieces, those taken
-    today and those under repair, with the figures of the inventory.
+    """What each equipment offers today, by name: its pieces, those taken today
+    and those under repair, with the figures of the inventory.
     """
     return inventory()
 
@@ -89,7 +88,9 @@ def read_availability(request, period: Query[AvailabilityQuery]):
     the period, what remains free, and those loans. The loan being edited is
     left out: its own pieces do not stand in its way.
     """
-    return availability_report(ordered_equipment(), period.start, period.end, period.exclude_loan)
+    return availability_report(
+        Equipment.objects.all(), period.start, period.end, period.exclude_loan
+    )
 
 
 @router.put(

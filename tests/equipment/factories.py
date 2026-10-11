@@ -4,7 +4,7 @@ from decimal import Decimal
 import factory
 from django.utils import timezone
 
-from equipment.models import Equipment, EquipmentCategory, Loan, LoanBorrowerType, LoanLine
+from equipment.models import Equipment, Loan, LoanBorrowerType, LoanLine
 from tests.events.factories import EventFactory
 
 
@@ -15,10 +15,7 @@ class EquipmentFactory(factory.django.DjangoModelFactory):
         model = Equipment
 
     name = factory.Sequence(lambda n: f"Barnums 3 × 3 m ({n})")
-    category = EquipmentCategory.MARQUEES
-    storage_location = "Garage communal"
     total_quantity = 4
-    unit_value = Decimal("250.00")
 
 
 class LoanFactory(factory.django.DjangoModelFactory):

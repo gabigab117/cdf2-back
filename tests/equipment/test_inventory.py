@@ -5,7 +5,7 @@ from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
-from equipment.models import Equipment, EquipmentCategory, LoanStatus
+from equipment.models import Equipment, LoanStatus
 from equipment.services.inventory import inventory
 from tests.equipment.factories import EquipmentFactory, lend
 from tests.equipment.mockup import TODAY, build_mockup
@@ -28,11 +28,8 @@ def payload(**changes):
     """An equipment as the inventory's form sends it, whole."""
     return {
         "name": "Barnums 3 × 6 m",
-        "category": "marquees",
-        "storage_location": "Garage communal",
         "total_quantity": 2,
         "repair_quantity": 0,
-        "unit_value": "420.00",
         "repair_note": "",
     } | changes
 
@@ -62,18 +59,17 @@ def test_the_inventory_of_the_mockup_tells_its_figures():
     assert (totals.references, totals.taken_today, totals.pieces_under_repair) == (14, 3, 5)
 
 
-def test_a_member_reads_todays_inventory_by_category(board_client):
+def test_a_member_reads_todays_inventory_by_name(board_client):
     """
     Given marquees, one under repair and two out today, tables the committee
     keeps for its event today, and chairs
     When a member reads the inventory
-    Then each equipment comes by category with what is taken and free today,
-    with the inventory's figures and the counts of its categories
+    Then each equipment comes by name with what is taken and free today, with
+    the inventory's figures
     """
     marquees = EquipmentFactory(name="Barnums 3 × 3 m", repair_quantity=1)
-    furniture = EquipmentCategory.FURNITURE
-    tables = EquipmentFactory(name="Tables pliantes 180 cm", category=furniture, total_quantity=24)
-    EquipmentFactory(name="Chaises empilables", category=furniture, total_quantity=80)
+    tables = EquipmentFactory(name="Tables pliantes 180 cm", total_quantity=24)
+    EquipmentFactory(name="Chaises empilables", total_quantity=80)
     lend(marquees, 2, ahead(-1), ahead(1), status=LoanStatus.OUT)
     lend(tables, 8, ahead(0), ahead(1), event=EventFactory())
 
@@ -83,19 +79,11 @@ def test_a_member_reads_todays_inventory_by_category(board_client):
     body = response.json()
     assert body["day"] == timezone.localdate().isoformat()
     assert [(item["equipment"]["name"], item["taken"], item["free"]) for item in body["items"]] == [
+        ("Barnums 3 × 3 m", 2, 1),
         ("Chaises empilables", 0, 80),
         ("Tables pliantes 180 cm", 8, 16),
-        ("Barnums 3 × 3 m", 2, 1),
     ]
     assert body["totals"] == {"references": 3, "taken_today": 2, "pieces_under_repair": 1}
-    assert body["counts"] == {
-        "total": 3,
-        "furniture": 2,
-        "marquees": 1,
-        "sound_and_light": 0,
-        "kitchen": 0,
-        "street_and_games": 0,
-    }
 
 
 def test_the_inventory_takes_a_fixed_number_of_queries(board_client, django_assert_max_num_queries):
@@ -141,32 +129,14 @@ def test_a_member_adds_equipment(board_client):
                 "repair_quantity", "Assurez-vous que cette valeur est supérieure ou égale à 0."
             ),
         ),
-        (
-            {"unit_value": "-5"},
-            refusal("unit_value", "Assurez-vous que cette valeur est supérieure ou égale à 0."),
-        ),
         ({"name": "  "}, refusal("name", "Ce champ ne peut pas être vide.")),
-        (
-            {"category": "tents"},
-            {
-                "detail": [
-                    {
-                        "type": "enum",
-                        "loc": ["body", "payload", "category"],
-                        "msg": "Sélectionnez un choix valide. Ce choix ne fait pas partie de "
-                        "ceux disponibles.",
-                    }
-                ]
-            },
-        ),
     ],
 )
 def test_equipment_out_of_rule_is_refused(board_client, changes, error):
     """
     Given marquees of 3 × 3 m in the inventory
     When a member adds equipment of the same name whatever its case, with more
-    pieces under repair than it has, a quantity or value below zero, no name,
-    or a category the inventory does not know
+    pieces under repair than it has, a quantity below zero, or no name
     Then it is refused with a 422, in French
     """
     EquipmentFactory(name="Barnums 3 × 3 m")
@@ -260,7 +230,7 @@ def test_a_lower_total_is_refused_when_loans_would_lack_pieces(
 def test_a_change_that_takes_no_piece_away_passes_whatever_the_loans(board_client):
     """
     Given marquees already short: 2 offered, 3 lent, as a return may leave them
-    When a member changes where they are stored
+    When a member changes their repair note
     Then it passes: the change takes no piece away
     """
     marquees = EquipmentFactory(total_quantity=3, repair_quantity=1)
@@ -272,14 +242,14 @@ def test_a_change_that_takes_no_piece_away_passes_whatever_the_loans(board_clien
         url(marquees.id),
         payload(
             name=marquees.name,
-            storage_location="Local du comité",
             total_quantity=3,
             repair_quantity=1,
+            repair_note="Toile recousue, à vérifier.",
         ),
     )
 
     assert response.status_code == 200
-    assert response.json()["storage_location"] == "Local du comité"
+    assert response.json()["repair_note"] == "Toile recousue, à vérifier."
 
 
 def test_changing_equipment_locks_it_first(board_client):

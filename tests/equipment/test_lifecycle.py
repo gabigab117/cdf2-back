@@ -167,11 +167,7 @@ def test_a_return_names_the_loans_its_repairs_leave_short(board_client, marquees
 
     assert response.status_code == 200
     [shortage] = response.json()["shortages"]
-    assert shortage["equipment"] == {
-        "id": marquees.id,
-        "name": "Barnums 3 × 3 m",
-        "unit_value": "250.00",
-    }
+    assert shortage["equipment"] == {"id": marquees.id, "name": "Barnums 3 × 3 m"}
     assert (shortage["day"], shortage["offered"], shortage["taken"]) == (
         ahead(15).isoformat(),
         1,

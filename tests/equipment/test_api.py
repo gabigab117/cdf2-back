@@ -5,7 +5,6 @@ from django.test import Client
 from django.utils import timezone
 from ninja_jwt.tokens import AccessToken
 
-from equipment.models import EquipmentCategory
 from tests.accounts.factories import UserFactory
 from tests.equipment.factories import EquipmentFactory, lend
 from tests.events.factories import EventFactory
@@ -87,19 +86,13 @@ def test_a_member_reads_what_each_equipment_offers_over_a_period(board_client):
     """
     Given tables, and marquees of which one is under repair and two are lent
     When a member asks what is free over two days of that loan
-    Then each equipment comes, by category, with what is taken, what remains,
-    and the loan that takes it
+    Then each equipment comes, by name, with what is taken, what remains, and
+    the loan that takes it
     """
     marquees = EquipmentFactory(
         name="Barnums 3 × 3 m", repair_quantity=1, repair_note="Toile déchirée."
     )
-    tables = EquipmentFactory(
-        name="Tables pliantes 180 cm",
-        category=EquipmentCategory.FURNITURE,
-        storage_location="Local du comité · rack A",
-        total_quantity=24,
-        unit_value=None,
-    )
+    tables = EquipmentFactory(name="Tables pliantes 180 cm", total_quantity=24)
     loan = lend(marquees, 2, ahead(15), ahead(17))
 
     response = board_client.get(AVAILABILITY, period(ahead(16), ahead(17)))
@@ -111,28 +104,10 @@ def test_a_member_reads_what_each_equipment_offers_over_a_period(board_client):
         "items": [
             {
                 "equipment": {
-                    "id": tables.id,
-                    "name": "Tables pliantes 180 cm",
-                    "category": "furniture",
-                    "storage_location": "Local du comité · rack A",
-                    "total_quantity": 24,
-                    "repair_quantity": 0,
-                    "unit_value": None,
-                    "repair_note": "",
-                },
-                "taken": 0,
-                "free": 24,
-                "conflicts": [],
-            },
-            {
-                "equipment": {
                     "id": marquees.id,
                     "name": "Barnums 3 × 3 m",
-                    "category": "marquees",
-                    "storage_location": "Garage communal",
                     "total_quantity": 4,
                     "repair_quantity": 1,
-                    "unit_value": "250.00",
                     "repair_note": "Toile déchirée.",
                 },
                 "taken": 2,
@@ -152,6 +127,18 @@ def test_a_member_reads_what_each_equipment_offers_over_a_period(board_client):
                         "quantity": 2,
                     }
                 ],
+            },
+            {
+                "equipment": {
+                    "id": tables.id,
+                    "name": "Tables pliantes 180 cm",
+                    "total_quantity": 24,
+                    "repair_quantity": 0,
+                    "repair_note": "",
+                },
+                "taken": 0,
+                "free": 24,
+                "conflicts": [],
             },
         ],
     }

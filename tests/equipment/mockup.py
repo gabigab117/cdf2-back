@@ -5,11 +5,10 @@ of the mockup.
 
 import datetime as dt
 from dataclasses import dataclass
-from decimal import Decimal
 
 from django.utils import timezone
 
-from equipment.models import EquipmentCategory, LoanBorrowerType, LoanStatus
+from equipment.models import LoanBorrowerType, LoanStatus
 from tests.equipment.factories import (
     CommitteeLoanFactory,
     EquipmentFactory,
@@ -20,24 +19,22 @@ from tests.events.factories import EventFactory
 
 TODAY = dt.date(2026, 10, 1)
 
-_CATEGORIES = EquipmentCategory
-
-# Its name, category, pieces, pieces under repair and value of a piece.
+# Its name, pieces and pieces under repair.
 EQUIPMENT = {
-    "tables": ("Tables pliantes 180 cm", _CATEGORIES.FURNITURE, 24, 1, "60"),
-    "bancs": ("Bancs pliants", _CATEGORIES.FURNITURE, 40, 2, "35"),
-    "chaises": ("Chaises empilables", _CATEGORIES.FURNITURE, 80, 0, "15"),
-    "mange": ("Mange-debout", _CATEGORIES.FURNITURE, 6, 0, "45"),
-    "b33": ("Barnums 3 × 3 m", _CATEGORIES.MARQUEES, 4, 1, "250"),
-    "b36": ("Barnums 3 × 6 m", _CATEGORIES.MARQUEES, 2, 0, "420"),
-    "lestes": ("Lestes de barnum 15 kg", _CATEGORIES.MARQUEES, 16, 0, "20"),
-    "enceinte": ("Enceintes sur pied", _CATEGORIES.SOUND_AND_LIGHT, 2, 0, "300"),
-    "guirlandes": ("Guirlandes guinguette 20 m", _CATEGORIES.SOUND_AND_LIGHT, 6, 0, "40"),
-    "rallonges": ("Rallonges 25 m", _CATEGORIES.SOUND_AND_LIGHT, 10, 1, "25"),
-    "perco": ("Percolateurs 100 tasses", _CATEGORIES.KITCHEN, 2, 0, "90"),
-    "frigo": ("Réfrigérateur vitrine", _CATEGORIES.KITCHEN, 1, 0, "400"),
-    "barrieres": ("Barrières de ville", _CATEGORIES.STREET_AND_GAMES, 20, 0, "50"),
-    "jeux": ("Jeux en bois (lot de 8)", _CATEGORIES.STREET_AND_GAMES, 1, 0, "350"),
+    "tables": ("Tables pliantes 180 cm", 24, 1),
+    "bancs": ("Bancs pliants", 40, 2),
+    "chaises": ("Chaises empilables", 80, 0),
+    "mange": ("Mange-debout", 6, 0),
+    "b33": ("Barnums 3 × 3 m", 4, 1),
+    "b36": ("Barnums 3 × 6 m", 2, 0),
+    "lestes": ("Lestes de barnum 15 kg", 16, 0),
+    "enceinte": ("Enceintes sur pied", 2, 0),
+    "guirlandes": ("Guirlandes guinguette 20 m", 6, 0),
+    "rallonges": ("Rallonges 25 m", 10, 1),
+    "perco": ("Percolateurs 100 tasses", 2, 0),
+    "frigo": ("Réfrigérateur vitrine", 1, 0),
+    "barrieres": ("Barrières de ville", 20, 0),
+    "jeux": ("Jeux en bois (lot de 8)", 1, 0),
 }
 
 _TYPES = LoanBorrowerType
@@ -133,14 +130,8 @@ def _lines(loan, pieces, equipment):
 def build_mockup():
     """Write the equipment and the loans of the mockup."""
     equipment = {
-        key: EquipmentFactory(
-            name=name,
-            category=category,
-            total_quantity=total,
-            repair_quantity=repair,
-            unit_value=Decimal(value),
-        )
-        for key, (name, category, total, repair, value) in EQUIPMENT.items()
+        key: EquipmentFactory(name=name, total_quantity=total, repair_quantity=repair)
+        for key, (name, total, repair) in EQUIPMENT.items()
     }
     loans = {}
     for key, (borrower, kind, purpose, (start, end), status, pieces) in LOANS.items():

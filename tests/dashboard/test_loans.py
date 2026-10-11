@@ -203,11 +203,7 @@ def test_an_events_dashboard_shows_the_equipment_it_keeps(board_client, marquees
         "lines": [
             {
                 "id": line.id,
-                "equipment": {
-                    "id": line.equipment.id,
-                    "name": line.equipment.name,
-                    "unit_value": "250.00",
-                },
+                "equipment": {"id": line.equipment.id, "name": line.equipment.name},
                 "quantity": line.quantity,
                 "damaged_quantity": 0,
                 "missing_quantity": 0,

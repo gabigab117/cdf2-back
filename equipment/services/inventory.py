@@ -6,16 +6,15 @@ is free and its writing.
 """
 
 import datetime as dt
-from collections import Counter
 from dataclasses import dataclass
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Case, ProtectedError, QuerySet, Value, When
+from django.db.models import ProtectedError
 from django.utils import timezone
 from django.utils.translation import ngettext
 
-from equipment.models import Equipment, EquipmentCategory, Loan
+from equipment.models import Equipment, Loan
 from equipment.schemas import EquipmentIn
 from equipment.services.availability import Availability, Conflict, availability, shortages
 
@@ -36,14 +35,13 @@ class InventoryTotals:
 
 @dataclass(frozen=True)
 class Inventory:
-    """Today's inventory: what each equipment offers today, its figures, and how
-    many equipment each category holds. A bounded aggregate (A7).
+    """Today's inventory: what each equipment offers today, by name, and its
+    figures. A bounded aggregate (A7).
     """
 
     day: dt.date
     items: list[Availability]
     totals: InventoryTotals
-    counts: dict[str, int]
 
 
 @dataclass(frozen=True)
@@ -55,24 +53,10 @@ class Occupancy:
     loans: list[Conflict]
 
 
-def ordered_equipment() -> QuerySet[Equipment]:
-    """The equipment in the inventory's order: by category, in the order of the
-    chips, then by name.
-    """
-    category_order = Case(
-        *(
-            When(category=category, then=Value(index))
-            for index, category in enumerate(EquipmentCategory.values)
-        )
-    )
-    return Equipment.objects.order_by(category_order, "name", "pk")
-
-
 def inventory(*, today: dt.date | None = None) -> Inventory:
     """What each equipment offers today, with the figures of the inventory."""
     today = today or timezone.localdate()
-    items = availability(ordered_equipment(), today, today, today=today)
-    categories = Counter(item.equipment.category for item in items)
+    items = availability(Equipment.objects.all(), today, today, today=today)
     return Inventory(
         day=today,
         items=items,
@@ -81,8 +65,6 @@ def inventory(*, today: dt.date | None = None) -> Inventory:
             taken_today=sum(1 for item in items if item.taken),
             pieces_under_repair=sum(item.equipment.repair_quantity for item in items),
         ),
-        counts={"total": len(items)}
-        | {category: categories[category] for category in EquipmentCategory.values},
     )
 
 
@@ -141,11 +123,8 @@ def delete_equipment(equipment: Equipment) -> None:
 
 def _write(equipment: Equipment, data: EquipmentIn) -> None:
     equipment.name = data.name
-    equipment.category = data.category
-    equipment.storage_location = data.storage_location
     equipment.total_quantity = data.total_quantity
     equipment.repair_quantity = data.repair_quantity
-    equipment.unit_value = data.unit_value
     equipment.repair_note = data.repair_note
 
 

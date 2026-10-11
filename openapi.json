@@ -1041,62 +1041,9 @@
         "title": "EquipmentAvailabilityOut",
         "type": "object"
       },
-      "EquipmentCategory": {
-        "enum": [
-          "furniture",
-          "marquees",
-          "sound_and_light",
-          "kitchen",
-          "street_and_games"
-        ],
-        "title": "EquipmentCategory",
-        "type": "string"
-      },
-      "EquipmentCountsOut": {
-        "description": "How many equipment each category holds: the chips of the inventory.",
-        "properties": {
-          "furniture": {
-            "title": "Furniture",
-            "type": "integer"
-          },
-          "kitchen": {
-            "title": "Kitchen",
-            "type": "integer"
-          },
-          "marquees": {
-            "title": "Marquees",
-            "type": "integer"
-          },
-          "sound_and_light": {
-            "title": "Sound And Light",
-            "type": "integer"
-          },
-          "street_and_games": {
-            "title": "Street And Games",
-            "type": "integer"
-          },
-          "total": {
-            "title": "Total",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "total",
-          "furniture",
-          "marquees",
-          "sound_and_light",
-          "kitchen",
-          "street_and_games"
-        ],
-        "title": "EquipmentCountsOut",
-        "type": "object"
-      },
       "EquipmentIn": {
         "description": "An equipment as the board writes it: whole, every key required.\n\nIts values are checked by the model, whose messages are in French.",
         "properties": {
-          "category": {
-            "$ref": "#/components/schemas/EquipmentCategory"
-          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -1109,37 +1056,15 @@
             "title": "Repair Quantity",
             "type": "integer"
           },
-          "storage_location": {
-            "title": "Storage Location",
-            "type": "string"
-          },
           "total_quantity": {
             "title": "Total Quantity",
             "type": "integer"
-          },
-          "unit_value": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Unit Value"
           }
         },
         "required": [
           "name",
-          "category",
-          "storage_location",
           "total_quantity",
           "repair_quantity",
-          "unit_value",
           "repair_note"
         ],
         "title": "EquipmentIn",
@@ -1148,9 +1073,6 @@
       "EquipmentOut": {
         "description": "An equipment of the inventory.",
         "properties": {
-          "category": {
-            "$ref": "#/components/schemas/EquipmentCategory"
-          },
           "id": {
             "title": "Id",
             "type": "integer"
@@ -1167,35 +1089,16 @@
             "title": "Repair Quantity",
             "type": "integer"
           },
-          "storage_location": {
-            "title": "Storage Location",
-            "type": "string"
-          },
           "total_quantity": {
             "title": "Total Quantity",
             "type": "integer"
-          },
-          "unit_value": {
-            "anyOf": [
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Unit Value"
           }
         },
         "required": [
           "id",
           "name",
-          "category",
-          "storage_location",
           "total_quantity",
           "repair_quantity",
-          "unit_value",
           "repair_note"
         ],
         "title": "EquipmentOut",
@@ -1830,11 +1733,8 @@
         "type": "object"
       },
       "InventoryOut": {
-        "description": "What each equipment offers today, in the inventory's order: a bounded\naggregate (A7).",
+        "description": "What each equipment offers today, by name: a bounded aggregate (A7).",
         "properties": {
-          "counts": {
-            "$ref": "#/components/schemas/EquipmentCountsOut"
-          },
           "day": {
             "format": "date",
             "title": "Day",
@@ -1854,8 +1754,7 @@
         "required": [
           "day",
           "items",
-          "totals",
-          "counts"
+          "totals"
         ],
         "title": "InventoryOut",
         "type": "object"
@@ -2153,24 +2052,11 @@
           "name": {
             "title": "Name",
             "type": "string"
-          },
-          "unit_value": {
-            "anyOf": [
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Unit Value"
           }
         },
         "required": [
           "id",
-          "name",
-          "unit_value"
+          "name"
         ],
         "title": "LoanEquipmentOut",
         "type": "object"
@@ -5870,7 +5756,7 @@
     },
     "/api/board/equipment": {
       "get": {
-        "description": "What each equipment offers today, by category: its pieces, those taken\ntoday and those under repair, with the figures of the inventory.",
+        "description": "What each equipment offers today, by name: its pieces, those taken today\nand those under repair, with the figures of the inventory.",
         "operationId": "equipment_api_read_inventory",
         "parameters": [],
         "responses": {

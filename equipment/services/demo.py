@@ -12,111 +12,35 @@ would refuse it.
 import datetime as dt
 from collections.abc import Callable
 from dataclasses import dataclass
-from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from equipment.models import Equipment, EquipmentCategory, Loan, LoanBorrowerType
+from equipment.models import Equipment, Loan, LoanBorrowerType
 from equipment.schemas import EquipmentIn, LoanIn, LoanLineIn, LoanReturnIn, ReturnLineIn
 from equipment.services.inventory import create_equipment, update_equipment
 from equipment.services.lifecycle import check_out, return_loan
 from equipment.services.loans import create_loan
 from events.models import Event
 
-_CATEGORIES = EquipmentCategory
-
-# Its name, category, place, pieces, pieces under repair, value of a piece and
-# repair note, before the loans: the bench damaged at the school's fête goes
-# under repair with its return.
+# Its name, pieces, pieces under repair and repair note, before the loans: the
+# bench damaged at the school's fête goes under repair with its return.
 DEMO_EQUIPMENT = [
-    (
-        "Tables pliantes 180 cm",
-        _CATEGORIES.FURNITURE,
-        "Local du comité · rack A",
-        24,
-        1,
-        "60",
-        "1 table au pied voilé, à redresser.",
-    ),
-    (
-        "Bancs pliants",
-        _CATEGORIES.FURNITURE,
-        "Local du comité · rack A",
-        40,
-        1,
-        "35",
-        "1 assise fendue.",
-    ),
-    ("Chaises empilables", _CATEGORIES.FURNITURE, "Réserve de la salle des fêtes", 80, 0, "15", ""),
-    ("Mange-debout", _CATEGORIES.FURNITURE, "Réserve de la salle des fêtes", 6, 0, "45", ""),
-    (
-        "Barnums 3 × 3 m",
-        _CATEGORIES.MARQUEES,
-        "Garage communal",
-        4,
-        1,
-        "250",
-        "Toile déchirée sur un côté. Devis de réparation demandé.",
-    ),
-    ("Barnums 3 × 6 m", _CATEGORIES.MARQUEES, "Garage communal", 2, 0, "420", ""),
-    ("Lestes de barnum 15 kg", _CATEGORIES.MARQUEES, "Garage communal", 16, 0, "20", ""),
-    (
-        "Enceintes sur pied",
-        _CATEGORIES.SOUND_AND_LIGHT,
-        "Local du comité · armoire",
-        2,
-        0,
-        "300",
-        "",
-    ),
-    (
-        "Guirlandes guinguette 20 m",
-        _CATEGORIES.SOUND_AND_LIGHT,
-        "Local du comité · armoire",
-        6,
-        0,
-        "40",
-        "",
-    ),
-    (
-        "Rallonges 25 m",
-        _CATEGORIES.SOUND_AND_LIGHT,
-        "Local du comité · armoire",
-        10,
-        1,
-        "25",
-        "1 rallonge à la prise endommagée.",
-    ),
-    (
-        "Percolateurs 100 tasses",
-        _CATEGORIES.KITCHEN,
-        "Réserve de la salle des fêtes",
-        2,
-        0,
-        "90",
-        "",
-    ),
-    (
-        "Réfrigérateur vitrine",
-        _CATEGORIES.KITCHEN,
-        "Réserve de la salle des fêtes",
-        1,
-        0,
-        "400",
-        "",
-    ),
-    ("Barrières de ville", _CATEGORIES.STREET_AND_GAMES, "Garage communal", 20, 0, "50", ""),
-    (
-        "Jeux en bois (lot de 8)",
-        _CATEGORIES.STREET_AND_GAMES,
-        "Local du comité · rack B",
-        1,
-        0,
-        "350",
-        "",
-    ),
+    ("Tables pliantes 180 cm", 24, 1, "1 table au pied voilé, à redresser."),
+    ("Bancs pliants", 40, 1, "1 assise fendue."),
+    ("Chaises empilables", 80, 0, ""),
+    ("Mange-debout", 6, 0, ""),
+    ("Barnums 3 × 3 m", 4, 1, "Toile déchirée sur un côté. Devis de réparation demandé."),
+    ("Barnums 3 × 6 m", 2, 0, ""),
+    ("Lestes de barnum 15 kg", 16, 0, ""),
+    ("Enceintes sur pied", 2, 0, ""),
+    ("Guirlandes guinguette 20 m", 6, 0, ""),
+    ("Rallonges 25 m", 10, 1, "1 rallonge à la prise endommagée."),
+    ("Percolateurs 100 tasses", 2, 0, ""),
+    ("Réfrigérateur vitrine", 1, 0, ""),
+    ("Barrières de ville", 20, 0, ""),
+    ("Jeux en bois (lot de 8)", 1, 0, ""),
 ]
 
 
@@ -249,18 +173,8 @@ def seed_demo_equipment(today: dt.date) -> DemoInventory:
     return DemoInventory(list(equipment.values()), loans)
 
 
-def _equipment(
-    name: str, category: str, place: str, total: int, repair: int, value: str, note: str
-) -> Equipment:
-    data = EquipmentIn(
-        name=name,
-        category=category,
-        storage_location=place,
-        total_quantity=total,
-        repair_quantity=repair,
-        unit_value=Decimal(value),
-        repair_note=note,
-    )
+def _equipment(name: str, total: int, repair: int, note: str) -> Equipment:
+    data = EquipmentIn(name=name, total_quantity=total, repair_quantity=repair, repair_note=note)
     existing = Equipment.objects.filter(name__iexact=name).first()
     return create_equipment(data) if existing is None else update_equipment(existing, data)
 
