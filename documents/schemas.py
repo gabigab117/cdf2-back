@@ -131,6 +131,8 @@ class DocumentItemOut(Schema):
     title: str
     category: DocumentCategory
     status: DocumentStatus
+    # Where it comes from: a sworn statement shows as one (D14).
+    source: DocumentSource
     event: DocumentEventOut | None
     amount: Decimal | None
     # The date it is listed by: the document's own, or the day it was deposited.

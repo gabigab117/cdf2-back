@@ -72,6 +72,7 @@ def test_a_member_attests_a_purchase_whose_receipt_was_lost(
     When they attest the purchase
     Then an invoice awaits review, made from the statement, paid on the day of the purchase
     And its file is a PDF, stored under a random name
+    And the list tells it is a sworn statement
     """
     event = EventFactory()
 
@@ -119,6 +120,8 @@ def test_a_member_attests_a_purchase_whose_receipt_was_lost(
     assert stored.suffix == ".pdf"
     assert stored.read_bytes() == document.file.read()
     assert document.size == stored.stat().st_size
+    [row] = board_client.get("/api/board/documents").json()["items"]
+    assert row["source"] == "sworn_statement"
 
 
 def test_the_pdf_tells_what_the_member_attested(board_client):

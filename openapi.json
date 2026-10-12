@@ -715,6 +715,9 @@
             "title": "Id",
             "type": "integer"
           },
+          "source": {
+            "$ref": "#/components/schemas/DocumentSource"
+          },
           "status": {
             "$ref": "#/components/schemas/DocumentStatus"
           },
@@ -728,6 +731,7 @@
           "title",
           "category",
           "status",
+          "source",
           "event",
           "amount",
           "date"

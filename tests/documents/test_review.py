@@ -104,7 +104,7 @@ def test_a_listed_document_holds_what_its_row_shows(board_client):
     """
     Given an invoice of an event, of 380 €, awaiting review
     When a member lists the documents
-    Then its row holds its title, category, status, event, amount and date
+    Then its row holds its title, category, status, source, event, amount and date
     """
     event = EventFactory(title="Halloween des enfants")
     document = DocumentFactory(
@@ -120,6 +120,7 @@ def test_a_listed_document_holds_what_its_row_shows(board_client):
                 "title": document.title,
                 "category": "invoice",
                 "status": "to_review",
+                "source": "upload",
                 "event": {"id": event.id, "title": "Halloween des enfants"},
                 "amount": "380.00",
                 "date": "2026-09-28",
