@@ -12,6 +12,7 @@ from documents.schemas import (
     DocumentListFilters,
     DocumentOut,
     DocumentUploadIn,
+    SwornStatementIn,
 )
 from documents.services.documents import (
     delete_document,
@@ -24,6 +25,7 @@ from documents.services.documents import (
 )
 from documents.services.files import PDF, WEBP
 from documents.services.serving import file_response
+from documents.services.statements import create_sworn_statement
 
 router = Router(tags=["documents"])
 
@@ -75,6 +77,25 @@ def upload(request, file: File[UploadedFile], payload: Form[DocumentUploadIn]):
     The type is read from the content: a PDF, or an image, converted to WebP.
     """
     return Status(201, upload_document(file, payload, request.auth))
+
+
+# Declared before the operations on /documents/{document_id}, like the counts.
+@router.post(
+    "/documents/statements",
+    response={
+        201: DocumentOut,
+        400: ErrorOut,
+        401: ErrorOut,
+        403: ErrorOut,
+        422: ValidationErrorOut,
+    },
+    summary="Attest a purchase whose receipt was lost",
+)
+def make_statement(request, payload: SwornStatementIn):
+    """Attest a purchase on the honour of the member who paid it (D14): its PDF
+    is filed as an invoice paid on the day of the purchase, which awaits review.
+    """
+    return Status(201, create_sworn_statement(payload, request.auth))
 
 
 # Declared before the operations on /documents/{document_id}: Ninja tries the

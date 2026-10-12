@@ -962,7 +962,8 @@
       "DocumentSource": {
         "enum": [
           "upload",
-          "v1_import"
+          "v1_import",
+          "sworn_statement"
         ],
         "title": "DocumentSource",
         "type": "string"
@@ -4030,6 +4031,56 @@
         "title": "StationOut",
         "type": "object"
       },
+      "SwornStatementIn": {
+        "description": "A purchase paid for the committee whose receipt was lost, as the member\nwho paid attests it on their honour (D14): every key required.\n\nIts values are checked by the service, with the model's messages.",
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Amount"
+          },
+          "event": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event"
+          },
+          "purchase": {
+            "title": "Purchase",
+            "type": "string"
+          },
+          "purchase_date": {
+            "format": "date",
+            "title": "Purchase Date",
+            "type": "string"
+          },
+          "supplier": {
+            "title": "Supplier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "supplier",
+          "purchase_date",
+          "purchase",
+          "amount",
+          "event"
+        ],
+        "title": "SwornStatementIn",
+        "type": "object"
+      },
       "TaskIn": {
         "description": "A task as the board writes it: whole, every key required.\n\nA key left out never erases a value. The values themselves are checked by\nthe model, whose messages are in French.",
         "properties": {
@@ -5334,6 +5385,84 @@
           }
         ],
         "summary": "Count the documents by category",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
+    "/api/board/documents/statements": {
+      "post": {
+        "description": "Attest a purchase on the honour of the member who paid it (D14): its PDF\nis filed as an invoice paid on the day of the purchase, which awaits review.",
+        "operationId": "documents_api_make_statement",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwornStatementIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentOut"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Attest a purchase whose receipt was lost",
         "tags": [
           "documents"
         ]

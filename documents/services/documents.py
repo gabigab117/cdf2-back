@@ -19,7 +19,7 @@ from django.utils import timezone
 from accounts.models import User
 from documents.models import Document, DocumentCategory, DocumentStatus
 from documents.schemas import DocumentIn, DocumentUploadIn
-from documents.services.files import read_upload
+from documents.services.files import StoredFile, read_upload
 from documents.services.notifications import notify_document_upload
 from tasks.models import Task
 from tasks.schemas import TaskIn
@@ -75,6 +75,14 @@ def upload_document(file: File, data: DocumentUploadIn, member: User) -> Documen
         uploaded_by=member,
     )
     _check(document)
+    return record_document(document, stored)
+
+
+def record_document(document: Document, stored: StoredFile) -> Document:
+    """Store the file of a document already checked, then record the document,
+    which the chosen accounts are told of (D7): a deposit, or a sworn
+    statement (D14).
+    """
     # Written once checked, so that a refused document leaves no file; and
     # removed when the record fails, so that none is left without one.
     document.file.save(stored.name, stored.content, save=False)

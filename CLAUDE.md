@@ -135,6 +135,11 @@ def test_loan_over_availability_rejected(api_client):
     - toute image acceptée (JPEG, PNG, HEIC par pillow-heif, WebP) devient un WebP, redressé (`ImageOps.exif_transpose`, l'API publique de Pillow, plutôt que le `Transpose` de pilkit) et réduit à 4 000 px ;
     - le WebP de Pillow n'écrit ni EXIF ni XMP sans qu'on les lui passe : la position GPS d'une photo ne reste pas ;
     - un PDF se reconnaît à sa signature `%PDF-` : Python n'a plus de détection par le contenu depuis le retrait d'`imghdr`, et Pillow ne lit pas les PDF.
+  - **Un PDF que l'application fait** : l'attestation sur l'honneur d'un achat sans ticket (D14, `documents/services/statements.py`).
+    - ReportLab, la librairie qu'emploie la documentation de Django, en Python pur. Il n'est pas thread-safe : les workers sont synchrones, sans threads.
+    - Polices standard du PDF (Helvetica), rien à embarquer. Elles écrivent le jeu Windows-1252, français et « € » compris ; un caractère hors de ce jeu, comme un emoji, s'imprime en carré noir, sans erreur.
+    - Un texte saisi passe par `xml.sax.saxutils.escape` : un `Paragraph` lit du balisage.
+    - Les tests lisent le texte du PDF par pypdf (dépendance de développement).
   - **Un fichier s'écrit depuis les octets lus** (`ContentFile`) : créé dans le dossier, il en hérite le groupe que nginx lit. Un gros envoi, que Django déplace depuis son fichier temporaire, garderait le groupe de l'API.
   - **Aucun `FILE_UPLOAD_DIRECTORY_PERMISSIONS`** : Django 6.1 applique ce mode par un `chmod` après la création du dossier, ce qui efface le bit setgid hérité de `private/`. Les fichiers du dossier prendraient alors le groupe de l'API, et nginx ne les servirait plus (constaté en production le 11/10/2026).
   - Un fichier n'est écrit qu'une fois l'objet validé (`full_clean`), et il est effacé si l'enregistrement échoue : aucun fichier orphelin.

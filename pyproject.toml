@@ -19,6 +19,7 @@ dependencies = [
     "pillow-heif>=1.8",
     "psycopg[binary]>=3.3",
     "python-dateutil>=2.9",
+    "reportlab>=5.0.1",
 ]
 
 [tool.uv]
@@ -29,6 +30,7 @@ dev = [
     "factory-boy>=3.3.3",
     "openapi-spec-validator>=0.9",
     "pre-commit>=4.6.2",
+    "pypdf>=6.20.1",
     "pytest>=9.1",
     "pytest-cov>=7.1",
     "pytest-django>=4.14",

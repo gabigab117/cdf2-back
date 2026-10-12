@@ -1,5 +1,8 @@
 """Texts in French, as the API writes them to the board."""
 
+# The association's name, as its calendar and its documents print it.
+COMMITTEE = "Comité des fêtes d’Ons-en-Bray"
+
 # What the purge of personal data writes in place of a name (A9). A loan to a
 # third party, a reservation and a volunteer each need one, and the board's
 # lists, their accessible labels and the reservations' workbook still read.

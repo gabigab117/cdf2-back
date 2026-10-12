@@ -27,6 +27,9 @@ class DocumentStatus(models.TextChoices):
 class DocumentSource(models.TextChoices):
     UPLOAD = "upload", "Dépôt"
     V1_IMPORT = "v1_import", "Import de la v1"
+    # A purchase whose receipt was lost, attested by the member who paid (D14):
+    # its PDF is made by the application.
+    SWORN_STATEMENT = "sworn_statement", "Attestation sur l’honneur"
 
 
 def document_path(document, filename):

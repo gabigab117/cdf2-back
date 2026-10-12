@@ -21,6 +21,23 @@ class DocumentUploadIn(InputSchema):
     event: int | None = None
 
 
+class SwornStatementIn(InputSchema):
+    """A purchase paid for the committee whose receipt was lost, as the member
+    who paid attests it on their honour (D14): every key required.
+
+    Its values are checked by the service, with the model's messages.
+    """
+
+    # The shop or seller the receipt came from.
+    supplier: str
+    purchase_date: dt.date
+    # What was bought, in a few words: the title of the document.
+    purchase: str
+    amount: Decimal
+    # The id of an event, or none.
+    event: int | None
+
+
 class ExtractedTaskIn(InputSchema):
     """A task the minutes of a meeting list, to create when they are validated."""
 

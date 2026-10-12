@@ -8,9 +8,9 @@ from django.utils import timezone
 from icalendar import Calendar
 from icalendar import Event as CalendarEvent
 
+from core.text import COMMITTEE
 from events.models import Event
 
-COMMITTEE = "Comité des fêtes d’Ons-en-Bray"
 PRODUCT = f"-//{COMMITTEE}//Agenda//FR"
 # The address of an event's page on the site.
 EVENT_PAGE = "/evenements/{slug}"

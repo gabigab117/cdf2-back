@@ -24,6 +24,7 @@ DOCUMENTS = "/api/board/documents"
 OPERATIONS = [
     ("get", DOCUMENTS),
     ("post", DOCUMENTS),
+    ("post", f"{DOCUMENTS}/statements"),
     ("get", f"{DOCUMENTS}/counts"),
     ("get", f"{DOCUMENTS}/1"),
     ("put", f"{DOCUMENTS}/1"),
