@@ -193,3 +193,27 @@ class FiscalYearResultsOut(Schema):
     events: list[LedgerEventResultOut]
     # The entries of the committee's general running.
     general: LedgerTotalsOut
+
+
+class LedgerCategoryTotalOut(Schema):
+    """What a category brought in, or cost, over a fiscal year."""
+
+    category: LedgerCategory
+    total: Decimal
+    count: int
+
+
+class GeneralMeetingReportOut(Schema):
+    """The report of a fiscal year for the general meeting: a bounded aggregate (A7)."""
+
+    year: int
+    totals: LedgerTotalsOut
+    # The events that have entries, the first to start first.
+    events: list[LedgerEventResultOut]
+    # The entries of the committee's general running.
+    general: LedgerTotalsOut
+    # The categories that have entries, in the order of the form.
+    income_categories: list[LedgerCategoryTotalOut]
+    expense_categories: list[LedgerCategoryTotalOut]
+    # The expenses of the year missing their receipt, the oldest first.
+    missing_receipts: list[LedgerEntryOut]

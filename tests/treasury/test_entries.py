@@ -21,6 +21,7 @@ ENTRIES = f"{TREASURY}/entries"
 # refusal comes before the entry is looked up.
 OPERATIONS = [
     ("get", f"{TREASURY}/results?year=2026"),
+    ("get", f"{TREASURY}/report?year=2026"),
     ("get", ENTRIES),
     ("post", ENTRIES),
     ("get", f"{ENTRIES}/1"),

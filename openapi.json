@@ -1755,6 +1755,60 @@
         "title": "FiscalYearResultsOut",
         "type": "object"
       },
+      "GeneralMeetingReportOut": {
+        "description": "The report of a fiscal year for the general meeting: a bounded aggregate (A7).",
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerEventResultOut"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "expense_categories": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerCategoryTotalOut"
+            },
+            "title": "Expense Categories",
+            "type": "array"
+          },
+          "general": {
+            "$ref": "#/components/schemas/LedgerTotalsOut"
+          },
+          "income_categories": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerCategoryTotalOut"
+            },
+            "title": "Income Categories",
+            "type": "array"
+          },
+          "missing_receipts": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerEntryOut"
+            },
+            "title": "Missing Receipts",
+            "type": "array"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/LedgerTotalsOut"
+          },
+          "year": {
+            "title": "Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "year",
+          "totals",
+          "events",
+          "general",
+          "income_categories",
+          "expense_categories",
+          "missing_receipts"
+        ],
+        "title": "GeneralMeetingReportOut",
+        "type": "object"
+      },
       "GeneralTasksOut": {
         "description": "The tasks without an event (D10), as the dashboard's block shows them.",
         "properties": {
@@ -2022,6 +2076,30 @@
         ],
         "title": "LedgerCategory",
         "type": "string"
+      },
+      "LedgerCategoryTotalOut": {
+        "description": "What a category brought in, or cost, over a fiscal year.",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/LedgerCategory"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "total": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total",
+            "type": "string"
+          }
+        },
+        "required": [
+          "category",
+          "total",
+          "count"
+        ],
+        "title": "LedgerCategoryTotalOut",
+        "type": "object"
       },
       "LedgerEntryFilters": {
         "description": "The entries the journal keeps: every filter given applies.",
@@ -12073,6 +12151,76 @@
           }
         ],
         "summary": "Record the expense of an invoice",
+        "tags": [
+          "treasury"
+        ]
+      }
+    },
+    "/api/board/treasury/report": {
+      "get": {
+        "description": "« Bilan pour l'AG »: the totals and results of a fiscal year, what each\ncategory brought in or cost, and the expenses missing their receipt.",
+        "operationId": "treasury_api_read_report",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "year",
+            "required": true,
+            "schema": {
+              "maximum": 9999,
+              "minimum": 1,
+              "title": "Year",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeneralMeetingReportOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Read the report of a fiscal year for the general meeting",
         "tags": [
           "treasury"
         ]

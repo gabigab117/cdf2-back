@@ -9,6 +9,7 @@ from treasury.models import LedgerEntry
 from treasury.schemas import (
     FiscalYearQuery,
     FiscalYearResultsOut,
+    GeneralMeetingReportOut,
     InvoiceAttachIn,
     InvoiceExpenseIn,
     LedgerEntryFilters,
@@ -26,6 +27,7 @@ from treasury.services.entries import (
 )
 from treasury.services.invoices import attach_invoice, create_invoice_expense
 from treasury.services.reimbursements import cancel_reimbursement, mark_reimbursed
+from treasury.services.report import general_meeting_report
 from treasury.services.results import fiscal_year_results
 
 router = Router(tags=["treasury"])
@@ -44,6 +46,18 @@ def read_results(request, query: Query[FiscalYearQuery]):
     entries in it, the first to start first, then for the general running.
     """
     return fiscal_year_results(query.year)
+
+
+@router.get(
+    "/treasury/report",
+    response={200: GeneralMeetingReportOut, 401: ErrorOut, 403: ErrorOut, 422: ValidationErrorOut},
+    summary="Read the report of a fiscal year for the general meeting",
+)
+def read_report(request, query: Query[FiscalYearQuery]):
+    """« Bilan pour l'AG »: the totals and results of a fiscal year, what each
+    category brought in or cost, and the expenses missing their receipt.
+    """
+    return general_meeting_report(query.year)
 
 
 @router.get(
