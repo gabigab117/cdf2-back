@@ -2052,6 +2052,11 @@
               }
             ]
           },
+          "to_reimburse": {
+            "default": false,
+            "title": "To Reimburse",
+            "type": "boolean"
+          },
           "year": {
             "anyOf": [
               {
@@ -3905,6 +3910,34 @@
         "title": "PasswordLinkOut",
         "type": "object"
       },
+      "PendingAdvancesOut": {
+        "description": "The advances the committee owes its members (6.5).",
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerEntryOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total",
+            "type": "string"
+          }
+        },
+        "required": [
+          "count",
+          "total",
+          "items"
+        ],
+        "title": "PendingAdvancesOut",
+        "type": "object"
+      },
       "PendingDocumentsOut": {
         "description": "The documents awaiting review: how many, by category, and the latest.",
         "properties": {
@@ -3978,6 +4011,9 @@
       "PendingOut": {
         "description": "What awaits the board (A6): the bell's panel, the sidebar's badges.",
         "properties": {
+          "advances": {
+            "$ref": "#/components/schemas/PendingAdvancesOut"
+          },
           "documents": {
             "$ref": "#/components/schemas/PendingDocumentsOut"
           },
@@ -4000,7 +4036,8 @@
           "documents",
           "loans",
           "receipts",
-          "invoices"
+          "invoices",
+          "advances"
         ],
         "title": "PendingOut",
         "type": "object"
@@ -4375,6 +4412,25 @@
           "description"
         ],
         "title": "PublicProgrammeItemOut",
+        "type": "object"
+      },
+      "ReimbursementIn": {
+        "description": "How the committee paid an advance back: every key required.",
+        "properties": {
+          "reimbursed_on": {
+            "format": "date",
+            "title": "Reimbursed On",
+            "type": "string"
+          },
+          "reimbursement_method": {
+            "$ref": "#/components/schemas/ReimbursementMethod"
+          }
+        },
+        "required": [
+          "reimbursed_on",
+          "reimbursement_method"
+        ],
+        "title": "ReimbursementIn",
         "type": "object"
       },
       "ReimbursementMethod": {
@@ -11018,6 +11074,16 @@
           },
           {
             "in": "query",
+            "name": "to_reimburse",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "To Reimburse",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
             "name": "page",
             "required": false,
             "schema": {
@@ -11637,6 +11703,180 @@
           }
         ],
         "summary": "Join the receipt of a ledger entry",
+        "tags": [
+          "treasury"
+        ]
+      }
+    },
+    "/api/board/treasury/entries/{entry_id}/reimbursement": {
+      "delete": {
+        "description": "« Annuler le remboursement »: the advance is owed again.",
+        "operationId": "treasury_api_cancel_reimbursement_of",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedgerEntryOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Cancel the reimbursement of an advance",
+        "tags": [
+          "treasury"
+        ]
+      },
+      "post": {
+        "description": "« Marquer remboursée »: the advance of a member is paid back, its line\ncompleted; no second expense is written (A18).",
+        "operationId": "treasury_api_reimburse",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReimbursementIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedgerEntryOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Mark an advance reimbursed",
         "tags": [
           "treasury"
         ]

@@ -6,6 +6,7 @@ on another for its figures.
 
 import datetime as dt
 from dataclasses import dataclass
+from decimal import Decimal
 
 from django.db.models import Count, Q
 from django.utils import timezone
@@ -23,6 +24,7 @@ from tasks.services.tasks import next_tasks, recently_done_tasks, task_counts
 from treasury.models import LedgerEntry
 from treasury.services.entries import missing_receipts
 from treasury.services.invoices import unpaid_invoices
+from treasury.services.reimbursements import advances_to_reimburse, owed
 
 # How many events the dashboard's table shows. It sums up: the board's list
 # holds them all, and the table leads to it when more are to come.
@@ -80,6 +82,17 @@ class PendingInvoices:
 
 
 @dataclass(frozen=True)
+class PendingAdvances:
+    """The advances the committee owes its members: how many, how much, and
+    the oldest.
+    """
+
+    count: int
+    total: Decimal
+    items: list[LedgerEntry]
+
+
+@dataclass(frozen=True)
 class Pending:
     """What awaits the board (A6): the bell's panel and the sidebar's badges.
     The phase 7 adds its own: the stock.
@@ -91,6 +104,7 @@ class Pending:
     loans: PendingLoans
     receipts: PendingReceipts
     invoices: PendingInvoices
+    advances: PendingAdvances
 
 
 @dataclass(frozen=True)
@@ -178,12 +192,21 @@ def _pending(loans_by_state: dict[str, int], today: dt.date) -> Pending:
     receipts = PendingReceipts(count=missing.count(), items=list(missing[:PENDING_COUNT]))
     unpaid = unpaid_invoices(today)
     invoices = PendingInvoices(count=unpaid.count(), items=list(unpaid[:PENDING_COUNT]))
+    owing = advances_to_reimburse()
+    count, total = owed(owing)
+    advances = PendingAdvances(count=count, total=total, items=list(owing[:PENDING_COUNT]))
     return Pending(
-        total=counts["total"] + loans.overdue + loans.to_prepare + receipts.count + invoices.count,
+        total=counts["total"]
+        + loans.overdue
+        + loans.to_prepare
+        + receipts.count
+        + invoices.count
+        + advances.count,
         documents=PendingDocuments(counts=counts, items=list(latest)),
         loans=loans,
         receipts=receipts,
         invoices=invoices,
+        advances=advances,
     )
 
 

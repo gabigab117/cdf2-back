@@ -1,4 +1,5 @@
 import datetime as dt
+from decimal import Decimal
 from typing import Literal
 
 from ninja import Schema
@@ -84,6 +85,16 @@ class PendingInvoicesOut(Schema):
     items: list[UnpaidInvoiceOut]
 
 
+class PendingAdvancesOut(Schema):
+    """The advances the committee owes its members (6.5)."""
+
+    count: int
+    # What they add up to.
+    total: Decimal
+    # The oldest first, at most ten.
+    items: list[LedgerEntryOut]
+
+
 class PendingOut(Schema):
     """What awaits the board (A6): the bell's panel, the sidebar's badges."""
 
@@ -93,6 +104,7 @@ class PendingOut(Schema):
     loans: PendingLoansOut
     receipts: PendingReceiptsOut
     invoices: PendingInvoicesOut
+    advances: PendingAdvancesOut
 
 
 class LoanedEquipmentOut(Schema):

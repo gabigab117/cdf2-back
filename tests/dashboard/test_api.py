@@ -167,6 +167,7 @@ def test_an_empty_board_has_no_event_to_come(board_client):
             "loans": {"overdue": 0, "to_prepare": 0, "items": []},
             "receipts": {"count": 0, "items": []},
             "invoices": {"count": 0, "items": []},
+            "advances": {"count": 0, "total": "0.00", "items": []},
         },
         "recent_documents": [],
         "loans": {"out_count": 0, "to_prepare_count": 0, "next_return": None},
@@ -225,8 +226,9 @@ def test_the_counts_take_a_fixed_number_of_queries(board_client, django_assert_m
     # documents: those to review (counts and latest), and the recent ones; then
     # the loans: their counts, the next return, the fortnight's movements with
     # their lines (2), and those to list in the bell; then the treasury: the
-    # receipts missing and the invoices to pay (count and first ones).
-    with django_assert_max_num_queries(20):
+    # receipts missing, the invoices to pay and the advances owed (count and
+    # first ones).
+    with django_assert_max_num_queries(22):
         board_client.get(OVERVIEW)
 
 

@@ -15,6 +15,7 @@ from treasury.schemas import (
     LedgerEntryIn,
     LedgerEntryOut,
     NewLedgerEntryIn,
+    ReimbursementIn,
 )
 from treasury.services.entries import (
     attach_receipt,
@@ -24,6 +25,7 @@ from treasury.services.entries import (
     update_entry,
 )
 from treasury.services.invoices import attach_invoice, create_invoice_expense
+from treasury.services.reimbursements import cancel_reimbursement, mark_reimbursed
 from treasury.services.results import fiscal_year_results
 
 router = Router(tags=["treasury"])
@@ -113,6 +115,28 @@ def join_receipt(request, entry_id: int, file: File[UploadedFile]):
     none, filed among the documents.
     """
     return attach_receipt(get_object_or_404(LedgerEntry, pk=entry_id), file, request.auth)
+
+
+@router.post(
+    "/treasury/entries/{entry_id}/reimbursement",
+    response={200: LedgerEntryOut, 400: ErrorOut, **REFUSALS},
+    summary="Mark an advance reimbursed",
+)
+def reimburse(request, entry_id: int, payload: ReimbursementIn):
+    """« Marquer remboursée »: the advance of a member is paid back, its line
+    completed; no second expense is written (A18).
+    """
+    return mark_reimbursed(get_object_or_404(LedgerEntry, pk=entry_id), payload)
+
+
+@router.delete(
+    "/treasury/entries/{entry_id}/reimbursement",
+    response={200: LedgerEntryOut, **REFUSALS},
+    summary="Cancel the reimbursement of an advance",
+)
+def cancel_reimbursement_of(request, entry_id: int):
+    """« Annuler le remboursement »: the advance is owed again."""
+    return cancel_reimbursement(get_object_or_404(LedgerEntry, pk=entry_id))
 
 
 @router.post(

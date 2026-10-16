@@ -27,6 +27,8 @@ OPERATIONS = [
     ("put", f"{ENTRIES}/1"),
     ("delete", f"{ENTRIES}/1"),
     ("post", f"{ENTRIES}/1/receipt"),
+    ("post", f"{ENTRIES}/1/reimbursement"),
+    ("delete", f"{ENTRIES}/1/reimbursement"),
     ("post", f"{TREASURY}/invoices/1/expense"),
     ("post", f"{TREASURY}/invoices/1/attach"),
 ]

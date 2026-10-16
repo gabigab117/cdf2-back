@@ -62,10 +62,25 @@ class LedgerEntryFilters(FilterSchema):
     general: bool = False
     # Every year's entries whose receipt stands so, such as those missing one.
     receipt_state: LedgerReceiptState | None = None
+    # Every year's advances the committee still owes.
+    to_reimburse: bool = False
 
     def filter_general(self, value: bool) -> Q:
         # Called even when the filter is left out: false keeps every entry.
         return Q(event__isnull=True) if value else Q()
+
+    def filter_to_reimburse(self, value: bool) -> Q:
+        # Called even when the filter is left out: false keeps every entry.
+        if not value:
+            return Q()
+        return Q(payment_method=LedgerPaymentMethod.ADVANCE, reimbursed_on__isnull=True)
+
+
+class ReimbursementIn(InputSchema):
+    """How the committee paid an advance back: every key required."""
+
+    reimbursed_on: dt.date
+    reimbursement_method: ReimbursementMethod
 
 
 class InvoiceExpenseIn(InputSchema):

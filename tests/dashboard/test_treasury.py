@@ -8,8 +8,8 @@ import pytest
 from documents.models import DocumentCategory, DocumentSource
 from tests.accounts.factories import BoardMemberFactory
 from tests.documents.factories import DocumentFactory
-from tests.treasury.factories import IncomeFactory, LedgerEntryFactory
-from treasury.models import LedgerCategory
+from tests.treasury.factories import AdvanceFactory, IncomeFactory, LedgerEntryFactory
+from treasury.models import LedgerCategory, ReimbursementMethod
 
 pytestmark = pytest.mark.django_db
 
@@ -107,3 +107,23 @@ def test_the_bell_counts_what_the_treasury_leaves_to_do(board_client):
     to_pay()
 
     assert pending(board_client)["total"] == 3
+
+
+def test_the_bell_lists_the_advances_owed_the_oldest_first(board_client):
+    """
+    Given advances of Marc owed since 12 and 30 September, and one reimbursed
+    When a member opens the bell
+    Then the two advances owed come, the oldest first, with what they add up to
+    """
+    AdvanceFactory(label="Goûter", date=dt.date(2026, 9, 30), amount=Decimal("47.85"))
+    AdvanceFactory(label="Buvette", date=dt.date(2026, 9, 12), amount=Decimal("286.30"))
+    AdvanceFactory(
+        label="Remboursée",
+        reimbursed_on=dt.date(2026, 9, 20),
+        reimbursement_method=ReimbursementMethod.CASH,
+    )
+
+    advances = pending(board_client)["advances"]
+
+    assert (advances["count"], advances["total"]) == (2, "334.15")
+    assert [item["label"] for item in advances["items"]] == ["Buvette", "Goûter"]
