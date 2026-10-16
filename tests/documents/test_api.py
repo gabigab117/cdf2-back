@@ -147,6 +147,7 @@ def test_a_member_deposits_a_document_to_review(board_client, board_member, priv
         "validated_by": None,
         "validated_at": None,
         "created_at": iso(document.created_at),
+        "ledger_entry": None,
     }
     [stored] = stored_files(private_files)
     assert stored.name != "facture-sono.pdf"

@@ -739,6 +739,37 @@
         "title": "DocumentItemOut",
         "type": "object"
       },
+      "DocumentLedgerEntryOut": {
+        "description": "The ledger entry a document proves (phase 6).",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "date",
+          "label",
+          "created_at"
+        ],
+        "title": "DocumentLedgerEntryOut",
+        "type": "object"
+      },
       "DocumentListFilters": {
         "description": "The filters of the list, which also keeps a single category.",
         "properties": {
@@ -861,6 +892,16 @@
             "title": "Issuer",
             "type": "string"
           },
+          "ledger_entry": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DocumentLedgerEntryOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "mime_type": {
             "title": "Mime Type",
             "type": "string"
@@ -958,7 +999,8 @@
           "uploaded_by",
           "validated_by",
           "validated_at",
-          "created_at"
+          "created_at",
+          "ledger_entry"
         ],
         "title": "DocumentOut",
         "type": "object"
@@ -1859,6 +1901,60 @@
         "title": "InvitationOut",
         "type": "object"
       },
+      "InvoiceAttachIn": {
+        "description": "The expense, already entered, an invoice proves.",
+        "properties": {
+          "entry": {
+            "title": "Entry",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "entry"
+        ],
+        "title": "InvoiceAttachIn",
+        "type": "object"
+      },
+      "InvoiceExpenseIn": {
+        "description": "What an invoice does not tell of its expense, as the member types it:\nevery key required.",
+        "properties": {
+          "advanced_by": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Advanced By"
+          },
+          "category": {
+            "$ref": "#/components/schemas/LedgerCategory"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "paid_on": {
+            "format": "date",
+            "title": "Paid On",
+            "type": "string"
+          },
+          "payment_method": {
+            "$ref": "#/components/schemas/LedgerPaymentMethod"
+          }
+        },
+        "required": [
+          "paid_on",
+          "label",
+          "category",
+          "payment_method",
+          "advanced_by"
+        ],
+        "title": "InvoiceExpenseIn",
+        "type": "object"
+      },
       "LatestNoteOut": {
         "description": "A note of the board, as the dashboard lists the latest.",
         "properties": {
@@ -1945,6 +2041,16 @@
             "default": false,
             "title": "General",
             "type": "boolean"
+          },
+          "receipt_state": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LedgerReceiptState"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "year": {
             "anyOf": [
@@ -2071,6 +2177,16 @@
           "category": {
             "$ref": "#/components/schemas/LedgerCategory"
           },
+          "contact": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BoardMemberOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -2119,6 +2235,19 @@
           "payment_method": {
             "$ref": "#/components/schemas/LedgerPaymentMethod"
           },
+          "receipt": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LedgerReceiptOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "receipt_state": {
+            "$ref": "#/components/schemas/LedgerReceiptState"
+          },
           "reimbursed_on": {
             "anyOf": [
               {
@@ -2161,7 +2290,10 @@
           "supplier",
           "note",
           "created_by",
-          "created_at"
+          "created_at",
+          "receipt",
+          "receipt_state",
+          "contact"
         ],
         "title": "LedgerEntryOut",
         "type": "object"
@@ -2237,6 +2369,45 @@
           "advance"
         ],
         "title": "LedgerPaymentMethod",
+        "type": "string"
+      },
+      "LedgerReceiptOut": {
+        "description": "The document that proves an entry, as its viewer opens it.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "original_name": {
+            "title": "Original Name",
+            "type": "string"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "original_name",
+          "size"
+        ],
+        "title": "LedgerReceiptOut",
+        "type": "object"
+      },
+      "LedgerReceiptState": {
+        "description": "Where the receipt of an entry stands, worked out (6.2): an expense needs\none, but for its bank fees; an income needs none.",
+        "enum": [
+          "attached",
+          "missing",
+          "not_required"
+        ],
+        "title": "LedgerReceiptState",
         "type": "string"
       },
       "LedgerTotalsOut": {
@@ -3755,6 +3926,28 @@
         "title": "PendingDocumentsOut",
         "type": "object"
       },
+      "PendingInvoicesOut": {
+        "description": "The invoices to pay (6.2), those taken over from the v1 left aside.",
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/UnpaidInvoiceOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "items"
+        ],
+        "title": "PendingInvoicesOut",
+        "type": "object"
+      },
       "PendingLoansOut": {
         "description": "The loans that call for the board: late, then to prepare.",
         "properties": {
@@ -3788,8 +3981,14 @@
           "documents": {
             "$ref": "#/components/schemas/PendingDocumentsOut"
           },
+          "invoices": {
+            "$ref": "#/components/schemas/PendingInvoicesOut"
+          },
           "loans": {
             "$ref": "#/components/schemas/PendingLoansOut"
+          },
+          "receipts": {
+            "$ref": "#/components/schemas/PendingReceiptsOut"
           },
           "total": {
             "title": "Total",
@@ -3799,9 +3998,33 @@
         "required": [
           "total",
           "documents",
-          "loans"
+          "loans",
+          "receipts",
+          "invoices"
         ],
         "title": "PendingOut",
+        "type": "object"
+      },
+      "PendingReceiptsOut": {
+        "description": "The expenses whose receipt is missing (6.2).",
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerEntryOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "items"
+        ],
+        "title": "PendingReceiptsOut",
         "type": "object"
       },
       "PracticalInfoIcon": {
@@ -4808,6 +5031,61 @@
           "reservations"
         ],
         "title": "TicketTypeStatsOut",
+        "type": "object"
+      },
+      "UnpaidInvoiceOut": {
+        "description": "An invoice « à régler », as the bell and the treasury assistant name it.",
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "issuer": {
+            "title": "Issuer",
+            "type": "string"
+          },
+          "overdue": {
+            "title": "Overdue",
+            "type": "boolean"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "issuer",
+          "amount",
+          "due_date",
+          "overdue"
+        ],
+        "title": "UnpaidInvoiceOut",
         "type": "object"
       },
       "ValidationErrorItem": {
@@ -10725,6 +11003,21 @@
           },
           {
             "in": "query",
+            "name": "receipt_state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/LedgerReceiptState"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "in": "query",
             "name": "page",
             "required": false,
             "schema": {
@@ -10805,12 +11098,12 @@
         ]
       },
       "post": {
-        "description": "Record an entry, from the form of the journal: a field left empty is not sent.",
+        "description": "Record an entry, from the form of the journal: a field left empty is not\nsent. A file sent with it is its receipt, filed among the documents.",
         "operationId": "treasury_api_record",
         "parameters": [],
         "requestBody": {
           "content": {
-            "application/x-www-form-urlencoded": {
+            "multipart/form-data": {
               "schema": {
                 "properties": {
                   "advanced_by": {
@@ -10873,6 +11166,18 @@
                     ],
                     "title": "Event"
                   },
+                  "file": {
+                    "anyOf": [
+                      {
+                        "format": "binary",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "title": "File"
+                  },
                   "kind": {
                     "enum": [
                       "income",
@@ -10916,7 +11221,7 @@
                   "category",
                   "payment_method"
                 ],
-                "title": "FormParams",
+                "title": "MultiPartBodyParams",
                 "type": "object"
               }
             }
@@ -11223,6 +11528,311 @@
           }
         ],
         "summary": "Correct a ledger entry",
+        "tags": [
+          "treasury"
+        ]
+      }
+    },
+    "/api/board/treasury/entries/{entry_id}/receipt": {
+      "post": {
+        "description": "« Joindre le justificatif »: the document that proves an entry that has\nnone, filed among the documents.",
+        "operationId": "treasury_api_join_receipt",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "format": "binary",
+                    "title": "File",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "title": "FileParams",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedgerEntryOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Join the receipt of a ledger entry",
+        "tags": [
+          "treasury"
+        ]
+      }
+    },
+    "/api/board/treasury/invoices/{document_id}/attach": {
+      "post": {
+        "description": "« Ligne déjà saisie »: an invoice becomes the receipt of an expense\nentered without one, rather than an expense recorded twice.",
+        "operationId": "treasury_api_attach_invoice_to_expense",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvoiceAttachIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Attach an invoice to the expense it proves",
+        "tags": [
+          "treasury"
+        ]
+      }
+    },
+    "/api/board/treasury/invoices/{document_id}/expense": {
+      "post": {
+        "description": "« Valider et créer l'écriture », « Marquer payée »: the expense of an\ninvoice at the date it was paid, the invoice as its receipt, validated if it\nawaited review.",
+        "operationId": "treasury_api_record_invoice_expense",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvoiceExpenseIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Record the expense of an invoice",
         "tags": [
           "treasury"
         ]

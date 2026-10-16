@@ -82,6 +82,16 @@ class LedgerPaymentMethod(models.TextChoices):
     ADVANCE = "advance", "Avancé par un membre"
 
 
+class LedgerReceiptState(models.TextChoices):
+    """Where the receipt of an entry stands, worked out (6.2): an expense needs
+    one, but for its bank fees; an income needs none.
+    """
+
+    ATTACHED = "attached", "Joint"
+    MISSING = "missing", "Manquant"
+    NOT_REQUIRED = "not_required", "Sans objet"
+
+
 class ReimbursementMethod(models.TextChoices):
     """How the committee paid an advance back to its member."""
 
@@ -227,6 +237,13 @@ class LedgerEntry(models.Model):
 
     def __str__(self):
         return self.label
+
+    @property
+    def contact(self):
+        """The member to ask for the receipt: who advanced the expense, or else
+        who recorded it.
+        """
+        return self.advanced_by or self.created_by
 
     def clean(self):
         # The constraints keep these rules in the database; this places their

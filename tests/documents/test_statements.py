@@ -115,6 +115,7 @@ def test_a_member_attests_a_purchase_whose_receipt_was_lost(
         "validated_by": None,
         "validated_at": None,
         "created_at": DjangoJSONEncoder().default(document.created_at),
+        "ledger_entry": None,
     }
     [stored] = stored_files(private_files)
     assert stored.suffix == ".pdf"

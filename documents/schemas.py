@@ -179,6 +179,15 @@ EMPTY_EXTRACTED = {
 }
 
 
+class DocumentLedgerEntryOut(Schema):
+    """The ledger entry a document proves (phase 6)."""
+
+    id: int
+    date: dt.date
+    label: str
+    created_at: dt.datetime
+
+
 class DocumentOut(Schema):
     """A document of the board, as its detail panel shows it."""
 
@@ -207,7 +216,15 @@ class DocumentOut(Schema):
     validated_by: BoardMemberOut | None
     validated_at: dt.datetime | None
     created_at: dt.datetime
+    # The entry of the treasury it proves, if any: an invoice paid and recorded.
+    ledger_entry: DocumentLedgerEntryOut | None
 
     @staticmethod
     def resolve_extracted(document):
         return EMPTY_EXTRACTED | document.extracted
+
+    @staticmethod
+    def resolve_ledger_entry(document):
+        # The reverse of a one-to-one raises rather than giving None, the
+        # select_related having found nothing.
+        return getattr(document, "ledger_entry", None)

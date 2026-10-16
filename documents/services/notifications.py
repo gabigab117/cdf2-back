@@ -17,7 +17,7 @@ from django.utils import timezone
 from accounts.models import User
 from accounts.services.roles import board_members
 from core.services.mail import MAIL_FAILURES
-from documents.models import Document
+from documents.models import Document, DocumentStatus
 
 # Created by the migration documents/0002_document_notification_group.
 DOCUMENT_NOTIFICATION_GROUP = "Notifications documents"
@@ -34,8 +34,9 @@ def notification_recipients(uploader: User) -> QuerySet[User]:
 
 
 def notify_document_upload(document_id: int) -> None:
-    """Tell the chosen accounts that a document awaits review: one message each,
-    all over a single connection.
+    """Tell the chosen accounts that a document was deposited, to review, or as
+    the receipt of a ledger entry: one message each, all over a single
+    connection.
 
     The deposit is done already: a failure to send is written to the
     application's journal, and the member who deposited never sees it.
@@ -57,6 +58,10 @@ def document_link(document: Document) -> str:
 
 
 def _subject(document: Document) -> str:
+    # Only the receipt of a ledger entry arrives validated: its fields come
+    # from the entry.
+    if document.status == DocumentStatus.VALIDATED:
+        return f"Nouveau justificatif : {document.title}"
     return f"Nouveau document à vérifier : {document.title}"
 
 
@@ -73,6 +78,7 @@ def _body(document: Document) -> str:
         f"Déposé par : {who}\n"
         f"Date du dépôt : {deposited:%d/%m/%Y} à {deposited:%H} h {deposited:%M}\n"
         f"\n"
-        f"Pour le vérifier (la page demande de se connecter) :\n"
+        f"Pour le {'voir' if document.status == DocumentStatus.VALIDATED else 'vérifier'}"
+        f" (la page demande de se connecter) :\n"
         f"{document_link(document)}\n"
     )

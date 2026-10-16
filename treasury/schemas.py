@@ -11,6 +11,7 @@ from treasury.models import (
     LedgerCategory,
     LedgerEntryKind,
     LedgerPaymentMethod,
+    LedgerReceiptState,
     ReimbursementMethod,
 )
 
@@ -59,10 +60,32 @@ class LedgerEntryFilters(FilterSchema):
     event: int | None = None
     # The entries of the committee's general running, without an event.
     general: bool = False
+    # Every year's entries whose receipt stands so, such as those missing one.
+    receipt_state: LedgerReceiptState | None = None
 
     def filter_general(self, value: bool) -> Q:
         # Called even when the filter is left out: false keeps every entry.
         return Q(event__isnull=True) if value else Q()
+
+
+class InvoiceExpenseIn(InputSchema):
+    """What an invoice does not tell of its expense, as the member types it:
+    every key required.
+    """
+
+    paid_on: dt.date
+    label: str
+    category: LedgerCategory
+    payment_method: LedgerPaymentMethod
+    # The id of the board member who paid an advance; None for any other expense.
+    advanced_by: int | None
+
+
+class InvoiceAttachIn(InputSchema):
+    """The expense, already entered, an invoice proves."""
+
+    # The id of an expense without a receipt.
+    entry: int
 
 
 class FiscalYearQuery(Schema):
@@ -75,6 +98,16 @@ class LedgerEventOut(Schema):
     id: int
     title: str
     starts_at: dt.datetime
+
+
+class LedgerReceiptOut(Schema):
+    """The document that proves an entry, as its viewer opens it."""
+
+    id: int
+    title: str
+    original_name: str
+    # In bytes.
+    size: int
 
 
 class LedgerEntryOut(Schema):
@@ -99,6 +132,23 @@ class LedgerEntryOut(Schema):
     # None once the account is deleted.
     created_by: BoardMemberOut | None
     created_at: dt.datetime
+    receipt: LedgerReceiptOut | None
+    receipt_state: LedgerReceiptState
+    # The member to ask for a missing receipt: who advanced the expense, or
+    # else who recorded it; None once both accounts are deleted.
+    contact: BoardMemberOut | None
+
+
+class UnpaidInvoiceOut(Schema):
+    """An invoice « à régler », as the bell and the treasury assistant name it."""
+
+    id: int
+    title: str
+    issuer: str
+    amount: Decimal | None
+    due_date: dt.date | None
+    # Its due date has passed.
+    overdue: bool
 
 
 class LedgerTotalsOut(Schema):

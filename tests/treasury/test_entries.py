@@ -26,6 +26,9 @@ OPERATIONS = [
     ("get", f"{ENTRIES}/1"),
     ("put", f"{ENTRIES}/1"),
     ("delete", f"{ENTRIES}/1"),
+    ("post", f"{ENTRIES}/1/receipt"),
+    ("post", f"{TREASURY}/invoices/1/expense"),
+    ("post", f"{TREASURY}/invoices/1/attach"),
 ]
 
 
@@ -161,6 +164,9 @@ def test_a_member_records_an_expense_of_an_event(board_client, board_member):
         "note": "Pour la buvette",
         "created_by": member_json(board_member),
         "created_at": iso(entry.created_at),
+        "receipt": None,
+        "receipt_state": "missing",
+        "contact": member_json(board_member),
     }
 
 

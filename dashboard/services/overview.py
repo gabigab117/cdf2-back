@@ -20,6 +20,9 @@ from events.services.periods import events_in_period
 from notes.models import Note
 from tasks.models import Task
 from tasks.services.tasks import next_tasks, recently_done_tasks, task_counts
+from treasury.models import LedgerEntry
+from treasury.services.entries import missing_receipts
+from treasury.services.invoices import unpaid_invoices
 
 # How many events the dashboard's table shows. It sums up: the board's list
 # holds them all, and the table leads to it when more are to come.
@@ -36,9 +39,9 @@ RECENTLY_DONE_GENERAL_TASKS_COUNT = 2
 # The « Documents récents » block: the first of the list.
 RECENT_DOCUMENTS_COUNT = 4
 
-# The documents to review the « À traiter » panel lists: a bounded aggregate
-# (A7), whose count leads to them all.
-PENDING_DOCUMENTS_COUNT = 10
+# How many of each kind of item the « À traiter » panel lists: a bounded
+# aggregate (A7), whose count leads to them all. The loans keep their own.
+PENDING_COUNT = 10
 
 
 @dataclass(frozen=True)
@@ -61,15 +64,33 @@ class PendingLoans:
 
 
 @dataclass(frozen=True)
+class PendingReceipts:
+    """The expenses whose receipt is missing: how many, and the oldest."""
+
+    count: int
+    items: list[LedgerEntry]
+
+
+@dataclass(frozen=True)
+class PendingInvoices:
+    """The invoices to pay: how many, and the first due."""
+
+    count: int
+    items: list[Document]
+
+
+@dataclass(frozen=True)
 class Pending:
     """What awaits the board (A6): the bell's panel and the sidebar's badges.
-    The phases 6 and 7 add their own: stock, receipts.
+    The phase 7 adds its own: the stock.
     """
 
     # Every item awaiting, whatever its kind: the bell shows a dot if any.
     total: int
     documents: PendingDocuments
     loans: PendingLoans
+    receipts: PendingReceipts
+    invoices: PendingInvoices
 
 
 @dataclass(frozen=True)
@@ -147,16 +168,22 @@ def board_overview() -> BoardOverview:
 def _pending(loans_by_state: dict[str, int], today: dt.date) -> Pending:
     to_review = listed_documents().filter(status=DocumentStatus.TO_REVIEW)
     counts = document_counts(to_review)
-    latest = to_review.order_by("-created_at", "-pk")[:PENDING_DOCUMENTS_COUNT]
+    latest = to_review.order_by("-created_at", "-pk")[:PENDING_COUNT]
     loans = PendingLoans(
         overdue=loans_by_state[LoanState.OVERDUE],
         to_prepare=loans_by_state[LoanState.TO_PREPARE],
         items=pending_loans(today),
     )
+    missing = missing_receipts()
+    receipts = PendingReceipts(count=missing.count(), items=list(missing[:PENDING_COUNT]))
+    unpaid = unpaid_invoices(today)
+    invoices = PendingInvoices(count=unpaid.count(), items=list(unpaid[:PENDING_COUNT]))
     return Pending(
-        total=counts["total"] + loans.overdue + loans.to_prepare,
+        total=counts["total"] + loans.overdue + loans.to_prepare + receipts.count + invoices.count,
         documents=PendingDocuments(counts=counts, items=list(latest)),
         loans=loans,
+        receipts=receipts,
+        invoices=invoices,
     )
 
 

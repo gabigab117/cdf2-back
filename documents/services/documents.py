@@ -40,9 +40,9 @@ def documents() -> QuerySet[Document]:
     Each is dated by its own date, or else by the day it was deposited, in
     Paris time: the list is ordered by it, and shows it.
     """
-    return Document.objects.select_related("event", "uploaded_by", "validated_by").annotate(
-        date=Coalesce("document_date", TruncDate("created_at"))
-    )
+    return Document.objects.select_related(
+        "event", "uploaded_by", "validated_by", "ledger_entry"
+    ).annotate(date=Coalesce("document_date", TruncDate("created_at")))
 
 
 def listed_documents() -> QuerySet[Document]:
@@ -63,25 +63,33 @@ def document_counts(selection: QuerySet[Document]) -> dict[str, int]:
 
 def upload_document(file: File, data: DocumentUploadIn, member: User) -> Document:
     """Record the file a member deposits, as they classify it: it awaits review."""
-    stored = read_upload(file, max_size=settings.DOCUMENT_MAX_SIZE)
     document = Document(
         category=data.category,
         title=data.title or PurePath(file.name).stem[:200],
         event_id=data.event,
-        original_name=stored.name,
-        mime_type=stored.mime_type,
-        size=stored.size,
-        sha256=stored.sha256,
-        uploaded_by=member,
     )
+    return deposit_document(document, file, member)
+
+
+def deposit_document(document: Document, file: File, member: User) -> Document:
+    """Record the file a member deposits for a document they describe: one they
+    classify, or the receipt of a ledger entry (6.2). The file is refused
+    before the document's fields.
+    """
+    stored = read_upload(file, max_size=settings.DOCUMENT_MAX_SIZE)
+    document.original_name = stored.name
+    document.mime_type = stored.mime_type
+    document.size = stored.size
+    document.sha256 = stored.sha256
+    document.uploaded_by = member
     _check(document)
     return record_document(document, stored)
 
 
 def record_document(document: Document, stored: StoredFile) -> Document:
     """Store the file of a document already checked, then record the document,
-    which the chosen accounts are told of (D7): a deposit, or a sworn
-    statement (D14).
+    which the chosen accounts are told of (D7): a deposit, the receipt of a
+    ledger entry, or a sworn statement (D14).
     """
     # Written once checked, so that a refused document leaves no file; and
     # removed when the record fails, so that none is left without one.
@@ -131,11 +139,16 @@ def validate_document(document: Document, member: User) -> Document:
             raise ValidationError("Ce document est déjà validé.")
         if document.category == DocumentCategory.MINUTES:
             _create_tasks(document, member)
-        document.status = DocumentStatus.VALIDATED
-        document.validated_by = member
-        document.validated_at = timezone.now()
+        mark_validated(document, member)
         document.save()
     return documents().get(pk=document.pk)
+
+
+def mark_validated(document: Document, member: User) -> None:
+    """Mark a document validated by a member, now: the caller saves it."""
+    document.status = DocumentStatus.VALIDATED
+    document.validated_by = member
+    document.validated_at = timezone.now()
 
 
 def delete_document(document: Document) -> None:

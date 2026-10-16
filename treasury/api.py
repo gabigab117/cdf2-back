@@ -1,18 +1,29 @@
 from django.shortcuts import get_object_or_404
-from ninja import Form, Query, Router, Status
+from ninja import File, Form, Query, Router, Status, UploadedFile
 from ninja.pagination import paginate
 
 from core.schemas import ErrorOut, ValidationErrorOut
+from documents.models import Document
+from documents.schemas import DocumentOut
 from treasury.models import LedgerEntry
 from treasury.schemas import (
     FiscalYearQuery,
     FiscalYearResultsOut,
+    InvoiceAttachIn,
+    InvoiceExpenseIn,
     LedgerEntryFilters,
     LedgerEntryIn,
     LedgerEntryOut,
     NewLedgerEntryIn,
 )
-from treasury.services.entries import delete_entry, ledger_entries, record_entry, update_entry
+from treasury.services.entries import (
+    attach_receipt,
+    delete_entry,
+    ledger_entries,
+    record_entry,
+    update_entry,
+)
+from treasury.services.invoices import attach_invoice, create_invoice_expense
 from treasury.services.results import fiscal_year_results
 
 router = Router(tags=["treasury"])
@@ -55,9 +66,11 @@ def list_entries(request, filters: Query[LedgerEntryFilters]):
     },
     summary="Record a ledger entry",
 )
-def record(request, payload: Form[NewLedgerEntryIn]):
-    """Record an entry, from the form of the journal: a field left empty is not sent."""
-    return Status(201, record_entry(payload, request.auth))
+def record(request, payload: Form[NewLedgerEntryIn], file: File[UploadedFile | None] = None):
+    """Record an entry, from the form of the journal: a field left empty is not
+    sent. A file sent with it is its receipt, filed among the documents.
+    """
+    return Status(201, record_entry(payload, request.auth, file))
 
 
 @router.get(
@@ -88,3 +101,42 @@ def delete(request, entry_id: int):
     """Delete an entry: its receipt stays among the documents."""
     delete_entry(get_object_or_404(LedgerEntry, pk=entry_id))
     return Status(204, None)
+
+
+@router.post(
+    "/treasury/entries/{entry_id}/receipt",
+    response={200: LedgerEntryOut, 400: ErrorOut, **REFUSALS},
+    summary="Join the receipt of a ledger entry",
+)
+def join_receipt(request, entry_id: int, file: File[UploadedFile]):
+    """« Joindre le justificatif »: the document that proves an entry that has
+    none, filed among the documents.
+    """
+    return attach_receipt(get_object_or_404(LedgerEntry, pk=entry_id), file, request.auth)
+
+
+@router.post(
+    "/treasury/invoices/{document_id}/expense",
+    response={200: DocumentOut, 400: ErrorOut, **REFUSALS},
+    summary="Record the expense of an invoice",
+)
+def record_invoice_expense(request, document_id: int, payload: InvoiceExpenseIn):
+    """« Valider et créer l'écriture », « Marquer payée »: the expense of an
+    invoice at the date it was paid, the invoice as its receipt, validated if it
+    awaited review.
+    """
+    return create_invoice_expense(
+        get_object_or_404(Document, pk=document_id), payload, request.auth
+    )
+
+
+@router.post(
+    "/treasury/invoices/{document_id}/attach",
+    response={200: DocumentOut, 400: ErrorOut, **REFUSALS},
+    summary="Attach an invoice to the expense it proves",
+)
+def attach_invoice_to_expense(request, document_id: int, payload: InvoiceAttachIn):
+    """« Ligne déjà saisie »: an invoice becomes the receipt of an expense
+    entered without one, rather than an expense recorded twice.
+    """
+    return attach_invoice(get_object_or_404(Document, pk=document_id), payload, request.auth)

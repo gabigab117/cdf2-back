@@ -3,7 +3,6 @@ from decimal import Decimal
 
 import pytest
 from django.core.serializers.json import DjangoJSONEncoder
-from django.utils import timezone
 
 from tests.events.factories import EventFactory
 from tests.treasury.factories import IncomeFactory, LedgerEntryFactory
@@ -13,12 +12,6 @@ from treasury.services.results import fiscal_year_results, fiscal_years
 pytestmark = pytest.mark.django_db
 
 RESULTS = "/api/board/treasury/results"
-
-
-@pytest.fixture
-def mockup_day(monkeypatch):
-    """Today is the mockup's day, Thursday 1 October 2026."""
-    monkeypatch.setattr(timezone, "localdate", lambda: dt.date(2026, 10, 1))
 
 
 def totals(income, expense, result, count):

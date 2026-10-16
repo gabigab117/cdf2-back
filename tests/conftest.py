@@ -1,5 +1,8 @@
+import datetime as dt
+
 import pytest
 from django.test import Client
+from django.utils import timezone
 from ninja_jwt.tokens import AccessToken
 
 from tests.accounts.factories import BoardMemberFactory
@@ -26,3 +29,9 @@ def board_member(db):
 def board_client(board_member):
     """A client signed in as a board member, with a valid access token."""
     return Client(headers={"Authorization": f"Bearer {AccessToken.for_user(board_member)}"})
+
+
+@pytest.fixture
+def mockup_day(monkeypatch):
+    """Today is the mockup's day, Thursday 1 October 2026, in Paris."""
+    monkeypatch.setattr(timezone, "localdate", lambda *args, **kwargs: dt.date(2026, 10, 1))

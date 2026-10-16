@@ -8,6 +8,7 @@ from documents.schemas import DocumentCountsOut, DocumentItemOut
 from equipment.schemas import LoanBriefOut, LoanItemOut
 from events.schemas import EventItemOut
 from tasks.schemas import TaskOut
+from treasury.schemas import LedgerEntryOut, UnpaidInvoiceOut
 
 
 class OverviewEventOut(EventItemOut):
@@ -67,6 +68,22 @@ class PendingLoansOut(Schema):
     items: list[LoanBriefOut]
 
 
+class PendingReceiptsOut(Schema):
+    """The expenses whose receipt is missing (6.2)."""
+
+    count: int
+    # The oldest first, at most ten.
+    items: list[LedgerEntryOut]
+
+
+class PendingInvoicesOut(Schema):
+    """The invoices to pay (6.2), those taken over from the v1 left aside."""
+
+    count: int
+    # The first due first, at most ten.
+    items: list[UnpaidInvoiceOut]
+
+
 class PendingOut(Schema):
     """What awaits the board (A6): the bell's panel, the sidebar's badges."""
 
@@ -74,6 +91,8 @@ class PendingOut(Schema):
     total: int
     documents: PendingDocumentsOut
     loans: PendingLoansOut
+    receipts: PendingReceiptsOut
+    invoices: PendingInvoicesOut
 
 
 class LoanedEquipmentOut(Schema):

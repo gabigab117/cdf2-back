@@ -1,6 +1,7 @@
 import factory
+from django.utils import timezone
 
-from documents.models import Document, DocumentCategory
+from documents.models import Document, DocumentCategory, DocumentStatus
 from tests.accounts.factories import BoardMemberFactory
 from tests.documents.samples import PDF
 
@@ -23,3 +24,11 @@ class DocumentFactory(factory.django.DjangoModelFactory):
     size = len(PDF)
     sha256 = factory.Sequence(lambda n: f"{n:064x}")
     uploaded_by = factory.SubFactory(BoardMemberFactory)
+
+    class Params:
+        # Validated by a member, now: `DocumentFactory(validated=True)`.
+        validated = factory.Trait(
+            status=DocumentStatus.VALIDATED,
+            validated_by=factory.SubFactory(BoardMemberFactory),
+            validated_at=factory.LazyFunction(timezone.now),
+        )
