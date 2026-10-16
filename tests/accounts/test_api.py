@@ -373,13 +373,14 @@ def test_me_describes_the_signed_in_board_member(board_client, board_member):
     """
     Given a signed-in board member, the treasurer
     When they ask who they are
-    Then the answer gives their email address, names, the label of their
+    Then the answer gives their id, email address, names, the label of their
     position, and that they are not the superuser
     """
     response = board_client.get(ME)
 
     assert response.status_code == 200
     assert response.json() == {
+        "id": board_member.pk,
         "email": board_member.email,
         "first_name": "Camille",
         "last_name": "Martin",

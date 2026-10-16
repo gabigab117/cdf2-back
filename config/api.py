@@ -27,6 +27,7 @@ from notes.api import router as notes_router
 from reservations.api import router as reservations_router
 from stations.api import router as stations_router
 from tasks.api import router as tasks_router
+from treasury.api import router as treasury_router
 
 
 def serve_schema_if_enabled(view):
@@ -124,4 +125,5 @@ api.add_router("/board/", reservations_router)
 api.add_router("/board/", documents_router)
 api.add_router("/board/", equipment_router)
 api.add_router("/board/", loans_router)
+api.add_router("/board/", treasury_router)
 api.add_router("/public/", events_public_router)

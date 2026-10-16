@@ -4,9 +4,11 @@ import datetime as dt
 
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
+from django.db.models import ProtectedError
 from django.utils import timezone
 from django.utils.text import slugify
 
+from core.text import counted
 from events.models import Event, PracticalInfo, ProgrammeItem
 from events.schemas import EventIn
 
@@ -42,9 +44,20 @@ def delete_event(event: Event) -> None:
     """Delete an event, with its programme and practical info.
 
     A later edition loses its link to it. Each phase that attaches records to
-    events sets its own rule: delete them along, or refuse.
+    events sets its own rule: delete them along, or refuse. An event that has
+    ledger entries is refused: its accounts never go without a word.
     """
-    event.delete()
+    # PROTECT refuses it before any deletion: the transaction stays usable.
+    try:
+        event.delete()
+    except ProtectedError as error:
+        entries = len(error.protected_objects)
+        them = "la" if entries == 1 else "les"
+        raise ValidationError(
+            f"Cet événement a {counted(entries, 'ligne de trésorerie', 'lignes de trésorerie')} :"
+            f" rattachez-{them} à un autre événement ou au fonctionnement du comité"
+            " avant de le supprimer."
+        ) from error
 
 
 @transaction.atomic

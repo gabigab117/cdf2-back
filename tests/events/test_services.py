@@ -9,6 +9,7 @@ from events.schemas import EventIn
 from events.services.events import create_event, delete_event, update_event
 from tests.accounts.factories import BoardMemberFactory, UserFactory
 from tests.events.factories import EventFactory, event_payload
+from tests.treasury.factories import LedgerEntryFactory
 
 pytestmark = pytest.mark.django_db
 
@@ -240,3 +241,35 @@ def test_deleting_an_event_deletes_its_lines_and_unlinks_its_next_edition():
     assert not Event.objects.filter(pk=previous.pk).exists()
     assert ProgrammeItem.objects.filter(event=event).count() == ProgrammeItem.objects.count()
     assert PracticalInfo.objects.filter(event=event).count() == PracticalInfo.objects.count()
+
+
+@pytest.mark.parametrize(
+    ("entries", "message"),
+    [
+        (
+            1,
+            "Cet événement a 1 ligne de trésorerie : rattachez-la à un autre événement"
+            " ou au fonctionnement du comité avant de le supprimer.",
+        ),
+        (
+            2,
+            "Cet événement a 2 lignes de trésorerie : rattachez-les à un autre événement"
+            " ou au fonctionnement du comité avant de le supprimer.",
+        ),
+    ],
+)
+def test_an_event_that_has_ledger_entries_is_not_deleted(entries, message):
+    """
+    Given an event that has one ledger entry, or two
+    When it is deleted
+    Then the deletion is refused, saying how many entries to move first
+    And the event and its entries stay
+    """
+    event = EventFactory()
+    LedgerEntryFactory.create_batch(entries, event=event)
+
+    with pytest.raises(ValidationError) as error:
+        delete_event(event)
+
+    assert error.value.messages == [message]
+    assert Event.objects.filter(pk=event.pk).exists()

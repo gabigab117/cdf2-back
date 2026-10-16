@@ -147,3 +147,25 @@ def test_a_lower_bound_error_states_its_bound():
     assert schema_error_details(error)[0]["msg"] == (
         "Assurez-vous que cette valeur est supérieure ou égale à 1."
     )
+
+
+def test_an_upper_bound_error_states_its_bound():
+    """
+    Given a year of the query string after the last one a date holds, 9999
+    When the error is converted for the API
+    Then its message states that bound
+    """
+    error = SchemaValidationError(
+        [
+            {
+                "type": "less_than_equal",
+                "loc": ("query", "year"),
+                "msg": "Input should be less than or equal to 9999",
+                "ctx": {"le": 9999},
+            }
+        ]
+    )
+
+    assert schema_error_details(error)[0]["msg"] == (
+        "Assurez-vous que cette valeur est inférieure ou égale à 9999."
+    )

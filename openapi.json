@@ -1660,6 +1660,59 @@
         "title": "ExtractedTaskOut",
         "type": "object"
       },
+      "FiscalYearQuery": {
+        "properties": {
+          "year": {
+            "maximum": 9999,
+            "minimum": 1,
+            "title": "Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "year"
+        ],
+        "title": "FiscalYearQuery",
+        "type": "object"
+      },
+      "FiscalYearResultsOut": {
+        "description": "A fiscal year's totals, by event then without one: a bounded aggregate (A7).",
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerEventResultOut"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "general": {
+            "$ref": "#/components/schemas/LedgerTotalsOut"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/LedgerTotalsOut"
+          },
+          "year": {
+            "title": "Year",
+            "type": "integer"
+          },
+          "years": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Years",
+            "type": "array"
+          }
+        },
+        "required": [
+          "year",
+          "years",
+          "totals",
+          "events",
+          "general"
+        ],
+        "title": "FiscalYearResultsOut",
+        "type": "object"
+      },
       "GeneralTasksOut": {
         "description": "The tasks without an event (D10), as the dashboard's block shows them.",
         "properties": {
@@ -1851,6 +1904,371 @@
           "event"
         ],
         "title": "LatestNoteOut",
+        "type": "object"
+      },
+      "LedgerCategory": {
+        "description": "What an entry is for: each kind has its own categories, « Divers » both.",
+        "enum": [
+          "food",
+          "drinks",
+          "equipment_rental",
+          "decoration",
+          "prizes",
+          "insurance",
+          "bank_fees",
+          "bar",
+          "pitches",
+          "tickets",
+          "grant",
+          "membership_fees",
+          "donations",
+          "misc"
+        ],
+        "title": "LedgerCategory",
+        "type": "string"
+      },
+      "LedgerEntryFilters": {
+        "description": "The entries the journal keeps: every filter given applies.",
+        "properties": {
+          "event": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event"
+          },
+          "general": {
+            "default": false,
+            "title": "General",
+            "type": "boolean"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "maximum": 9999,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          }
+        },
+        "title": "LedgerEntryFilters",
+        "type": "object"
+      },
+      "LedgerEntryIn": {
+        "description": "A ledger entry as the board corrects it: whole, every key required.\n\nIts values are checked by the model and the service, whose messages are in\nFrench. Its amount is positive: its kind tells income from expense.",
+        "properties": {
+          "advanced_by": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Advanced By"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Amount"
+          },
+          "category": {
+            "$ref": "#/components/schemas/LedgerCategory"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "event": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/LedgerEntryKind"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "payment_method": {
+            "$ref": "#/components/schemas/LedgerPaymentMethod"
+          },
+          "supplier": {
+            "title": "Supplier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "kind",
+          "label",
+          "amount",
+          "category",
+          "payment_method",
+          "advanced_by",
+          "event",
+          "supplier",
+          "note"
+        ],
+        "title": "LedgerEntryIn",
+        "type": "object"
+      },
+      "LedgerEntryKind": {
+        "enum": [
+          "income",
+          "expense"
+        ],
+        "title": "LedgerEntryKind",
+        "type": "string"
+      },
+      "LedgerEntryOut": {
+        "description": "An entry of the journal, as its line and its page show it.",
+        "properties": {
+          "advanced_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BoardMemberOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "amount": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/LedgerCategory"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BoardMemberOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "event": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LedgerEventOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/LedgerEntryKind"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "payment_method": {
+            "$ref": "#/components/schemas/LedgerPaymentMethod"
+          },
+          "reimbursed_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reimbursed On"
+          },
+          "reimbursement_method": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReimbursementMethod"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "supplier": {
+            "title": "Supplier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "date",
+          "kind",
+          "label",
+          "amount",
+          "category",
+          "payment_method",
+          "advanced_by",
+          "reimbursed_on",
+          "reimbursement_method",
+          "event",
+          "supplier",
+          "note",
+          "created_by",
+          "created_at"
+        ],
+        "title": "LedgerEntryOut",
+        "type": "object"
+      },
+      "LedgerEventOut": {
+        "description": "The event of an entry, or of a result.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "starts_at": {
+            "format": "date-time",
+            "title": "Starts At",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "starts_at"
+        ],
+        "title": "LedgerEventOut",
+        "type": "object"
+      },
+      "LedgerEventResultOut": {
+        "description": "The totals of an event that has entries in the fiscal year.",
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "event": {
+            "$ref": "#/components/schemas/LedgerEventOut"
+          },
+          "expense": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Expense",
+            "type": "string"
+          },
+          "income": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Income",
+            "type": "string"
+          },
+          "result": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "income",
+          "expense",
+          "result",
+          "count",
+          "event"
+        ],
+        "title": "LedgerEventResultOut",
+        "type": "object"
+      },
+      "LedgerPaymentMethod": {
+        "enum": [
+          "association_card",
+          "cash",
+          "cheque",
+          "transfer",
+          "direct_debit",
+          "advance"
+        ],
+        "title": "LedgerPaymentMethod",
+        "type": "string"
+      },
+      "LedgerTotalsOut": {
+        "description": "What came in and went out, the result, and over how many entries.",
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "expense": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Expense",
+            "type": "string"
+          },
+          "income": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Income",
+            "type": "string"
+          },
+          "result": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "income",
+          "expense",
+          "result",
+          "count"
+        ],
+        "title": "LedgerTotalsOut",
         "type": "object"
       },
       "LoanAgreementOut": {
@@ -2617,6 +3035,10 @@
             "title": "First Name",
             "type": "string"
           },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
           "is_superuser": {
             "title": "Is Superuser",
             "type": "boolean"
@@ -2631,6 +3053,7 @@
           }
         },
         "required": [
+          "id",
           "email",
           "first_name",
           "last_name",
@@ -2638,6 +3061,83 @@
           "is_superuser"
         ],
         "title": "MeOut",
+        "type": "object"
+      },
+      "NewLedgerEntryIn": {
+        "description": "A ledger entry as the board records it, from a form: a field left empty\nis not sent, and takes its default.",
+        "properties": {
+          "advanced_by": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Advanced By"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Amount"
+          },
+          "category": {
+            "$ref": "#/components/schemas/LedgerCategory"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "event": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/LedgerEntryKind"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "title": "Note",
+            "type": "string"
+          },
+          "payment_method": {
+            "$ref": "#/components/schemas/LedgerPaymentMethod"
+          },
+          "supplier": {
+            "default": "",
+            "title": "Supplier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "kind",
+          "label",
+          "amount",
+          "category",
+          "payment_method"
+        ],
+        "title": "NewLedgerEntryIn",
         "type": "object"
       },
       "NoteDocumentOut": {
@@ -3044,6 +3544,27 @@
           "count"
         ],
         "title": "PagedEventItemOut",
+        "type": "object"
+      },
+      "PagedLedgerEntryOut": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerEntryOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "count"
+        ],
+        "title": "PagedLedgerEntryOut",
         "type": "object"
       },
       "PagedLoanItemOut": {
@@ -3632,6 +4153,16 @@
         ],
         "title": "PublicProgrammeItemOut",
         "type": "object"
+      },
+      "ReimbursementMethod": {
+        "description": "How the committee paid an advance back to its member.",
+        "enum": [
+          "cash",
+          "cheque",
+          "transfer"
+        ],
+        "title": "ReimbursementMethod",
+        "type": "string"
       },
       "ReplyIn": {
         "properties": {
@@ -10140,6 +10671,630 @@
         "summary": "Delete a type of place",
         "tags": [
           "reservations"
+        ]
+      }
+    },
+    "/api/board/treasury/entries": {
+      "get": {
+        "description": "The journal, by page, the latest entry first.",
+        "operationId": "treasury_api_list_entries",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "year",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 9999,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Year"
+            }
+          },
+          {
+            "in": "query",
+            "name": "event",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event"
+            }
+          },
+          {
+            "in": "query",
+            "name": "general",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "General",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedLedgerEntryOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "List the ledger entries",
+        "tags": [
+          "treasury"
+        ]
+      },
+      "post": {
+        "description": "Record an entry, from the form of the journal: a field left empty is not sent.",
+        "operationId": "treasury_api_record",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "properties": {
+                  "advanced_by": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "title": "Advanced By"
+                  },
+                  "amount": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                        "type": "string"
+                      }
+                    ],
+                    "title": "Amount"
+                  },
+                  "category": {
+                    "description": "What an entry is for: each kind has its own categories, « Divers » both.",
+                    "enum": [
+                      "food",
+                      "drinks",
+                      "equipment_rental",
+                      "decoration",
+                      "prizes",
+                      "insurance",
+                      "bank_fees",
+                      "bar",
+                      "pitches",
+                      "tickets",
+                      "grant",
+                      "membership_fees",
+                      "donations",
+                      "misc"
+                    ],
+                    "title": "LedgerCategory",
+                    "type": "string"
+                  },
+                  "date": {
+                    "format": "date",
+                    "title": "Date",
+                    "type": "string"
+                  },
+                  "event": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "title": "Event"
+                  },
+                  "kind": {
+                    "enum": [
+                      "income",
+                      "expense"
+                    ],
+                    "title": "LedgerEntryKind",
+                    "type": "string"
+                  },
+                  "label": {
+                    "title": "Label",
+                    "type": "string"
+                  },
+                  "note": {
+                    "default": "",
+                    "title": "Note",
+                    "type": "string"
+                  },
+                  "payment_method": {
+                    "enum": [
+                      "association_card",
+                      "cash",
+                      "cheque",
+                      "transfer",
+                      "direct_debit",
+                      "advance"
+                    ],
+                    "title": "LedgerPaymentMethod",
+                    "type": "string"
+                  },
+                  "supplier": {
+                    "default": "",
+                    "title": "Supplier",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "date",
+                  "kind",
+                  "label",
+                  "amount",
+                  "category",
+                  "payment_method"
+                ],
+                "title": "FormParams",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedgerEntryOut"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Record a ledger entry",
+        "tags": [
+          "treasury"
+        ]
+      }
+    },
+    "/api/board/treasury/entries/{entry_id}": {
+      "delete": {
+        "description": "Delete an entry: its receipt stays among the documents.",
+        "operationId": "treasury_api_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Delete a ledger entry",
+        "tags": [
+          "treasury"
+        ]
+      },
+      "get": {
+        "operationId": "treasury_api_read_entry",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedgerEntryOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Read a ledger entry",
+        "tags": [
+          "treasury"
+        ]
+      },
+      "put": {
+        "description": "Rewrite an entry whole: its receipt and its reimbursement stay as they are.",
+        "operationId": "treasury_api_correct",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LedgerEntryIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedgerEntryOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Correct a ledger entry",
+        "tags": [
+          "treasury"
+        ]
+      }
+    },
+    "/api/board/treasury/results": {
+      "get": {
+        "description": "What a fiscal year brought in and cost: in all, for each event that has\nentries in it, the first to start first, then for the general running.",
+        "operationId": "treasury_api_read_results",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "year",
+            "required": true,
+            "schema": {
+              "maximum": 9999,
+              "minimum": 1,
+              "title": "Year",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FiscalYearResultsOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Read the results of a fiscal year",
+        "tags": [
+          "treasury"
         ]
       }
     },

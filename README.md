@@ -64,6 +64,7 @@ notes/           notes du bureau, sur un événement ou générales, avec un niv
 reservations/    réservations d'un événement par le bureau : types de place, capacité, saisie sous verrou, chiffres et export Excel (/api/board/events/{id}/reservations)
 stations/        postes d'un événement et bénévoles qui y sont affectés ; « complet » seulement si chaque poste l'est (/api/board/events/{id}/stations)
 tasks/           tâches du bureau : assignation, échéance, faite ou non, dans l'ordre du bureau (/api/board/tasks)
+treasury/        trésorerie : journal unique des recettes et des dépenses, rattachées à un événement ou au fonctionnement du comité, avances des membres (/api/board/treasury/entries), résultats d'un exercice par événement (/api/board/treasury/results)
 tests/           tests pytest, en miroir des apps
 openapi.json     schéma OpenAPI exporté (contrat avec le front)
 ```

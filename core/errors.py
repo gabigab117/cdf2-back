@@ -9,7 +9,7 @@ from typing import Any
 
 from django import forms
 from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
-from django.core.validators import MinValueValidator, RegexValidator
+from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.utils.functional import Promise
 from ninja.errors import ValidationError as SchemaValidationError
 
@@ -84,6 +84,8 @@ def schema_error_details(error: SchemaValidationError) -> list[ErrorItem]:
 def _schema_message(item: dict[str, Any]) -> str:
     if item["type"] == "greater_than_equal":
         return MinValueValidator.message % {"limit_value": item["ctx"]["ge"]}
+    if item["type"] == "less_than_equal":
+        return MaxValueValidator.message % {"limit_value": item["ctx"]["le"]}
     # Any other type, such as a text expected and something else given, only
     # comes from a request no form of the board sends.
     return str(_SCHEMA_MESSAGES.get(item["type"], RegexValidator.message))

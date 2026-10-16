@@ -224,5 +224,6 @@ def test_schemas_and_choices_have_unique_names():
         "reservations",
         "stations",
         "tasks",
+        "treasury",
     } <= project_apps
     assert [name for name, count in names.items() if count > 1] == []

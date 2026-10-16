@@ -24,6 +24,8 @@ class AccessTokenOut(Schema):
 # A plain Schema rather than a ModelSchema, which would publish the fields that
 # may be blank as optional and nullable.
 class MeOut(Schema):
+    # The board space names the member who records an advance by it.
+    id: int
     email: str
     first_name: str
     last_name: str

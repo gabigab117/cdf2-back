@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     "reservations",
     "stations",
     "tasks",
+    "treasury",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
