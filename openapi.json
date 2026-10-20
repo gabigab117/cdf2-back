@@ -3701,6 +3701,69 @@
         "title": "OccupancyOut",
         "type": "object"
       },
+      "OrderLineIn": {
+        "description": "A line of an order: an item, and how much of it comes.",
+        "properties": {
+          "item": {
+            "title": "Item",
+            "type": "integer"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Quantity"
+          }
+        },
+        "required": [
+          "item",
+          "quantity"
+        ],
+        "title": "OrderLineIn",
+        "type": "object"
+      },
+      "OrderLineOut": {
+        "description": "A line of an order: « Bonbons assortis +12 kg ».",
+        "properties": {
+          "item": {
+            "$ref": "#/components/schemas/StockMovementItemOut"
+          },
+          "quantity": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Quantity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "item",
+          "quantity"
+        ],
+        "title": "OrderLineOut",
+        "type": "object"
+      },
+      "OrderLinesIn": {
+        "description": "The lines of an order, all at once: without any, the order brings\nnothing to the stock.",
+        "properties": {
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/OrderLineIn"
+            },
+            "title": "Lines",
+            "type": "array"
+          }
+        },
+        "required": [
+          "lines"
+        ],
+        "title": "OrderLinesIn",
+        "type": "object"
+      },
       "OverviewEventOut": {
         "description": "An event of the dashboard's table: a row of the board's list, with how\nfar its tasks have gone and how many notes it has.",
         "properties": {
@@ -5109,6 +5172,32 @@
         "title": "StockCountsOut",
         "type": "object"
       },
+      "StockDeliveryOut": {
+        "description": "When, and by whom, an order was received.",
+        "properties": {
+          "author": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BoardMemberOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "created_at",
+          "author"
+        ],
+        "title": "StockDeliveryOut",
+        "type": "object"
+      },
       "StockDirection": {
         "description": "Which way an operation moves the stock (« Entrée ou sortie »).",
         "enum": [
@@ -5452,6 +5541,83 @@
         "title": "StockOperationReason",
         "type": "string"
       },
+      "StockOrderOut": {
+        "description": "An order of the stock (7.4): its document, its lines and its delivery.",
+        "properties": {
+          "delivery": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StockDeliveryOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "delivery_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivery Date"
+          },
+          "event": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StockEventOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "issuer": {
+            "title": "Issuer",
+            "type": "string"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/OrderLineOut"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "undoable": {
+            "title": "Undoable",
+            "type": "boolean"
+          },
+          "validated": {
+            "title": "Validated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "issuer",
+          "delivery_date",
+          "event",
+          "validated",
+          "lines",
+          "delivery",
+          "undoable"
+        ],
+        "title": "StockOrderOut",
+        "type": "object"
+      },
       "StockOverviewOut": {
         "description": "The stock, item by item, and its figures: a bounded aggregate (A7).",
         "properties": {
@@ -5475,6 +5641,13 @@
               }
             ]
           },
+          "orders": {
+            "items": {
+              "$ref": "#/components/schemas/StockOrderOut"
+            },
+            "title": "Orders",
+            "type": "array"
+          },
           "recent_operations": {
             "items": {
               "$ref": "#/components/schemas/StockOperationOut"
@@ -5495,7 +5668,8 @@
           "counts",
           "last_stocktake",
           "recent_operations",
-          "shopping_list"
+          "shopping_list",
+          "orders"
         ],
         "title": "StockOverviewOut",
         "type": "object"
@@ -11693,6 +11867,326 @@
           }
         ],
         "summary": "Record an entry or an exit of the stock",
+        "tags": [
+          "stock"
+        ]
+      }
+    },
+    "/api/board/stock/orders/{document_id}": {
+      "get": {
+        "description": "What an order brings to the stock, and whether it was received.",
+        "operationId": "stock_api_read_order",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockOrderOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Read the lines and the delivery of an order",
+        "tags": [
+          "stock"
+        ]
+      }
+    },
+    "/api/board/stock/orders/{document_id}/delivery": {
+      "delete": {
+        "description": "« Annuler »: the delivery is undone the day it was received, unless some\nof it has left the stock, or a stocktake has counted it, since.",
+        "operationId": "stock_api_cancel_order_delivery",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockOrderOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Cancel the delivery of an order",
+        "tags": [
+          "stock"
+        ]
+      },
+      "post": {
+        "description": "« Réceptionner la livraison »: each line of a validated order comes into\nthe stock, by a single delivery of the member.",
+        "operationId": "stock_api_receive_delivery",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockOrderOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Receive the delivery of an order",
+        "tags": [
+          "stock"
+        ]
+      }
+    },
+    "/api/board/stock/orders/{document_id}/lines": {
+      "put": {
+        "description": "The lines of an order, all at once, until it is received: without any,\nthe order leaves the Stock page.",
+        "operationId": "stock_api_write_order_lines",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderLinesIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockOrderOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Write the lines of an order",
         "tags": [
           "stock"
         ]

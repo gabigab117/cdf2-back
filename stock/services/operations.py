@@ -16,6 +16,7 @@ from django.utils.formats import number_format
 from accounts.models import User
 from stock.models import (
     ITEM_TWICE,
+    NO_QUANTITY,
     UNKNOWN_ITEM,
     StockDirection,
     StockItem,
@@ -42,7 +43,7 @@ WRONG_WAYS = {
 # The quantities of the stock, to the hundredth, as its movements keep them.
 HUNDREDTHS = DecimalValidator(max_digits=10, decimal_places=2)
 # What an entry or an exit moves; what a stocktake counts, nothing included.
-SOME = (MinValueValidator(Decimal("0.01"), "Indiquez une quantité supérieure à zéro."), HUNDREDTHS)
+SOME = (MinValueValidator(Decimal("0.01"), NO_QUANTITY), HUNDREDTHS)
 ANY = (MinValueValidator(Decimal(0)), HUNDREDTHS)
 
 Rows = list[tuple[int, Decimal]]

@@ -2,20 +2,24 @@ from django.shortcuts import get_object_or_404
 from ninja import Router, Status
 
 from core.schemas import ErrorOut, ValidationErrorOut
+from documents.models import Document, DocumentCategory
 from stock.models import StockItem
 from stock.schemas import (
+    OrderLinesIn,
     StockAdjustmentIn,
     StockedItemOut,
     StockItemIn,
     StockItemOut,
     StockOperationIn,
     StockOperationOut,
+    StockOrderOut,
     StockOverviewOut,
     StocktakeIn,
 )
 from stock.services.items import create_item, delete_item, update_item
 from stock.services.movements import adjust
 from stock.services.operations import record_operation, record_stocktake
+from stock.services.orders import cancel_delivery, order, orders, receive, replace_lines
 from stock.services.overview import stock_overview
 
 router = Router(tags=["stock"])
@@ -104,3 +108,54 @@ def adjust_item(request, item_id: int, payload: StockAdjustmentIn):
     Out, what is left when less than a step is.
     """
     return adjust(get_object_or_404(StockItem, pk=item_id), payload.direction, request.auth)
+
+
+def _order(document_id: int) -> Document:
+    """An order document: any other document is not one of the stock's."""
+    return get_object_or_404(Document, pk=document_id, category=DocumentCategory.ORDER)
+
+
+@router.get(
+    "/stock/orders/{document_id}",
+    response={200: StockOrderOut, 401: ErrorOut, 403: ErrorOut, 404: ErrorOut},
+    summary="Read the lines and the delivery of an order",
+)
+def read_order(request, document_id: int):
+    """What an order brings to the stock, and whether it was received."""
+    return order(get_object_or_404(orders(), pk=document_id))
+
+
+@router.put(
+    "/stock/orders/{document_id}/lines",
+    response={200: StockOrderOut, 400: ErrorOut, **REFUSALS},
+    summary="Write the lines of an order",
+)
+def write_order_lines(request, document_id: int, payload: OrderLinesIn):
+    """The lines of an order, all at once, until it is received: without any,
+    the order leaves the Stock page.
+    """
+    return replace_lines(_order(document_id), payload)
+
+
+@router.post(
+    "/stock/orders/{document_id}/delivery",
+    response={200: StockOrderOut, **REFUSALS},
+    summary="Receive the delivery of an order",
+)
+def receive_delivery(request, document_id: int):
+    """« Réceptionner la livraison »: each line of a validated order comes into
+    the stock, by a single delivery of the member.
+    """
+    return receive(_order(document_id), request.auth)
+
+
+@router.delete(
+    "/stock/orders/{document_id}/delivery",
+    response={200: StockOrderOut, **REFUSALS},
+    summary="Cancel the delivery of an order",
+)
+def cancel_order_delivery(request, document_id: int):
+    """« Annuler »: the delivery is undone the day it was received, unless some
+    of it has left the stock, or a stocktake has counted it, since.
+    """
+    return cancel_delivery(_order(document_id))

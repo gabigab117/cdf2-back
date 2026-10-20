@@ -5,7 +5,13 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 
 from stock.models import StockOperationReason
-from tests.stock.factories import StockItemFactory, StockMovementFactory, StockOperationFactory
+from tests.stock.factories import (
+    OrderLineFactory,
+    StockItemFactory,
+    StockMovementFactory,
+    StockOperationFactory,
+    order_document,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -122,3 +128,43 @@ def test_an_operation_moves_an_item_once():
     assert errors_of(movement) == {"__all__": ["Cet article figure déjà dans l’opération."]}
     with pytest.raises(IntegrityError):
         movement.save()
+
+
+def test_an_order_line_reads_as_its_item_and_its_quantity():
+    """
+    Given 12 kg of sweets ordered
+    When the line is shown in a shell or a log
+    Then it reads as the item and the quantity
+    """
+    line = OrderLineFactory.build(item=StockItemFactory.build(name="Bonbons"), quantity=Decimal(12))
+
+    assert str(line) == "Bonbons : 12"
+
+
+def test_an_order_line_brings_some_of_its_item():
+    """
+    Given a line of an order that brings nothing
+    When it is checked, then written
+    Then its quantity is refused, and the database refuses it too
+    """
+    line = OrderLineFactory.build(
+        document=order_document(), item=StockItemFactory(), quantity=Decimal(0)
+    )
+
+    assert errors_of(line) == {"quantity": ["Indiquez une quantité supérieure à zéro."]}
+    with pytest.raises(IntegrityError):
+        line.save()
+
+
+def test_an_order_names_an_item_once():
+    """
+    Given an order that brings sweets already
+    When a second line of sweets is checked, then written
+    Then it is refused, and the database refuses it too
+    """
+    first = OrderLineFactory()
+    line = OrderLineFactory.build(document=first.document, item=first.item)
+
+    assert errors_of(line) == {"__all__": ["Cet article figure déjà dans la commande."]}
+    with pytest.raises(IntegrityError):
+        line.save()

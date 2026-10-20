@@ -105,10 +105,26 @@ def record_document(document: Document, stored: StoredFile) -> Document:
     return documents().get(pk=document.pk)
 
 
+@transaction.atomic
 def update_document(document: Document, data: DocumentIn) -> Document:
     """Correct a document whole: how it is classified, its fields, and what
     belongs to its kind. A validated document stays validated.
     """
+    # The stock reads the lines of an order from it (7.4): an order keeps its
+    # category while it has some. Locked, as the lines are written: they cannot
+    # slip in between.
+    document = Document.objects.select_for_update().get(pk=document.pk)
+    if (
+        document.category == DocumentCategory.ORDER
+        and data.category != DocumentCategory.ORDER
+        and document.order_lines.exists()
+    ):
+        raise ValidationError(
+            {
+                "category": "Cette commande a des lignes de stock : retirez-les avant de "
+                "changer sa catégorie."
+            }
+        )
     document.category = data.category
     document.title = data.title
     document.event_id = data.event

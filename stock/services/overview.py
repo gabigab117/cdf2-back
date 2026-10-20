@@ -7,6 +7,7 @@ from decimal import Decimal
 from stock.models import StockItem, StockItemCategory, StockOperation, StockOperationReason
 from stock.services.items import StockedItem, quantity_to_buy, stock_items, stocked
 from stock.services.operations import recent_operations
+from stock.services.orders import Order, orders_to_receive
 
 
 @dataclass(frozen=True)
@@ -28,11 +29,14 @@ class StockOverview:
     recent_operations: list[StockOperation]
     # The items below their threshold, in the stock's order (7.3).
     shopping_list: list[ShoppingLine]
+    # The orders to receive, then those received today (7.4).
+    orders: list[Order]
 
 
 def stock_overview() -> StockOverview:
     """Every item and where its stock stands, the figures of the chips, the
-    latest stocktake, the latest operations, and the shopping list.
+    latest stocktake, the latest operations, the shopping list, and the
+    orders to receive.
     """
     items = [stocked(item) for item in stock_items()]
     by_category = Counter(entry.item.category for entry in items)
@@ -55,4 +59,5 @@ def stock_overview() -> StockOverview:
             for entry in items
             if entry.low
         ],
+        orders=orders_to_receive(),
     )

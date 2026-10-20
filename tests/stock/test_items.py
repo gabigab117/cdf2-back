@@ -33,6 +33,10 @@ OPERATIONS = [
     ("post", f"{ITEMS_PATH}/1/adjustments"),
     ("post", f"{STOCK}/operations"),
     ("post", f"{STOCK}/stocktakes"),
+    ("get", f"{STOCK}/orders/1"),
+    ("put", f"{STOCK}/orders/1/lines"),
+    ("post", f"{STOCK}/orders/1/delivery"),
+    ("delete", f"{STOCK}/orders/1/delivery"),
 ]
 
 
@@ -290,8 +294,9 @@ def test_the_stock_takes_a_fixed_number_of_queries(board_client, django_assert_m
     )
 
     # Authentication (2), the items with their quantities, the latest stocktake,
-    # the latest operations with their event and member, their movements.
-    with django_assert_max_num_queries(6):
+    # the latest operations with their event and member, their movements; the
+    # orders with their event, their lines and their delivery.
+    with django_assert_max_num_queries(9):
         board_client.get(STOCK)
 
 
@@ -469,8 +474,8 @@ def test_an_item_that_has_moved_cannot_be_deleted(board_client):
     assert response.status_code == 422
     assert response.json() == refusal(
         None,
-        "Impossible de supprimer « Café moulu 1 kg » : ses mouvements le gardent dans "
-        "l’historique. Mettez plutôt son seuil à 0, il ne sera plus signalé bas.",
+        "Impossible de supprimer « Café moulu 1 kg » : ses mouvements ou ses commandes le "
+        "gardent dans l’historique. Mettez plutôt son seuil à 0, il ne sera plus signalé bas.",
     )
     assert StockItem.objects.exists()
 

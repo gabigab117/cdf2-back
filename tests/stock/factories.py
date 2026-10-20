@@ -2,13 +2,16 @@ from decimal import Decimal
 
 import factory
 
+from documents.models import DocumentCategory
 from stock.models import (
+    OrderLine,
     StockItem,
     StockItemCategory,
     StockMovement,
     StockOperation,
     StockOperationReason,
 )
+from tests.documents.factories import DocumentFactory
 
 
 class StockItemFactory(factory.django.DjangoModelFactory):
@@ -41,6 +44,31 @@ class StockMovementFactory(factory.django.DjangoModelFactory):
     operation = factory.SubFactory(StockOperationFactory)
     item = factory.SubFactory(StockItemFactory)
     delta = Decimal(24)
+
+
+def order_document(**fields):
+    """The order of sweets for Halloween, validated, to be delivered on 27 October."""
+    return DocumentFactory(
+        **{
+            "category": DocumentCategory.ORDER,
+            "title": "Bon de commande — Bonbons et goûter",
+            "issuer": "Confiserie du Nord",
+            "extracted": {"delivery_date": "2026-10-27", "items": ""},
+            "validated": True,
+        }
+        | fields
+    )
+
+
+class OrderLineFactory(factory.django.DjangoModelFactory):
+    """Twelve of an item an order brings."""
+
+    class Meta:
+        model = OrderLine
+
+    document = factory.LazyFunction(order_document)
+    item = factory.SubFactory(StockItemFactory)
+    quantity = Decimal(12)
 
 
 def put_in_stock(item, quantity):

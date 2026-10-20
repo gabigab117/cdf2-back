@@ -59,6 +59,22 @@ class StockOperationIn(InputSchema):
     lines: list[StockLineIn]
 
 
+class OrderLineIn(InputSchema):
+    """A line of an order: an item, and how much of it comes."""
+
+    # The id of the item.
+    item: int
+    quantity: Decimal
+
+
+class OrderLinesIn(InputSchema):
+    """The lines of an order, all at once: without any, the order brings
+    nothing to the stock.
+    """
+
+    lines: list[OrderLineIn]
+
+
 class StockCountIn(InputSchema):
     """What a stocktake counted of an item."""
 
@@ -174,6 +190,41 @@ class ShoppingLineOut(Schema):
     quantity: Decimal
 
 
+class OrderLineOut(Schema):
+    """A line of an order: « Bonbons assortis +12 kg »."""
+
+    item: StockMovementItemOut
+    quantity: Decimal
+
+
+class StockDeliveryOut(Schema):
+    """When, and by whom, an order was received."""
+
+    created_at: dt.datetime
+    # None once the account is deleted.
+    author: BoardMemberOut | None
+
+
+class StockOrderOut(Schema):
+    """An order of the stock (7.4): its document, its lines and its delivery."""
+
+    # The id of its document.
+    id: int
+    title: str
+    # The supplier.
+    issuer: str
+    # None for an order without one.
+    delivery_date: dt.date | None
+    # None for an order of no event.
+    event: StockEventOut | None
+    validated: bool
+    lines: list[OrderLineOut]
+    # None until it is received.
+    delivery: StockDeliveryOut | None
+    # Received today: « Annuler » undoes it until midnight.
+    undoable: bool
+
+
 class StockOverviewOut(Schema):
     """The stock, item by item, and its figures: a bounded aggregate (A7)."""
 
@@ -186,6 +237,9 @@ class StockOverviewOut(Schema):
     recent_operations: list[StockOperationOut]
     # The items below their threshold, in the stock's order.
     shopping_list: list[ShoppingLineOut]
+    # The orders validated with lines, not received yet, the first delivered
+    # first; then those received today.
+    orders: list[StockOrderOut]
 
 
 class LowStockItemOut(Schema):

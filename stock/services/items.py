@@ -95,14 +95,16 @@ def update_item(item: StockItem, data: StockItemIn) -> StockItem:
 
 
 def delete_item(item: StockItem) -> None:
-    """Delete an item that has never moved: the history keeps the others."""
+    """Delete an item that has never moved, nor been ordered: the history keeps
+    the others.
+    """
     # PROTECT refuses it before any deletion: the transaction stays usable.
     try:
         item.delete()
     except ProtectedError as error:
         raise ValidationError(
-            f"Impossible de supprimer « {item.name} » : ses mouvements le gardent dans "
-            "l’historique. Mettez plutôt son seuil à 0, il ne sera plus signalé bas."
+            f"Impossible de supprimer « {item.name} » : ses mouvements ou ses commandes le "
+            "gardent dans l’historique. Mettez plutôt son seuil à 0, il ne sera plus signalé bas."
         ) from error
 
 

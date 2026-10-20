@@ -14,12 +14,16 @@ from django.db import models
 from django.db.models import Q
 from django.db.models.functions import Lower
 
+from documents.models import Document
 from events.models import Event
 
 NO_STEP = "Indiquez un pas supérieur à zéro."
 NO_DELTA = "Un mouvement change la quantité."
 UNKNOWN_ITEM = "Choisissez un article existant."
 ITEM_TWICE = "Cet article figure déjà dans l’opération."
+NO_QUANTITY = "Indiquez une quantité supérieure à zéro."
+ALREADY_RECEIVED = "Cette commande est déjà réceptionnée."
+ORDER_ITEM_TWICE = "Cet article figure déjà dans la commande."
 
 
 # Named after their model rather than nested in it: the OpenAPI document names an
@@ -127,6 +131,16 @@ class StockOperation(models.Model):
         related_name="stock_operations",
         error_messages={"invalid": "Choisissez un événement existant."},
     )
+    # The order a delivery received (7.4). A document deleted leaves the
+    # delivery behind, without it: the stock keeps what came in.
+    document = models.ForeignKey(
+        Document,
+        verbose_name="document",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="stock_operations",
+    )
     # A deleted account leaves its operations behind, without a name.
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -142,6 +156,15 @@ class StockOperation(models.Model):
         verbose_name = "opération du stock"
         verbose_name_plural = "opérations du stock"
         ordering = ["-created_at", "-pk"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["document"],
+                condition=Q(reason=StockOperationReason.DELIVERY),
+                name="stock_operation_one_delivery_per_order",
+                violation_error_code="unique",
+                violation_error_message=ALREADY_RECEIVED,
+            ),
+        ]
 
     def __str__(self):
         return self.label or self.get_reason_display()
@@ -184,3 +207,50 @@ class StockMovement(models.Model):
 
     def __str__(self):
         return f"{self.item} : {self.delta:+}"
+
+
+class OrderLine(models.Model):
+    """What an order brings to the stock (7.4): an item, and how much of it.
+    Before the assistant, a member enters them from the order (A19).
+    """
+
+    # The lines go with their order.
+    document = models.ForeignKey(
+        Document,
+        verbose_name="commande",
+        on_delete=models.CASCADE,
+        related_name="order_lines",
+    )
+    # An item an order names keeps its history: it is not deleted.
+    item = models.ForeignKey(
+        StockItem,
+        verbose_name="article",
+        on_delete=models.PROTECT,
+        related_name="order_lines",
+        error_messages={"invalid": UNKNOWN_ITEM},
+    )
+    quantity = models.DecimalField(
+        "quantité",
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01"), message=NO_QUANTITY)],
+    )
+
+    class Meta:
+        verbose_name = "ligne de commande"
+        verbose_name_plural = "lignes de commande"
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(quantity__gt=0),
+                name="order_line_some_quantity",
+                violation_error_message=NO_QUANTITY,
+            ),
+            models.UniqueConstraint(
+                fields=["document", "item"],
+                name="order_line_unique_item",
+                violation_error_message=ORDER_ITEM_TWICE,
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.item} : {self.quantity}"
