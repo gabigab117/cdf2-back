@@ -116,7 +116,7 @@ def _locked_invoice(document: Document) -> Document:
     document = Document.objects.select_for_update().get(pk=document.pk)
     if document.category != DocumentCategory.INVOICE:
         raise ValidationError(NOT_AN_INVOICE)
-    if getattr(document, "ledger_entry", None) is not None:
+    if hasattr(document, "ledger_entry"):
         raise ValidationError(HAS_EXPENSE)
     return document
 

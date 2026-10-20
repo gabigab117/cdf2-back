@@ -1,4 +1,4 @@
-"""The committee's ledger (A18): a single journal of income and expenses, each
+"""The committee's ledger (A18): a single record of income and expenses, each
 entry tied to an event or to the committee's general running. There is no bank
 balance.
 """
@@ -14,10 +14,14 @@ from django.utils import timezone
 
 from accounts.services.roles import BOARD_MEMBERS
 from documents.models import Document
-from events.models import Event
+from events.models import EVENT_ERROR_MESSAGES, Event
 
 NOT_IN_FUTURE = "La date ne peut pas être dans le futur."
 NO_AMOUNT = "Indiquez un montant supérieur à zéro."
+# Rules a constraint keeps in the database, and clean() places under their field.
+INCOME_NOT_ADVANCED = "Une recette n’est pas avancée par un membre."
+ADVANCE_ALONE_NAMES_MEMBER = "Seule une avance nomme le membre qui l’a faite."
+REIMBURSED_BEFORE_ADVANCE = "Le remboursement ne peut pas précéder l’avance."
 
 
 # Named after their model rather than nested in it: the OpenAPI document names an
@@ -162,7 +166,7 @@ class LedgerEntry(models.Model):
         null=True,
         blank=True,
         related_name="ledger_entries",
-        error_messages={"invalid": "Choisissez un événement existant."},
+        error_messages=EVENT_ERROR_MESSAGES,
     )
     # The document that proves the entry. A document proves a single entry; it
     # stays among the documents when the entry is deleted.
@@ -208,13 +212,13 @@ class LedgerEntry(models.Model):
                 condition=~Q(payment_method=LedgerPaymentMethod.ADVANCE)
                 | Q(kind=LedgerEntryKind.EXPENSE),
                 name="ledger_entry_advance_of_expense",
-                violation_error_message="Une recette n’est pas avancée par un membre.",
+                violation_error_message=INCOME_NOT_ADVANCED,
             ),
             models.CheckConstraint(
                 condition=Q(payment_method=LedgerPaymentMethod.ADVANCE)
                 | Q(advanced_by__isnull=True),
                 name="ledger_entry_member_of_advance",
-                violation_error_message="Seule une avance nomme le membre qui l’a faite.",
+                violation_error_message=ADVANCE_ALONE_NAMES_MEMBER,
             ),
             models.CheckConstraint(
                 condition=Q(reimbursed_on__isnull=True, reimbursement_method__isnull=True)
@@ -231,7 +235,7 @@ class LedgerEntry(models.Model):
             models.CheckConstraint(
                 condition=Q(reimbursed_on__isnull=True) | Q(reimbursed_on__gte=F("date")),
                 name="ledger_entry_reimbursed_after_advance",
-                violation_error_message="Le remboursement ne peut pas précéder l’avance.",
+                violation_error_message=REIMBURSED_BEFORE_ADVANCE,
             ),
         ]
 
@@ -257,18 +261,18 @@ class LedgerEntry(models.Model):
         advance = self.payment_method == LedgerPaymentMethod.ADVANCE
         reimbursed = self.reimbursed_on is not None or self.reimbursement_method is not None
         if advance and self.kind == LedgerEntryKind.INCOME:
-            errors["payment_method"] = "Une recette n’est pas avancée par un membre."
+            errors["payment_method"] = INCOME_NOT_ADVANCED
         elif not advance and reimbursed:
             errors["payment_method"] = (
                 "Une avance remboursée reste une avance : annulez d’abord son remboursement."
             )
         if not advance and self.advanced_by_id is not None:
-            errors["advanced_by"] = "Seule une avance nomme le membre qui l’a faite."
+            errors["advanced_by"] = ADVANCE_ALONE_NAMES_MEMBER
         if (
             self.reimbursed_on is not None
             and self.date is not None
             and self.reimbursed_on < self.date
         ):
-            errors["reimbursed_on"] = "Le remboursement ne peut pas précéder l’avance."
+            errors["reimbursed_on"] = REIMBURSED_BEFORE_ADVANCE
         if errors:
             raise ValidationError(errors)

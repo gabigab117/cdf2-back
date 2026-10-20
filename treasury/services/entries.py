@@ -1,4 +1,4 @@
-"""The entries of the journal (A18), as the board records and corrects them.
+"""The entries of the ledger (A18), as the board records and corrects them.
 
 An entry names its event, or none for the committee's general running. An
 advance names the member who paid it, who stays named once they have left the
@@ -26,7 +26,7 @@ MEMBER_OF_ADVANCE = "Choisissez le membre qui a avancé la dépense."
 HAS_RECEIPT = "Cette ligne a déjà son justificatif."
 
 # Where the receipt of an entry stands (6.2): an expense needs one, but for its
-# bank fees; an income needs none, though one may be joined.
+# bank fees; an income needs none, though one may be attached.
 RECEIPT_STATE = Case(
     When(receipt__isnull=False, then=Value(LedgerReceiptState.ATTACHED)),
     When(
@@ -39,7 +39,7 @@ RECEIPT_STATE = Case(
 
 
 def ledger_entries() -> QuerySet[LedgerEntry]:
-    """The entries as the journal reads them, the latest first, with their
+    """The entries as the ledger reads them, the latest first, with their
     event, their people, their receipt and where it stands.
     """
     return LedgerEntry.objects.select_related(
@@ -57,27 +57,26 @@ def record_entry(data: LedgerEntryIn, member: User, file: File | None = None) ->
             entry = _save(LedgerEntry(created_by=member), data)
             if file is not None:
                 document = receipt_document(entry, file, member)
-                _link(entry, document)
+                _attach(entry, document)
     except BaseException:
         _forget(document)
         raise
-    # Read again with its receipt, which changes where the receipt stands.
-    return entry if file is None else ledger_entries().get(pk=entry.pk)
+    return ledger_entries().get(pk=entry.pk)
 
 
 def attach_receipt(entry: LedgerEntry, file: File, member: User) -> LedgerEntry:
-    """Join the receipt of an entry that has none, such as the ticket of an
+    """Attach the receipt of an entry that has none, such as the ticket of an
     expense found afterwards.
     """
     document = None
     try:
         with transaction.atomic():
-            # Locked: two receipts joined at once, the second finds the first.
+            # Locked: two receipts attached at once, the second finds the first.
             entry = LedgerEntry.objects.select_for_update().get(pk=entry.pk)
             if entry.receipt_id is not None:
                 raise ValidationError({"file": HAS_RECEIPT})
             document = receipt_document(entry, file, member)
-            _link(entry, document)
+            _attach(entry, document)
     except BaseException:
         _forget(document)
         raise
@@ -96,7 +95,8 @@ def update_entry(entry: LedgerEntry, data: LedgerEntryIn) -> LedgerEntry:
     """Correct an entry whole. Its receipt and its reimbursement stay as they are."""
     # Locked: what the entry holds besides its fields, its reimbursement, is
     # read as it stands.
-    return _save(LedgerEntry.objects.select_for_update().get(pk=entry.pk), data)
+    entry = _save(LedgerEntry.objects.select_for_update().get(pk=entry.pk), data)
+    return ledger_entries().get(pk=entry.pk)
 
 
 def delete_entry(entry: LedgerEntry) -> None:
@@ -114,7 +114,7 @@ def _save(entry: LedgerEntry, data: LedgerEntryIn) -> LedgerEntry:
     _write(entry, data)
     check_entry(entry, keeps_member=keeps_member)
     entry.save()
-    return ledger_entries().get(pk=entry.pk)
+    return entry
 
 
 def check_entry(entry: LedgerEntry, keeps_member: bool) -> None:
@@ -140,7 +140,7 @@ def check_entry(entry: LedgerEntry, keeps_member: bool) -> None:
         raise ValidationError(errors)
 
 
-def _link(entry: LedgerEntry, document: Document) -> None:
+def _attach(entry: LedgerEntry, document: Document) -> None:
     entry.receipt = document
     entry.save(update_fields=["receipt"])
 

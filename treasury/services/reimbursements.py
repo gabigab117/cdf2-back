@@ -13,7 +13,7 @@ from django.db.models import Count, QuerySet, Sum
 
 from treasury.models import LedgerEntry, LedgerPaymentMethod
 from treasury.schemas import ReimbursementIn
-from treasury.services.entries import ledger_entries
+from treasury.services.entries import check_entry, ledger_entries
 
 NOT_AN_ADVANCE = "Seule une avance se rembourse."
 REIMBURSED = "Cette avance est déjà remboursée."
@@ -46,8 +46,7 @@ def mark_reimbursed(entry: LedgerEntry, data: ReimbursementIn) -> LedgerEntry:
         raise ValidationError(REIMBURSED)
     entry.reimbursed_on = data.reimbursed_on
     entry.reimbursement_method = data.reimbursement_method
-    # The member who advanced stays named, even once they have left the board.
-    entry.full_clean(exclude={"advanced_by"})
+    check_entry(entry, keeps_member=True)
     entry.save(update_fields=["reimbursed_on", "reimbursement_method"])
     return ledger_entries().get(pk=entry.pk)
 

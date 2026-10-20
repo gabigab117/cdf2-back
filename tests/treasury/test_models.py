@@ -2,12 +2,11 @@ import datetime as dt
 from decimal import Decimal
 
 import pytest
-from django.core.exceptions import ValidationError
 from django.db import IntegrityError
-from django.utils import timezone
 
 from tests.accounts.factories import BoardMemberFactory
 from tests.documents.factories import DocumentFactory
+from tests.helpers import ahead, errors_of
 from tests.treasury.factories import AdvanceFactory, IncomeFactory, LedgerEntryFactory
 from treasury.models import (
     LedgerCategory,
@@ -18,12 +17,6 @@ from treasury.models import (
 )
 
 pytestmark = pytest.mark.django_db
-
-
-def errors_of(entry):
-    with pytest.raises(ValidationError) as error:
-        entry.full_clean()
-    return error.value.message_dict
 
 
 def test_an_entry_reads_as_its_label():
@@ -190,7 +183,7 @@ def test_dates_are_never_in_the_future():
     When it is checked
     Then both dates are refused
     """
-    tomorrow = timezone.localdate() + dt.timedelta(days=1)
+    tomorrow = ahead(1)
     entry = AdvanceFactory.build(
         date=tomorrow,
         reimbursed_on=tomorrow,

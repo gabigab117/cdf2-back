@@ -1,6 +1,6 @@
 """The receipt of an entry: the document that proves it (6.2).
 
-A receipt joined from the treasury is filed among the documents, validated as
+A receipt attached from the treasury is filed among the documents, validated as
 it arrives: its fields come from the entry the member has just written
 (decision of 16/10/2026). Like any upload, it is told by email (D7).
 """

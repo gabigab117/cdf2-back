@@ -2,7 +2,7 @@ from django.shortcuts import get_object_or_404
 from ninja import File, Form, Query, Router, Status, UploadedFile
 from ninja.pagination import paginate
 
-from core.schemas import ErrorOut, ValidationErrorOut
+from core.schemas import REFUSALS, ErrorOut, ValidationErrorOut
 from documents.models import Document
 from documents.schemas import DocumentOut
 from treasury.models import LedgerEntry
@@ -31,9 +31,6 @@ from treasury.services.report import general_meeting_report
 from treasury.services.results import fiscal_year_results
 
 router = Router(tags=["treasury"])
-
-# What every operation on an existing entry may answer besides its success.
-REFUSALS = {401: ErrorOut, 403: ErrorOut, 404: ErrorOut, 422: ValidationErrorOut}
 
 
 @router.get(

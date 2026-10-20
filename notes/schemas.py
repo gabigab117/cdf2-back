@@ -15,7 +15,7 @@ class NoteIn(InputSchema):
     text: str
     tag: NoteTag | None
     pinned: bool
-    # The id of the document deposited as its attachment. Left out, none: the
+    # The id of the document uploaded as its attachment. Left out, none: the
     # notes written before attachments existed send no such key.
     document: int | None = None
 

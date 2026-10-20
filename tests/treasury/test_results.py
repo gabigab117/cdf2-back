@@ -2,9 +2,9 @@ import datetime as dt
 from decimal import Decimal
 
 import pytest
-from django.core.serializers.json import DjangoJSONEncoder
 
 from tests.events.factories import EventFactory
+from tests.helpers import iso
 from tests.treasury.factories import IncomeFactory, LedgerEntryFactory
 from tests.treasury.mockup import EXPENSE, INCOME, RESULT, build_mockup
 from treasury.services.results import fiscal_year_results, fiscal_years
@@ -54,7 +54,7 @@ def test_the_results_of_the_mockup(board_client, mockup_day):
     assert results["events"][4]["event"] == {
         "id": events["brocante"].id,
         "title": "Brocante",
-        "starts_at": DjangoJSONEncoder().default(events["brocante"].starts_at),
+        "starts_at": iso(events["brocante"].starts_at),
     }
     assert results["general"] == totals("1620.00", "366.00", "1254.00", 5)
 

@@ -4,7 +4,6 @@ import datetime as dt
 from decimal import Decimal
 
 import pytest
-from django.core.serializers.json import DjangoJSONEncoder
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 
@@ -12,6 +11,7 @@ from documents.models import Document, DocumentCategory, DocumentSource, Documen
 from tests.accounts.factories import BoardMemberFactory
 from tests.documents.factories import DocumentFactory
 from tests.events.factories import EventFactory
+from tests.helpers import iso, send
 from tests.treasury.factories import IncomeFactory, LedgerEntryFactory
 from treasury.models import LedgerEntry, LedgerEntryKind
 
@@ -37,10 +37,6 @@ def expense(**changes):
         "payment_method": "association_card",
         "advanced_by": None,
     } | changes
-
-
-def send(client, url, payload):
-    return client.post(url, payload, content_type="application/json")
 
 
 def invoice(**fields):
@@ -77,7 +73,7 @@ def test_a_paid_invoice_to_review_is_validated_with_its_expense(board_client, bo
     """
     document = invoice(paid_on=dt.date(2026, 9, 29))
 
-    response = send(board_client, expense_url(document), expense())
+    response = send(board_client, "post", expense_url(document), expense())
 
     assert response.status_code == 200
     entry = LedgerEntry.objects.get()
@@ -88,7 +84,7 @@ def test_a_paid_invoice_to_review_is_validated_with_its_expense(board_client, bo
         "id": entry.id,
         "date": "2026-09-29",
         "label": "Fête & Déco — décoration",
-        "created_at": DjangoJSONEncoder().default(entry.created_at),
+        "created_at": iso(entry.created_at),
     }
     assert (entry.kind, entry.amount, entry.supplier, entry.event, entry.receipt) == (
         LedgerEntryKind.EXPENSE,
@@ -114,7 +110,7 @@ def test_an_invoice_to_pay_is_marked_paid_with_its_expense(board_client):
     document = validated()
     reviewer = document.validated_by
 
-    response = send(board_client, expense_url(document), expense(paid_on="2026-09-30"))
+    response = send(board_client, "post", expense_url(document), expense(paid_on="2026-09-30"))
 
     assert response.json()["paid_on"] == "2026-09-30"
     assert response.json()["validated_by"]["id"] == reviewer.id
@@ -124,7 +120,7 @@ def test_an_invoice_to_pay_is_marked_paid_with_its_expense(board_client):
 def test_an_invoice_taken_over_from_the_v1_gets_its_expense_too(board_client):
     document = validated(source=DocumentSource.V1_IMPORT)
 
-    response = send(board_client, expense_url(document), expense())
+    response = send(board_client, "post", expense_url(document), expense())
 
     assert response.status_code == 200
     assert LedgerEntry.objects.get().receipt_id == document.id
@@ -135,6 +131,7 @@ def test_an_advance_names_its_member_on_the_expense_of_an_invoice(board_client):
 
     response = send(
         board_client,
+        "post",
         expense_url(validated()),
         expense(payment_method="advance", advanced_by=marc.id),
     )
@@ -173,7 +170,7 @@ def test_the_expense_of_an_invoice_is_checked_as_any_entry(board_client, changes
     """
     document = invoice()
 
-    response = send(board_client, expense_url(document), expense(**changes))
+    response = send(board_client, "post", expense_url(document), expense(**changes))
 
     assert messages(response) == errors
     document.refresh_from_db()
@@ -190,7 +187,7 @@ def test_the_expense_of_an_invoice_is_checked_as_any_entry(board_client, changes
     ],
 )
 def test_only_an_invoice_with_its_amount_becomes_an_expense(board_client, fields, message):
-    response = send(board_client, expense_url(invoice(**fields)), expense())
+    response = send(board_client, "post", expense_url(invoice(**fields)), expense())
 
     assert messages(response) == {("body",): message}
 
@@ -202,9 +199,9 @@ def test_an_invoice_gets_a_single_expense(board_client):
     Then it is refused: the invoice has its expense
     """
     document = validated()
-    send(board_client, expense_url(document), expense())
+    send(board_client, "post", expense_url(document), expense())
 
-    response = send(board_client, expense_url(document), expense())
+    response = send(board_client, "post", expense_url(document), expense())
 
     assert messages(response) == {("body",): "Cette facture a déjà sa dépense."}
     assert LedgerEntry.objects.count() == 1
@@ -212,7 +209,7 @@ def test_an_invoice_gets_a_single_expense(board_client):
 
 def test_recording_an_invoice_locks_it_before_anything(board_client):
     with CaptureQueriesContext(connection) as queries:
-        send(board_client, expense_url(validated()), expense())
+        send(board_client, "post", expense_url(validated()), expense())
 
     locks = [query["sql"] for query in queries.captured_queries if "FOR UPDATE" in query["sql"]]
     assert len(locks) == 1
@@ -232,7 +229,7 @@ def test_an_invoice_becomes_the_receipt_of_an_expense_entered_before(board_clien
     entry = LedgerEntryFactory(date=dt.date(2026, 9, 12))
     document = invoice()
 
-    response = send(board_client, attach_url(document), {"entry": entry.id})
+    response = send(board_client, "post", attach_url(document), {"entry": entry.id})
 
     assert response.status_code == 200
     assert response.json()["status"] == "validated"
@@ -247,7 +244,7 @@ def test_an_invoice_attached_keeps_its_own_payment_date(board_client):
     entry = LedgerEntryFactory(date=dt.date(2026, 9, 12))
     document = validated(paid_on=dt.date(2026, 9, 14))
 
-    response = send(board_client, attach_url(document), {"entry": entry.id})
+    response = send(board_client, "post", attach_url(document), {"entry": entry.id})
 
     assert response.json()["paid_on"] == "2026-09-14"
 
@@ -268,7 +265,9 @@ def test_an_invoice_attaches_to_an_expense_without_receipt_only(board_client, en
     """
     target = entry()
 
-    response = send(board_client, attach_url(invoice()), {"entry": target.id if target else 999999})
+    response = send(
+        board_client, "post", attach_url(invoice()), {"entry": target.id if target else 999999}
+    )
 
     assert messages(response) == {("body", "entry"): "Choisissez une dépense sans justificatif."}
 
@@ -277,7 +276,7 @@ def test_an_invoice_with_its_expense_is_not_attached_again(board_client):
     document = validated()
     LedgerEntryFactory(receipt=document)
 
-    response = send(board_client, attach_url(document), {"entry": LedgerEntryFactory().id})
+    response = send(board_client, "post", attach_url(document), {"entry": LedgerEntryFactory().id})
 
     assert messages(response) == {("body",): "Cette facture a déjà sa dépense."}
 
@@ -286,7 +285,7 @@ def test_attaching_an_invoice_locks_it_then_the_expense(board_client):
     entry = LedgerEntryFactory()
 
     with CaptureQueriesContext(connection) as queries:
-        send(board_client, attach_url(validated()), {"entry": entry.id})
+        send(board_client, "post", attach_url(validated()), {"entry": entry.id})
 
     locks = [query["sql"] for query in queries.captured_queries if "FOR UPDATE" in query["sql"]]
     assert len(locks) == 2
@@ -298,6 +297,6 @@ def test_attaching_an_invoice_locks_it_then_the_expense(board_client):
 def test_an_unknown_document_is_not_found(board_client, operation):
     payload = expense() if operation == "expense" else {"entry": 1}
 
-    response = send(board_client, f"{INVOICES}/999999/{operation}", payload)
+    response = send(board_client, "post", f"{INVOICES}/999999/{operation}", payload)
 
     assert response.status_code == 404

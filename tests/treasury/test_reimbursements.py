@@ -8,6 +8,7 @@ from django.db import connection
 from django.test.utils import CaptureQueriesContext
 
 from tests.accounts.factories import BoardMemberFactory
+from tests.helpers import send
 from tests.treasury.factories import AdvanceFactory, LedgerEntryFactory
 from treasury.models import LedgerEntry, ReimbursementMethod
 
@@ -22,7 +23,7 @@ def url(entry_id):
 
 def reimburse(client, entry, **changes):
     payload = {"reimbursed_on": "2026-09-20", "reimbursement_method": "transfer"} | changes
-    return client.post(url(entry.pk), payload, content_type="application/json")
+    return send(client, "post", url(entry.pk), payload)
 
 
 def messages(response):
@@ -152,7 +153,7 @@ def test_an_advance_owed_has_no_reimbursement_to_cancel(board_client):
 def test_the_reimbursement_of_an_unknown_entry_is_not_found(board_client, method):
     body = {"reimbursed_on": "2026-09-20", "reimbursement_method": "cash"}
 
-    response = getattr(board_client, method)(url(999999), body, content_type="application/json")
+    response = send(board_client, method, url(999999), body)
 
     assert response.status_code == 404
 

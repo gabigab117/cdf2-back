@@ -2,6 +2,8 @@
 
 import datetime as dt
 
+import pytest
+from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.utils import timezone
 
@@ -34,3 +36,10 @@ def messages(response):
 def ahead(days):
     """The day so many days from today, in Paris."""
     return timezone.localdate() + dt.timedelta(days=days)
+
+
+def errors_of(instance):
+    """The messages, by field, that full_clean() refuses an instance with."""
+    with pytest.raises(ValidationError) as error:
+        instance.full_clean()
+    return error.value.message_dict

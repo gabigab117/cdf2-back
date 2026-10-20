@@ -1,14 +1,11 @@
 import datetime as dt
 
 import pytest
-from django.core.serializers.json import DjangoJSONEncoder
-from django.test import Client
-from django.utils import timezone
-from ninja_jwt.tokens import AccessToken
 
-from tests.accounts.factories import BoardMemberFactory, UserFactory
+from tests.accounts.factories import BoardMemberFactory, UserFactory, client_of
 from tests.documents.factories import DocumentFactory
 from tests.events.factories import EventFactory
+from tests.helpers import ahead, iso, member_json, send
 from tests.treasury.factories import AdvanceFactory, IncomeFactory, LedgerEntryFactory
 from treasury.models import LedgerEntry, ReimbursementMethod
 
@@ -37,24 +34,6 @@ OPERATIONS = [
 
 def entry_url(entry_id):
     return f"{ENTRIES}/{entry_id}"
-
-
-def client_of(member):
-    return Client(headers={"Authorization": f"Bearer {AccessToken.for_user(member)}"})
-
-
-def iso(moment):
-    """A time as the API writes it: to the millisecond, as Django's JSON does."""
-    return DjangoJSONEncoder().default(moment)
-
-
-def member_json(member):
-    return {
-        "id": member.id,
-        "first_name": member.first_name,
-        "last_name": member.last_name,
-        "email": member.email,
-    }
 
 
 def form(**changes):
@@ -89,7 +68,7 @@ def whole(entry, **changes):
 
 
 def correct(client, entry, **changes):
-    return client.put(entry_url(entry.pk), whole(entry, **changes), content_type="application/json")
+    return send(client, "put", entry_url(entry.pk), whole(entry, **changes))
 
 
 def field_errors(response):
@@ -253,7 +232,7 @@ def test_an_entry_dated_in_the_future_is_refused(board_client):
     When a member records an entry on it
     Then its date is refused
     """
-    tomorrow = timezone.localdate() + dt.timedelta(days=1)
+    tomorrow = ahead(1)
 
     response = board_client.post(ENTRIES, form(date=tomorrow.isoformat()))
 
@@ -332,9 +311,7 @@ def test_an_unknown_entry_is_not_found(board_client, method):
     # A correction whole: its body is checked before the entry is looked up.
     body = whole(LedgerEntryFactory.build()) if method == "put" else {}
 
-    response = getattr(board_client, method)(
-        entry_url(999999), body, content_type="application/json"
-    )
+    response = send(board_client, method, entry_url(999999), body)
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Introuvable."}

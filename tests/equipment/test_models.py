@@ -2,7 +2,6 @@ import datetime as dt
 from decimal import Decimal
 
 import pytest
-from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.db.models import ProtectedError
 from django.utils import timezone
@@ -21,16 +20,11 @@ from tests.equipment.factories import (
     LoanLineFactory,
 )
 from tests.events.factories import EventFactory
+from tests.helpers import errors_of
 
 pytestmark = pytest.mark.django_db
 
 START = dt.date(2026, 10, 16)
-
-
-def errors_of(instance):
-    with pytest.raises(ValidationError) as error:
-        instance.full_clean()
-    return error.value.message_dict
 
 
 def test_equipment_loans_and_lines_read_as_what_they_are():

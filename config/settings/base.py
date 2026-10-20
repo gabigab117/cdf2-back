@@ -30,7 +30,7 @@ INSTALLED_APPS = [
     "ninja",
     # Refresh tokens: outstanding list, blacklist and `flushexpiredtokens`.
     "ninja_jwt.token_blacklist",
-    # Converts the images deposited to WebP (D9).
+    # Converts the images uploaded to WebP (D9).
     "imagekit",
     "accounts",
     "core",
@@ -114,7 +114,7 @@ STATIC_ROOT = Path(env("STATIC_ROOT", default=str(BASE_DIR / "staticfiles")))
 # folder by default; on the server, shared/private, required there.
 MEDIA_ROOT = Path(env("MEDIA_ROOT", default=str(BASE_DIR / "private")))
 
-# The largest file a member may deposit, in bytes: below the 20 MB nginx
+# The largest file a member may upload, in bytes: below the 20 MB nginx
 # accepts, so that the API, rather than nginx, tells the member.
 DOCUMENT_MAX_SIZE = env.int("DOCUMENT_MAX_SIZE", default=15 * 1024 * 1024)
 

@@ -1,20 +1,15 @@
 import datetime as dt
 
 import pytest
-from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
+from django.core.exceptions import NON_FIELD_ERRORS
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from tests.accounts.factories import BoardMemberFactory, UserFactory
 from tests.events.factories import EventFactory, PracticalInfoFactory, ProgrammeItemFactory
+from tests.helpers import errors_of
 
 pytestmark = pytest.mark.django_db
-
-
-def validation_errors(event):
-    with pytest.raises(ValidationError) as caught:
-        event.full_clean()
-    return caught.value.message_dict
 
 
 def database_refuses(event):
@@ -31,7 +26,7 @@ def test_an_event_cannot_end_before_it_starts():
     now = timezone.now()
     event = EventFactory.build(starts_at=now, ends_at=now - dt.timedelta(minutes=1))
 
-    assert validation_errors(event) == {
+    assert errors_of(event) == {
         NON_FIELD_ERRORS: ["La fin de l’événement ne peut pas précéder son début."]
     }
     database_refuses(event)
@@ -54,7 +49,7 @@ def test_coordinates_go_together():
     """
     event = EventFactory.build(latitude=49.42, longitude=None)
 
-    assert validation_errors(event) == {
+    assert errors_of(event) == {
         NON_FIELD_ERRORS: ["Indiquez la latitude et la longitude, ou aucune des deux."]
     }
     database_refuses(event)
@@ -68,7 +63,7 @@ def test_coordinates_stay_on_the_globe():
     """
     event = EventFactory.build(latitude=90.5, longitude=-180.5)
 
-    assert validation_errors(event) == {
+    assert errors_of(event) == {
         "latitude": ["Assurez-vous que cette valeur est inférieure ou égale à 90."],
         "longitude": ["Assurez-vous que cette valeur est supérieure ou égale à -180."],
     }
@@ -83,7 +78,7 @@ def test_an_event_is_not_its_own_previous_edition():
     event = EventFactory()
     event.previous_edition = event
 
-    assert validation_errors(event) == {
+    assert errors_of(event) == {
         NON_FIELD_ERRORS: ["Un événement ne peut pas être sa propre édition précédente."]
     }
     database_refuses(event)
@@ -99,7 +94,7 @@ def test_two_events_cannot_share_an_address():
     EventFactory(slug="loto-2026")
     event = EventFactory.build(slug="loto-2026")
 
-    assert validation_errors(event) == {"slug": ["Un autre événement utilise déjà cette adresse."]}
+    assert errors_of(event) == {"slug": ["Un autre événement utilise déjà cette adresse."]}
     database_refuses(event)
 
 
@@ -112,7 +107,7 @@ def test_the_lead_is_an_active_board_member():
     """
     for account in (UserFactory(), BoardMemberFactory(is_active=False)):
         event = EventFactory.build(lead=account)
-        assert validation_errors(event) == {"lead": ["Choisissez un membre du bureau."]}
+        assert errors_of(event) == {"lead": ["Choisissez un membre du bureau."]}
 
     EventFactory.build(lead=BoardMemberFactory()).full_clean()
 
@@ -125,7 +120,7 @@ def test_the_previous_edition_is_an_existing_event():
     """
     event = EventFactory.build(previous_edition_id=987654)
 
-    assert validation_errors(event) == {"previous_edition": ["Choisissez un événement existant."]}
+    assert errors_of(event) == {"previous_edition": ["Choisissez un événement existant."]}
 
 
 def test_lines_come_in_display_order():
