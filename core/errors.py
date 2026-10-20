@@ -10,6 +10,7 @@ from typing import Any
 from django import forms
 from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
+from django.db import models
 from django.utils.functional import Promise
 from ninja.errors import ValidationError as SchemaValidationError
 
@@ -66,6 +67,21 @@ def validation_error_details(error: ValidationError) -> list[ErrorItem]:
         for field, messages in error.message_dict.items()
         for message in messages
     ]
+
+
+def line_errors(
+    name: str, index: int, line: models.Model, exclude: set[str]
+) -> dict[str, list[str]]:
+    """Validate a line of a list, each error under its dotted path:
+    "programme.2.title", as validation_error_details() reads it.
+    """
+    try:
+        line.full_clean(exclude=exclude)
+    except ValidationError as error:
+        return {
+            f"{name}.{index}.{field}": messages for field, messages in error.message_dict.items()
+        }
+    return {}
 
 
 def schema_error_details(error: SchemaValidationError) -> list[ErrorItem]:

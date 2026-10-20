@@ -8,6 +8,7 @@ from django.db.models import ProtectedError
 from django.utils import timezone
 from django.utils.text import slugify
 
+from core.errors import line_errors
 from core.text import counted
 from events.models import Event, PracticalInfo, ProgrammeItem
 from events.schemas import EventIn
@@ -109,10 +110,6 @@ def _validate(event: Event, exclude: set[str], lines: dict[str, list[models.Mode
         errors |= error.message_dict
     for name, items in lines.items():
         for index, item in enumerate(items):
-            try:
-                item.full_clean(exclude={"event"})
-            except ValidationError as error:
-                for field, messages in error.message_dict.items():
-                    errors[f"{name}.{index}.{field}"] = messages
+            errors |= line_errors(name, index, item, {"event"})
     if errors:
         raise ValidationError(errors)

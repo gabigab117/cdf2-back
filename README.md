@@ -55,11 +55,11 @@ Les fichiers iCalendar sont écrits en heure de Paris (`TZID=Europe/Paris`, avec
 ```
 config/          projet Django : settings (base, dev, test, prod), urls, NinjaAPI unique (api.py)
 accounts/        comptes et authentification JWT des membres du bureau (connexion par adresse e-mail), liste des membres (/api/board/members)
-core/            socle commun : santé du service, schémas partagés, traduction des erreurs en réponses 422
+core/            socle commun : santé du service, schémas partagés, traduction des erreurs en réponses 422, commandes qui touchent plusieurs apps (purge nocturne, jeu de démonstration : seed_demo)
 dashboard/       tableaux de bord : celui du bureau (GET /api/board/overview, prochains événements avec leurs tâches et leurs notes, dernières notes) et celui d'un événement (GET /api/board/events/{id}/dashboard, compteurs de ses onglets, bloc « Tâches », personnes affectées aux postes, places réservées), agrégats bornés que chaque domaine enrichit
 documents/       documents du comité : dépôt (PDF, images converties en WebP), attestation sur l'honneur d'un achat sans ticket (PDF fait par ReportLab), classement, validation, fichiers privés servis par X-Accel-Redirect et e-mail à chaque dépôt (/api/board/documents)
 equipment/       matériel et prêts : prêts numérotés, écrits sous verrou sans dépasser le libre, sortis, rendus, rouverts ou annulés, listés par état, et leur planning sur neuf semaines (/api/board/loans), inventaire du jour, occupation d'un matériel, refus d'un changement qui laisse un prêt à court (/api/board/equipment), disponibilités au pic journalier, sur les dates effectives des prêts (/api/board/equipment/availability)
-events/          événements du comité : programme, « Bon à savoir », API du bureau (/api/board/events), API du site public (/api/public/), fichiers iCalendar et jeu de démonstration (seed_demo)
+events/          événements du comité : programme, « Bon à savoir », API du bureau (/api/board/events), API du site public (/api/public/), fichiers iCalendar et événements de la démonstration
 notes/           notes du bureau, sur un événement ou générales, avec un niveau de réponses ; seul l'auteur les modifie (/api/board/notes)
 reservations/    réservations d'un événement par le bureau : types de place, capacité, saisie sous verrou, chiffres et export Excel (/api/board/events/{id}/reservations)
 stations/        postes d'un événement et bénévoles qui y sont affectés ; « complet » seulement si chaque poste l'est (/api/board/events/{id}/stations)

@@ -1,7 +1,6 @@
 import datetime as dt
 
 import pytest
-from django.core.serializers.json import DjangoJSONEncoder
 from django.test import Client
 from django.utils import timezone
 from icalendar import Calendar
@@ -9,6 +8,7 @@ from icalendar import Calendar
 from events.models import EventCategory
 from tests.accounts.factories import BoardMemberFactory
 from tests.events.factories import EventFactory, PracticalInfoFactory, ProgrammeItemFactory
+from tests.helpers import iso
 
 pytestmark = pytest.mark.django_db
 
@@ -19,11 +19,6 @@ AGENDA_FEED = "/api/public/agenda.ics"
 
 def in_days(days):
     return timezone.now() + dt.timedelta(days=days)
-
-
-def iso(moment):
-    """A time as the API writes it: to the millisecond, as Django's JSON does."""
-    return DjangoJSONEncoder().default(moment)
 
 
 def published(title, days, **fields):

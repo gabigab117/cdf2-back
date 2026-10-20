@@ -4,7 +4,7 @@ import pytest
 from icalendar import Calendar
 
 from events.models import Event
-from events.services.calendar import agenda_calendar, event_calendar
+from events.services.calendar import calendar_feed, calendar_file
 from tests.events.factories import EventFactory
 
 pytestmark = pytest.mark.django_db
@@ -31,7 +31,7 @@ def test_an_event_is_written_in_paris_time_in_winter_and_in_summer():
     )
     EventFactory(title="Fête de la musique", starts_at=dt.datetime(2026, 6, 21, 18, tzinfo=dt.UTC))
 
-    content = agenda_calendar(Event.objects.order_by("starts_at"), SITE)
+    content = calendar_feed(Event.objects.order_by("starts_at"), SITE)
 
     lines = content.decode().splitlines()
     assert "DTSTART;TZID=Europe/Paris:20261031T150000" in lines
@@ -48,7 +48,7 @@ def test_an_event_without_an_end_has_none_in_the_calendar():
     """
     event = EventFactory(ends_at=None)
 
-    (entry,) = entries(event_calendar(event, SITE))
+    (entry,) = entries(calendar_file(event, SITE))
 
     assert "DTEND" not in entry
     assert "DURATION" not in entry
@@ -70,7 +70,7 @@ def test_an_entry_holds_what_a_calendar_shows_of_its_event():
         summary="Défilé costumé, puis goûter.",
     )
 
-    (entry,) = entries(event_calendar(event, SITE))
+    (entry,) = entries(calendar_file(event, SITE))
 
     page = "https://example.org/evenements/halloween-des-enfants-2026"
     assert entry["SUMMARY"] == "Halloween des enfants"
@@ -91,7 +91,7 @@ def test_an_entry_without_address_or_summary_keeps_the_venue_and_the_link():
     """
     event = EventFactory(slug="loto-2026", venue_name="Salle des fêtes")
 
-    (entry,) = entries(event_calendar(event, SITE))
+    (entry,) = entries(calendar_file(event, SITE))
 
     assert entry["LOCATION"] == "Salle des fêtes"
     assert entry["DESCRIPTION"] == "https://example.org/evenements/loto-2026"
@@ -105,11 +105,11 @@ def test_an_event_keeps_its_id_when_its_title_and_address_change():
     again
     """
     event = EventFactory(title="Loto", slug="loto-2026")
-    (before,) = entries(event_calendar(event, SITE))
+    (before,) = entries(calendar_file(event, SITE))
 
     event.title, event.slug = "Super loto", "super-loto-2026"
     event.save()
-    (after,) = entries(event_calendar(event, SITE))
+    (after,) = entries(calendar_file(event, SITE))
 
     assert after["SUMMARY"] == "Super loto"
     assert after["UID"] == before["UID"]
@@ -125,8 +125,8 @@ def test_the_agenda_feed_is_named_and_refreshed_twice_a_day_unlike_an_event_file
     """
     event = EventFactory()
 
-    agenda = Calendar.from_ical(agenda_calendar([event], SITE))
-    single = Calendar.from_ical(event_calendar(event, SITE))
+    agenda = Calendar.from_ical(calendar_feed([event], SITE))
+    single = Calendar.from_ical(calendar_file(event, SITE))
 
     assert agenda.calendar_name == "Comité des fêtes d’Ons-en-Bray"
     assert agenda.refresh_interval == dt.timedelta(hours=12)
@@ -141,7 +141,7 @@ def test_an_empty_agenda_is_a_calendar_without_entries():
     When the agenda is written as a calendar
     Then it is a valid calendar, without entries nor time zone
     """
-    calendar = Calendar.from_ical(agenda_calendar([], SITE))
+    calendar = Calendar.from_ical(calendar_feed([], SITE))
 
     assert calendar.events == []
     assert calendar.timezones == []

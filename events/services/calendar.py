@@ -18,7 +18,7 @@ EVENT_PAGE = "/evenements/{slug}"
 REFRESH_INTERVAL = dt.timedelta(hours=12)
 
 
-def agenda_calendar(events: Iterable[Event], site: str) -> bytes:
+def calendar_feed(events: Iterable[Event], site: str) -> bytes:
     """The agenda as a calendar feed, which a visitor's calendar subscribes to.
 
     `site` is the address of the site, such as "https://example.org/": each
@@ -30,7 +30,7 @@ def agenda_calendar(events: Iterable[Event], site: str) -> bytes:
     return _with_events(calendar, events, site)
 
 
-def event_calendar(event: Event, site: str) -> bytes:
+def calendar_file(event: Event, site: str) -> bytes:
     """The calendar file of one event, which a visitor adds to their calendar."""
     return _with_events(_calendar(), [event], site)
 

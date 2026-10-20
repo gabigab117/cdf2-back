@@ -5,12 +5,15 @@ import pytest
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
 from django.core.cache import cache
-from django.core.management import call_command
+from django.core.management import CommandError, call_command
 from django.db import connection
 from django.utils import timezone
 
 from core.text import ERASED_NAME
 from equipment.models import LoanBorrowerType, LoanStatus
+from events.models import Event
+from events.services.demo import DEMO_EVENTS
+from events.services.periods import events_in_period
 from tests.equipment.factories import LoanFactory
 from tests.events.factories import EventFactory
 from tests.reservations.factories import ReservationFactory
@@ -86,3 +89,38 @@ def test_the_nightly_purge_erases_the_personal_data_past_its_retention():
         "Personal data erased. Phones: 1. Borrowers' names: 1. Reservations: 1. "
         "Volunteers' names: 1.\n"
     )
+
+
+# The demo data of the mockup (seed_demo)
+
+
+def test_the_seed_is_refused_unless_the_environment_allows_it(settings):
+    """
+    Given an environment that does not allow demo data, as in production
+    When `manage.py seed_demo` runs
+    Then it is refused, and no event is written
+    """
+    settings.DEMO_DATA_ENABLED = False
+
+    with pytest.raises(CommandError, match="DEMO_DATA_ENABLED"):
+        call_command("seed_demo")
+
+    assert not Event.objects.exists()
+
+
+def test_the_seed_writes_the_events_of_the_mockup_around_today(settings):
+    """
+    Given an environment that allows demo data
+    When `manage.py seed_demo` runs
+    Then the events of the mockup are written, published, five to come and four past
+    And the command says how many it wrote
+    """
+    settings.DEMO_DATA_ENABLED = True
+    out = StringIO()
+
+    call_command("seed_demo", stdout=out)
+
+    assert "9 demo events written." in out.getvalue()
+    assert Event.objects.filter(published=True).count() == len(DEMO_EVENTS) == 9
+    assert events_in_period("upcoming").count() == 5
+    assert events_in_period("past").count() == 4

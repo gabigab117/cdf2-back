@@ -1,18 +1,17 @@
 import datetime as dt
 
 import pytest
-from django.test import Client
 from django.utils import timezone
-from ninja_jwt.tokens import AccessToken
 
 from events.models import Event, EventCategory
-from tests.accounts.factories import BoardMemberFactory, UserFactory
+from tests.accounts.factories import BoardMemberFactory, UserFactory, client_of
 from tests.events.factories import (
     EventFactory,
     PracticalInfoFactory,
     ProgrammeItemFactory,
     event_payload,
 )
+from tests.helpers import send
 
 pytestmark = pytest.mark.django_db
 
@@ -31,10 +30,6 @@ OPERATIONS = [
 
 def event_url(event_id):
     return f"{EVENTS}/{event_id}"
-
-
-def send(client, method, path, payload):
-    return getattr(client, method)(path, payload, content_type="application/json")
 
 
 def listed_titles(client, **params):
@@ -61,9 +56,7 @@ def test_events_are_refused_to_accounts_outside_the_board(method, path):
     When it calls any operation on the events
     Then it is refused with a 403
     """
-    client = Client(headers={"Authorization": f"Bearer {AccessToken.for_user(UserFactory())}"})
-
-    assert getattr(client, method)(path).status_code == 403
+    assert getattr(client_of(UserFactory()), method)(path).status_code == 403
 
 
 @pytest.mark.parametrize(

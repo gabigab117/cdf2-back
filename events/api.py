@@ -23,7 +23,7 @@ from events.services.agenda import (
     next_events,
     published_events,
 )
-from events.services.calendar import agenda_calendar, event_calendar
+from events.services.calendar import calendar_feed, calendar_file
 from events.services.events import create_event, delete_event, update_event
 from events.services.periods import Period, events_in_period
 
@@ -127,7 +127,7 @@ def delete(request, event_id: int):
     return Status(204, None)
 
 
-def _calendar_file(content: bytes, filename: str) -> HttpResponse:
+def _calendar_response(content: bytes, filename: str) -> HttpResponse:
     return HttpResponse(
         content,
         content_type="text/calendar; charset=utf-8",
@@ -174,7 +174,7 @@ def agenda_overview(request):
 )
 def agenda_feed(request):
     """Every published event, past ones included: a subscribed calendar keeps them."""
-    return _calendar_file(agenda_calendar(published_events(), _site(request)), "agenda.ics")
+    return _calendar_response(calendar_feed(published_events(), _site(request)), "agenda.ics")
 
 
 # Declared before /events/{slug}: the routes are tried in order, and that one
@@ -189,7 +189,7 @@ def agenda_feed(request):
 def event_file(request, slug: str):
     """A published event, to add to one's calendar."""
     event = get_object_or_404(published_events(), slug=slug)
-    return _calendar_file(event_calendar(event, _site(request)), f"{event.slug}.ics")
+    return _calendar_response(calendar_file(event, _site(request)), f"{event.slug}.ics")
 
 
 @public_router.get(

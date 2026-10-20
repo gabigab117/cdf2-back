@@ -1,7 +1,7 @@
 """The fictitious events of the mockup, which the preproduction shows (`seed_demo`)."""
 
 import datetime as dt
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from operator import attrgetter
 
 from django.db import transaction
@@ -20,11 +20,11 @@ class DemoEvent:
     month: int
     day: int
     # On its next day, today included, or on its last day before today.
-    to_come: bool
+    upcoming: bool
     starts: dt.time
     ends: dt.time | None
     # The other fields of EventIn, over the defaults of _DEFAULTS.
-    fields: dict[str, object] = field(default_factory=dict)
+    fields: dict[str, object]
 
 
 _DEFAULTS: dict[str, object] = {
@@ -61,7 +61,7 @@ DEMO_EVENTS = [
         "Halloween des enfants",
         month=10,
         day=31,
-        to_come=True,
+        upcoming=True,
         starts=dt.time(15),
         ends=dt.time(18, 30),
         fields=_HALL
@@ -131,7 +131,7 @@ DEMO_EVENTS = [
         "Loto d’automne",
         month=11,
         day=15,
-        to_come=True,
+        upcoming=True,
         starts=dt.time(13),
         ends=None,
         fields=_HALL
@@ -163,7 +163,7 @@ DEMO_EVENTS = [
         "Marché de Noël",
         month=12,
         day=13,
-        to_come=True,
+        upcoming=True,
         starts=dt.time(10),
         ends=dt.time(18),
         fields={
@@ -186,7 +186,7 @@ DEMO_EVENTS = [
         "Repas des aînés",
         month=1,
         day=17,
-        to_come=True,
+        upcoming=True,
         starts=dt.time(12),
         ends=None,
         fields=_HALL
@@ -200,7 +200,7 @@ DEMO_EVENTS = [
         "Chasse aux œufs",
         month=3,
         day=28,
-        to_come=True,
+        upcoming=True,
         starts=dt.time(10, 30),
         ends=None,
         fields=_EGG_HUNT,
@@ -209,7 +209,7 @@ DEMO_EVENTS = [
         "Brocante",
         month=9,
         day=13,
-        to_come=False,
+        upcoming=False,
         starts=dt.time(7),
         ends=dt.time(18),
         fields={
@@ -223,7 +223,7 @@ DEMO_EVENTS = [
         "Fête du 14 juillet",
         month=7,
         day=14,
-        to_come=False,
+        upcoming=False,
         starts=dt.time(19),
         ends=dt.time(23, 30),
         fields={
@@ -237,7 +237,7 @@ DEMO_EVENTS = [
         "Feu de la Saint-Jean",
         month=6,
         day=20,
-        to_come=False,
+        upcoming=False,
         starts=dt.time(21),
         ends=None,
         fields={
@@ -251,7 +251,7 @@ DEMO_EVENTS = [
         "Chasse aux œufs",
         month=4,
         day=5,
-        to_come=False,
+        upcoming=False,
         starts=dt.time(10, 30),
         ends=None,
         fields=_EGG_HUNT,
@@ -273,10 +273,10 @@ def seed_demo_events(today: dt.date) -> list[Event]:
     events = []
     # The past events first: an event to come takes the past event of the same
     # title as its previous edition.
-    for demo in sorted(DEMO_EVENTS, key=attrgetter("to_come")):
-        previous = past_editions.get(demo.title) if demo.to_come else None
+    for demo in sorted(DEMO_EVENTS, key=attrgetter("upcoming")):
+        previous = past_editions.get(demo.title) if demo.upcoming else None
         event = _write(_event_in(demo, _day_of(demo, today), previous))
-        if not demo.to_come:
+        if not demo.upcoming:
             past_editions[demo.title] = event
         events.append(event)
     return events
@@ -284,7 +284,7 @@ def seed_demo_events(today: dt.date) -> list[Event]:
 
 def _day_of(demo: DemoEvent, today: dt.date) -> dt.date:
     this_year = dt.date(today.year, demo.month, demo.day)
-    if demo.to_come:
+    if demo.upcoming:
         return this_year if this_year >= today else this_year.replace(year=today.year + 1)
     return this_year if this_year < today else this_year.replace(year=today.year - 1)
 

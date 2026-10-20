@@ -1,15 +1,12 @@
 import datetime as dt
-from io import StringIO
 from zoneinfo import ZoneInfo
 
 import pytest
-from django.core.management import CommandError, call_command
 from django.utils import timezone
 
 from events.models import Event
-from events.services.demo import DEMO_EVENTS, seed_demo_events
+from events.services.demo import seed_demo_events
 from events.services.events import event_slug
-from events.services.periods import events_in_period
 
 pytestmark = pytest.mark.django_db
 
@@ -22,41 +19,6 @@ def starts(title, slug_year=None):
     if slug_year is not None:
         events = events.filter(slug__endswith=str(slug_year))
     return timezone.localtime(events.get().starts_at)
-
-
-# The command
-
-
-def test_the_seed_is_refused_unless_the_environment_allows_it(settings):
-    """
-    Given an environment that does not allow demo data, as in production
-    When `manage.py seed_demo` runs
-    Then it is refused, and no event is written
-    """
-    settings.DEMO_DATA_ENABLED = False
-
-    with pytest.raises(CommandError, match="DEMO_DATA_ENABLED"):
-        call_command("seed_demo")
-
-    assert not Event.objects.exists()
-
-
-def test_the_seed_writes_the_events_of_the_mockup_around_today(settings):
-    """
-    Given an environment that allows demo data
-    When `manage.py seed_demo` runs
-    Then the events of the mockup are written, published, five to come and four past
-    And the command says how many it wrote
-    """
-    settings.DEMO_DATA_ENABLED = True
-    out = StringIO()
-
-    call_command("seed_demo", stdout=out)
-
-    assert "9 demo events written." in out.getvalue()
-    assert Event.objects.filter(published=True).count() == len(DEMO_EVENTS) == 9
-    assert events_in_period("upcoming").count() == 5
-    assert events_in_period("past").count() == 4
 
 
 # Their days

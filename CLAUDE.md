@@ -69,6 +69,7 @@ Règles de développement de ce dépôt, pour les humains comme pour les agents.
 - Chaque feature est testée. Dossier `tests/` à la racine du dépôt, structure miroir des apps.
 - **Tests en fonctions, jamais en classes** (`def test_...`). Le partage de contexte passe par des fixtures, pas par `setUp`.
 - **Fixtures built-in de pytest-django d'abord** : `client`, `admin_client`, `db`, `django_user_model`, `settings`, `rf`… Fixtures maison justifiées : client authentifié par rôle (`board_client` dans `tests/conftest.py`, header `Authorization: Bearer …` posé une fois), objets métier via factory_boy.
+- **Aides partagées des tests**, à reprendre plutôt qu'à recopier : `client_of(account)`, le client connecté d'un compte (`tests/accounts/factories.py`) ; `iso(moment)`, une date telle que l'API l'écrit, et `send(client, method, path, payload)`, une écriture en JSON (`tests/helpers.py`).
 - **Requêtes par le `client` de Django, pas par le `TestClient` de Ninja** : ce dernier appelle le routeur avec une requête fabriquée (utilisateur simulé, CSRF coupé, aucun middleware) et ne prouve donc rien sur l'authentification, les cookies ni le throttling.
 - `pytest-django` + **factory_boy** : pas de création manuelle de modèles reliés dans chaque test.
 - **Docstrings en Gherkin, en anglais** dans chaque test (sans pytest-bdd) :
