@@ -3,7 +3,7 @@
 The member who paid types what the receipt would have told. The application
 writes it as their statement, on their honour, in a PDF it files among the
 documents as an invoice: paid on the day of the purchase, it awaits review like
-a deposit. It is no invoice in the supplier's name, which would be a forgery:
+an upload. It is no invoice in the supplier's name, which would be a forgery:
 the supplier heads the page in plain text, above the committee's statement.
 
 The PDF holds what was attested. Correcting the document changes its fields,
@@ -50,7 +50,7 @@ FIELDS = {"issuer": "supplier", "document_date": "purchase_date", "title": "purc
 FILE_FIELDS = {"file", "original_name", "mime_type", "size", "sha256"}
 
 # A document without an event, as the board calls it.
-NO_EVENT = "Fonctionnement du comité"
+GENERAL = "Fonctionnement du comité"
 
 # Helvetica, one of the fonts every PDF reader holds: nothing to embed. It
 # writes the characters of Windows-1252, the French ones and « € » among them.
@@ -168,7 +168,7 @@ def _role(member: User) -> str:
 
 
 def _details(document: Document) -> Table:
-    event = document.event.title if document.event else NO_EVENT
+    event = document.event.title if document.event else GENERAL
     rows = [
         ("Fournisseur", document.issuer),
         ("Date de l’achat", f"{document.document_date:%d/%m/%Y}"),

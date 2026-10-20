@@ -1,19 +1,15 @@
-from pathlib import Path
-
 import pytest
-from django.core.serializers.json import DjangoJSONEncoder
-from django.test import Client
 from django.utils import timezone
-from ninja_jwt.tokens import AccessToken
 
 from documents.models import Document, DocumentCategory
 from documents.schemas import DocumentUploadIn
 from documents.services.documents import upload_document
 from documents.services.files import NOT_ACCEPTED
-from tests.accounts.factories import BoardMemberFactory, UserFactory
+from tests.accounts.factories import BoardMemberFactory, UserFactory, client_of
 from tests.documents.factories import DocumentFactory
-from tests.documents.samples import PDF, opened, pdf, phone_photo, upload
+from tests.documents.samples import PDF, opened, pdf, phone_photo, stored_files, upload
 from tests.events.factories import EventFactory
+from tests.helpers import iso, member_json
 
 pytestmark = pytest.mark.django_db
 
@@ -38,38 +34,9 @@ def file_url(document_id):
     return f"{DOCUMENTS}/{document_id}/file"
 
 
-def iso(moment):
-    """A time as the API writes it: to the millisecond, as Django's JSON does."""
-    return DjangoJSONEncoder().default(moment)
-
-
-def member_json(member):
-    return {
-        "id": member.id,
-        "first_name": member.first_name,
-        "last_name": member.last_name,
-        "email": member.email,
-    }
-
-
-def client_of(member):
-    return Client(headers={"Authorization": f"Bearer {AccessToken.for_user(member)}"})
-
-
-def deposit(client, content=PDF, name="facture-sono.pdf", **fields):
-    """Deposit a file as the upload form sends it: the fields left empty are left out."""
+def upload_file(client, content=PDF, name="facture-sono.pdf", **fields):
+    """Upload a file as the upload form sends it: the fields left empty are left out."""
     return client.post(DOCUMENTS, {"file": upload(content, name), "category": "invoice"} | fields)
-
-
-def stored_files(private_files):
-    """The files on disk, outside any test of their content."""
-    folder = Path(private_files) / "documents"
-    return sorted(folder.iterdir()) if folder.exists() else []
-
-
-def body(response):
-    """The bytes of a file, streamed or not."""
-    return b"".join(response.streaming_content)
 
 
 # Access
@@ -113,7 +80,7 @@ def test_a_member_deposits_a_document_to_review(board_client, board_member, priv
     """
     event = EventFactory()
 
-    response = deposit(board_client, pdf(), title="Facture — Location sono", event=event.id)
+    response = upload_file(board_client, pdf(), title="Facture — Location sono", event=event.id)
 
     assert response.status_code == 201
     document = Document.objects.get()
@@ -160,7 +127,7 @@ def test_a_document_is_titled_after_its_file_when_no_title_is_given(board_client
     When the document is recorded
     Then its title is the name of the file, without its extension
     """
-    response = deposit(board_client, name="devis-animation-60.pdf")
+    response = upload_file(board_client, name="devis-animation-60.pdf")
 
     assert response.json()["title"] == "devis-animation-60"
     assert response.json()["event"] is None
@@ -172,7 +139,7 @@ def test_a_photo_is_stored_as_a_webp(board_client, private_files):
     When it is deposited
     Then the document is a WebP, named after the photo
     """
-    response = deposit(board_client, phone_photo(), name="ticket.jpg")
+    response = upload_file(board_client, phone_photo(), name="ticket.jpg")
 
     assert response.json()["original_name"] == "ticket.webp"
     assert response.json()["mime_type"] == "image/webp"
@@ -188,9 +155,9 @@ def test_the_same_file_deposited_twice_is_refused_on_the_file(board_client, priv
     Then the second deposit is refused on the file
     And no second file is left on disk
     """
-    deposit(board_client, pdf("Facture"), name="facture.pdf")
+    upload_file(board_client, pdf("Facture"), name="facture.pdf")
 
-    response = deposit(board_client, pdf("Facture"), name="facture (1).pdf")
+    response = upload_file(board_client, pdf("Facture"), name="facture (1).pdf")
 
     assert response.status_code == 422
     assert response.json() == {
@@ -212,7 +179,7 @@ def test_a_file_of_another_type_is_refused(board_client, private_files):
     When it is deposited
     Then it is refused on the file, and nothing is stored
     """
-    response = deposit(board_client, b"<html><body>Facture</body></html>", name="facture.pdf")
+    response = upload_file(board_client, b"<html><body>Facture</body></html>", name="facture.pdf")
 
     assert response.status_code == 422
     assert response.json()["detail"] == [
@@ -229,7 +196,7 @@ def test_a_file_over_the_maximum_size_is_refused(board_client, settings):
     """
     settings.DOCUMENT_MAX_SIZE = 1024 * 1024
 
-    response = deposit(board_client, pdf("x" * 1024 * 1024))
+    response = upload_file(board_client, pdf("x" * 1024 * 1024))
 
     assert response.json()["detail"] == [
         {
@@ -263,8 +230,8 @@ def test_an_unknown_category_or_event_is_refused(board_client):
     When the API reads them
     Then each is refused on its field, in French
     """
-    category = deposit(board_client, category="budget")
-    event = deposit(board_client, event=999_999)
+    category = upload_file(board_client, category="budget")
+    event = upload_file(board_client, event=999_999)
 
     assert category.json()["detail"] == [
         {
@@ -288,7 +255,7 @@ def test_a_title_too_long_is_refused_and_leaves_no_file(board_client, private_fi
     When the document is deposited
     Then it is refused on the title, and no file is left on disk
     """
-    response = deposit(board_client, title="x" * 201)
+    response = upload_file(board_client, title="x" * 201)
 
     assert response.json()["detail"] == [
         {
@@ -335,7 +302,7 @@ def test_the_file_is_shown_in_the_browser_with_its_type(board_client):
     response = board_client.get(file_url(document.id))
 
     assert response.status_code == 200
-    assert body(response) == PDF
+    assert response.getvalue() == PDF
     assert response["Content-Type"] == "application/pdf"
     assert response["Content-Disposition"] == 'inline; filename="facture-sono.pdf"'
     assert response["X-Content-Type-Options"] == "nosniff"

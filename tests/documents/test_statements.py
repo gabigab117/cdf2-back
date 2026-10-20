@@ -3,21 +3,19 @@
 import datetime as dt
 from decimal import Decimal
 from io import BytesIO
-from pathlib import Path
 
 import pytest
 from django.contrib.auth.models import Group
-from django.core.serializers.json import DjangoJSONEncoder
-from django.test import Client
 from django.utils import timezone
-from ninja_jwt.tokens import AccessToken
 from pypdf import PdfReader
 
 from documents.models import Document
 from documents.services.notifications import DOCUMENT_NOTIFICATION_GROUP
 from documents.services.statements import UNNAMED, statement_pdf
-from tests.accounts.factories import BoardMemberFactory
+from tests.accounts.factories import BoardMemberFactory, client_of
+from tests.documents.samples import stored_files
 from tests.events.factories import EventFactory
+from tests.helpers import iso, send
 
 pytestmark = pytest.mark.django_db
 
@@ -39,22 +37,13 @@ def statement(**fields):
     } | fields
 
 
-def client_of(member):
-    return Client(headers={"Authorization": f"Bearer {AccessToken.for_user(member)}"})
-
-
 def attest(client, **fields):
-    return client.post(STATEMENTS, statement(**fields), content_type="application/json")
+    return send(client, "post", STATEMENTS, statement(**fields))
 
 
 def text_of(content):
     """The words a PDF shows, one space apart, as a reader extracts them."""
     return " ".join(PdfReader(BytesIO(content)).pages[0].extract_text().split())
-
-
-def stored_files(private_files):
-    folder = Path(private_files) / "documents"
-    return sorted(folder.iterdir()) if folder.exists() else []
 
 
 def errors_of(response):
@@ -114,7 +103,7 @@ def test_a_member_attests_a_purchase_whose_receipt_was_lost(
         },
         "validated_by": None,
         "validated_at": None,
-        "created_at": DjangoJSONEncoder().default(document.created_at),
+        "created_at": iso(document.created_at),
         "ledger_entry": None,
     }
     [stored] = stored_files(private_files)
@@ -138,7 +127,7 @@ def test_the_pdf_tells_what_the_member_attested(board_client):
     made = timezone.localtime(Document.objects.get().created_at)
     file = board_client.get(f"/api/board/documents/{response.json()['id']}/file")
     assert file["Content-Type"] == "application/pdf"
-    text = text_of(b"".join(file.streaming_content))
+    text = text_of(file.getvalue())
     assert text.startswith("Carrefour Achat du 12/10/2026 Attestation de dépense sur l’honneur")
     assert "Je soussigné·e Camille Martin, trésorier·e du Comité des fêtes d’Ons-en-Bray" in text
     assert "Achat Boissons et gobelets pour la buvette Montant TTC 23,40 €" in text
@@ -323,7 +312,7 @@ def test_a_statement_lacking_its_keys_is_refused(board_client):
     When the API reads it
     Then each is refused as required
     """
-    response = board_client.post(STATEMENTS, {}, content_type="application/json")
+    response = send(board_client, "post", STATEMENTS, {})
 
     assert response.status_code == 422
     assert errors_of(response) == {

@@ -2,14 +2,14 @@
 
 A receipt joined from the treasury is filed among the documents, validated as
 it arrives: its fields come from the entry the member has just written
-(decision of 16/10/2026). Like any deposit, it is told by email (D7).
+(decision of 16/10/2026). Like any upload, it is told by email (D7).
 """
 
 from django.core.files.base import File
 
 from accounts.models import User
 from documents.models import Document, DocumentCategory
-from documents.services.documents import deposit_document, mark_validated
+from documents.services.documents import mark_validated, record_upload
 from treasury.models import LedgerEntry, LedgerEntryKind
 
 
@@ -28,4 +28,4 @@ def receipt_document(entry: LedgerEntry, file: File, member: User) -> Document:
         paid_on=entry.date if expense else None,
     )
     mark_validated(document, member)
-    return deposit_document(document, file, member)
+    return record_upload(document, file, member)

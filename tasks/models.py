@@ -2,7 +2,7 @@ from django.conf import settings
 from django.db import models
 
 from accounts.services.roles import BOARD_MEMBERS
-from events.models import Event
+from events.models import EVENT_ERROR_MESSAGES, Event
 
 
 class Task(models.Model):
@@ -16,7 +16,7 @@ class Task(models.Model):
         null=True,
         blank=True,
         related_name="tasks",
-        error_messages={"invalid": "Choisissez un événement existant."},
+        error_messages=EVENT_ERROR_MESSAGES,
     )
     title = models.CharField("titre", max_length=200)
     assignee = models.ForeignKey(

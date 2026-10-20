@@ -1,4 +1,4 @@
-"""What a deposited file holds, recognised by its content, never by its name (A8).
+"""What an uploaded file holds, recognised by its content, never by its name (A8).
 
 A PDF is kept as it is. Any accepted image is converted to WebP (D9): turned
 upright, reduced to 4,000 px at most, and stripped of its metadata, the place a
@@ -76,7 +76,9 @@ class WebpPicture(WebpPhoto):
 
 @dataclass(frozen=True)
 class StoredFile:
-    """A deposited file as the server keeps it, with the fingerprint of what was sent."""
+    """A file as the server keeps it, uploaded or made by the application (D14),
+    with its fingerprint.
+    """
 
     content: ContentFile
     name: str
@@ -86,7 +88,7 @@ class StoredFile:
 
 
 def read_upload(file: File, max_size: int | None = None) -> StoredFile:
-    """A deposited file ready to store: a PDF, or an image converted to WebP.
+    """An uploaded file ready to store: a PDF, or an image converted to WebP.
 
     Every refusal is located on the file: empty, too large, of a type not
     accepted, or unreadable.

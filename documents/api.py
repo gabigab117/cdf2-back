@@ -2,7 +2,7 @@ from django.shortcuts import get_object_or_404
 from ninja import File, Form, Query, Router, Status, UploadedFile
 from ninja.pagination import paginate
 
-from core.schemas import ErrorOut, ValidationErrorOut
+from core.schemas import REFUSALS, ErrorOut, ValidationErrorOut
 from documents.models import Document
 from documents.schemas import (
     DocumentCountsOut,
@@ -42,9 +42,6 @@ DOCUMENT_FILE = {
         }
     }
 }
-
-# What every operation on an existing document may answer besides its success.
-REFUSALS = {401: ErrorOut, 403: ErrorOut, 404: ErrorOut, 422: ValidationErrorOut}
 
 
 @router.get(

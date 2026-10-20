@@ -1,6 +1,7 @@
 """Fictitious files, made in the tests: no real document belongs to the repository."""
 
 from io import BytesIO
+from pathlib import Path
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from PIL import Image
@@ -54,3 +55,9 @@ def upload(content, name="facture.pdf"):
 def opened(content):
     """The image a stored file holds."""
     return Image.open(BytesIO(content))
+
+
+def stored_files(private_files):
+    """The files on disk, outside any test of their content."""
+    folder = Path(private_files) / "documents"
+    return sorted(folder.iterdir()) if folder.exists() else []

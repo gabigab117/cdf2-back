@@ -8,15 +8,13 @@ from django.apps import apps
 from django.contrib.auth.models import Group
 from django.core.mail.backends.locmem import EmailBackend
 from django.db import transaction
-from django.test import Client
 from django.utils import timezone
-from ninja_jwt.tokens import AccessToken
 
 from documents.models import Document, DocumentCategory
 from documents.schemas import DocumentUploadIn
 from documents.services.documents import upload_document
 from documents.services.notifications import DOCUMENT_NOTIFICATION_GROUP
-from tests.accounts.factories import BoardMemberFactory, UserFactory
+from tests.accounts.factories import BoardMemberFactory, UserFactory, client_of
 from tests.documents.samples import pdf, upload
 
 pytestmark = pytest.mark.django_db
@@ -34,10 +32,9 @@ def notified(account):
     return account
 
 
-def deposit(member, content=None, title="Facture — Location sono"):
-    client = Client(headers={"Authorization": f"Bearer {AccessToken.for_user(member)}"})
+def upload_file(member, content=None, title="Facture — Location sono"):
     file = upload(content or pdf(title), "facture-sono.pdf")
-    return client.post(DOCUMENTS, {"file": file, "category": "invoice", "title": title})
+    return client_of(member).post(DOCUMENTS, {"file": file, "category": "invoice", "title": title})
 
 
 def test_the_notification_group_migration_creates_and_removes_the_group():
@@ -74,7 +71,7 @@ def test_a_deposit_tells_the_active_board_members_of_the_group_alone(
     uploader = notified(BoardMemberFactory(email="camille@example.fr"))
 
     with django_capture_on_commit_callbacks(execute=True):
-        response = deposit(uploader)
+        response = upload_file(uploader)
 
     assert response.status_code == 201
     assert sorted(message.to[0] for message in mailoutbox) == [superuser.email, member.email]
@@ -101,7 +98,7 @@ def test_the_messages_go_over_a_single_connection(
     monkeypatch.setattr(EmailBackend, "send_messages", counted)
 
     with django_capture_on_commit_callbacks(execute=True):
-        deposit(BoardMemberFactory())
+        upload_file(BoardMemberFactory())
 
     assert sends == [2]
 
@@ -120,7 +117,7 @@ def test_the_message_names_the_document_and_leads_to_it(
     notified(BoardMemberFactory())
 
     with django_capture_on_commit_callbacks(execute=True):
-        deposit(BoardMemberFactory(first_name="Camille", last_name="Martin"))
+        upload_file(BoardMemberFactory(first_name="Camille", last_name="Martin"))
 
     [message] = mailoutbox
     document = Document.objects.get()
@@ -147,7 +144,7 @@ def test_a_member_without_a_name_is_named_by_their_address(
     notified(BoardMemberFactory())
 
     with django_capture_on_commit_callbacks(execute=True):
-        deposit(BoardMemberFactory(first_name="", last_name="", email="tresor@example.fr"))
+        upload_file(BoardMemberFactory(first_name="", last_name="", email="tresor@example.fr"))
 
     assert "Déposé par : tresor@example.fr\n" in mailoutbox[0].body
 
@@ -201,7 +198,7 @@ def test_a_failure_to_send_leaves_the_deposit_done_and_is_written_to_the_journal
     monkeypatch.setattr(EmailBackend, "send_messages", failed)
 
     with django_capture_on_commit_callbacks(execute=True):
-        response = deposit(BoardMemberFactory())
+        response = upload_file(BoardMemberFactory())
 
     assert response.status_code == 201
     document = Document.objects.get()

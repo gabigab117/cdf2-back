@@ -3,7 +3,7 @@ from django.db import models
 from django.db.models import Q
 
 from documents.models import Document
-from events.models import Event
+from events.models import EVENT_ERROR_MESSAGES, Event
 
 
 # Named after its model rather than nested in it: the OpenAPI document names an
@@ -29,7 +29,7 @@ class Note(models.Model):
         null=True,
         blank=True,
         related_name="notes",
-        error_messages={"invalid": "Choisissez un événement existant."},
+        error_messages=EVENT_ERROR_MESSAGES,
     )
     # A deleted account leaves its notes behind, without a name.
     author = models.ForeignKey(

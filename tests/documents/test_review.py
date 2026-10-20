@@ -7,7 +7,6 @@ from decimal import Decimal
 from pathlib import Path
 
 import pytest
-from django.core.serializers.json import DjangoJSONEncoder
 from django.utils import timezone
 
 from documents.models import Document, DocumentCategory, DocumentStatus
@@ -15,6 +14,7 @@ from tasks.models import Task
 from tests.accounts.factories import BoardMemberFactory, UserFactory
 from tests.documents.factories import DocumentFactory
 from tests.events.factories import EventFactory
+from tests.helpers import iso, member_json, send
 
 pytestmark = pytest.mark.django_db
 
@@ -25,30 +25,12 @@ def document_url(document_id):
     return f"{DOCUMENTS}/{document_id}"
 
 
-def iso(moment):
-    """A time as the API writes it: to the millisecond, as Django's JSON does."""
-    return DjangoJSONEncoder().default(moment)
-
-
-def member_json(member):
-    return {
-        "id": member.id,
-        "first_name": member.first_name,
-        "last_name": member.last_name,
-        "email": member.email,
-    }
-
-
-def send(client, method, path, payload=None):
-    return getattr(client, method)(path, payload, content_type="application/json")
-
-
 def listed_titles(client, **params):
     return [item["title"] for item in client.get(DOCUMENTS, params).json()["items"]]
 
 
-def deposited_on(document, day):
-    """Date a document's deposit, its creation time being set by the database."""
+def uploaded_on(document, day):
+    """Date a document's upload, its creation time being set by the database."""
     moment = timezone.make_aware(dt.datetime.combine(day, dt.time(10)))
     Document.objects.filter(pk=document.pk).update(created_at=moment)
 
@@ -94,7 +76,7 @@ def test_the_documents_come_by_date_the_latest_first(board_client):
     """
     invoice = DocumentFactory(document_date=dt.date(2026, 9, 28))
     minutes = DocumentFactory(category=DocumentCategory.MINUTES)
-    deposited_on(minutes, dt.date(2026, 10, 1))
+    uploaded_on(minutes, dt.date(2026, 10, 1))
     order = DocumentFactory(category=DocumentCategory.ORDER, document_date=dt.date(2026, 9, 25))
 
     assert listed_titles(board_client) == [minutes.title, invoice.title, order.title]
@@ -385,6 +367,26 @@ def test_a_faulty_correction_is_refused_in_french_under_its_field(board_client):
         (["body", "amount"], "Assurez-vous qu’il n’y a pas plus de 2 chiffres après la virgule.")
     ]
     assert errors(event=999_999) == [(["body", "event"], "Choisissez un événement existant.")]
+
+
+def test_minutes_corrected_keep_the_tasks_they_list(board_client, board_member):
+    """
+    Given minutes
+    When a correction lists a task for a board member, then one for nobody
+    Then the minutes keep both tasks, as written
+    """
+    document = DocumentFactory(category=DocumentCategory.MINUTES)
+    tasks = [
+        {"title": "Valider le devis sono", "assignee": board_member.id},
+        {"title": "Commander les bonbons", "assignee": None},
+    ]
+
+    payload = correction(category="minutes", extracted=extracted(tasks=tasks))
+    response = send(board_client, "put", document_url(document.id), payload)
+
+    assert response.status_code == 200
+    document.refresh_from_db()
+    assert document.extracted["tasks"] == tasks
 
 
 def test_the_tasks_of_minutes_are_checked_as_they_are_written(board_client):

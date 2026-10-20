@@ -17,7 +17,7 @@ from documents.models import Document
 
 def file_response(document: Document, *, download: bool) -> HttpResponseBase:
     """The file of a document, of the type recorded for it, shown in the browser
-    or downloaded under the name it was deposited with.
+    or downloaded under the name it was uploaded with.
     """
     prefix = settings.PRIVATE_FILES_ACCEL_PREFIX
     if prefix:

@@ -28,6 +28,11 @@ class PracticalInfoIcon(models.TextChoices):
     ACCESSIBILITY = "accessibility", "Accessibilité"
 
 
+# The refusal of a reference to an event that does not exist, the same on every
+# model that names one.
+EVENT_ERROR_MESSAGES = {"invalid": "Choisissez un événement existant."}
+
+
 class Event(models.Model):
     """An event of the committee, with the content of its public page."""
 
@@ -77,7 +82,7 @@ class Event(models.Model):
         null=True,
         blank=True,
         related_name="next_editions",
-        error_messages={"invalid": "Choisissez un événement existant."},
+        error_messages=EVENT_ERROR_MESSAGES,
     )
     # How many places its reservations may take, or none for no limit. It is
     # set from the reservations' tab (D1), never with the rest of the event.

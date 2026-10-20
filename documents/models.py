@@ -7,7 +7,7 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import Q
 
-from events.models import Event
+from events.models import EVENT_ERROR_MESSAGES, Event
 
 
 # Named after their model rather than nested in it: the OpenAPI document names an
@@ -45,8 +45,8 @@ class Document(models.Model):
     """
 
     file = models.FileField("fichier", upload_to=document_path)
-    # The file as the member sent it: its name, and the type and size of what
-    # is stored, a PDF or a WebP (D9).
+    # The file as the member sent it, or as the application made it (D14): its
+    # name, and the type and size of what is stored, a PDF or a WebP (D9).
     original_name = models.CharField("nom d’origine", max_length=255)
     mime_type = models.CharField("type", max_length=50)
     size = models.PositiveBigIntegerField("taille")
@@ -79,7 +79,7 @@ class Document(models.Model):
         null=True,
         blank=True,
         related_name="documents",
-        error_messages={"invalid": "Choisissez un événement existant."},
+        error_messages=EVENT_ERROR_MESSAGES,
     )
     # What belongs to one kind of document only: the delivery date and the
     # items of an order, the abstract, decisions and tasks of the minutes, the

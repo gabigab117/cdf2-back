@@ -1,4 +1,4 @@
-"""The committee's documents: deposited by the board, classified when they arrive,
+"""The committee's documents: uploaded by the board, classified when they arrive,
 then reviewed (A8).
 
 A document awaits review until a member validates it. The minutes of a meeting
@@ -17,6 +17,7 @@ from django.db.models.functions import Cast, Coalesce, Replace, TruncDate
 from django.utils import timezone
 
 from accounts.models import User
+from core.errors import line_errors
 from documents.models import Document, DocumentCategory, DocumentStatus
 from documents.schemas import DocumentIn, DocumentUploadIn
 from documents.services.files import StoredFile, read_upload
@@ -34,10 +35,14 @@ EXTRACTED_KEYS = {
 }
 
 
+# How long a title may be, as the model holds it.
+TITLE_LENGTH = Document._meta.get_field("title").max_length
+
+
 def documents() -> QuerySet[Document]:
     """The documents as the board reads them, with their event and their people.
 
-    Each is dated by its own date, or else by the day it was deposited, in
+    Each is dated by its own date, or else by the day it was uploaded, in
     Paris time: the list is ordered by it, and shows it.
     """
     return Document.objects.select_related(
@@ -50,7 +55,7 @@ def listed_documents() -> QuerySet[Document]:
     its amount as the board writes it (« 380,00 »), for the search.
     """
     amount_text = Replace(Cast("amount", output_field=CharField()), Value("."), Value(","))
-    return documents().annotate(amount_text=amount_text).order_by("-date", "-created_at", "-pk")
+    return documents().alias(amount_text=amount_text).order_by("-date", "-created_at", "-pk")
 
 
 def document_counts(selection: QuerySet[Document]) -> dict[str, int]:
@@ -62,17 +67,17 @@ def document_counts(selection: QuerySet[Document]) -> dict[str, int]:
 
 
 def upload_document(file: File, data: DocumentUploadIn, member: User) -> Document:
-    """Record the file a member deposits, as they classify it: it awaits review."""
+    """Record the file a member uploads, as they classify it: it awaits review."""
     document = Document(
         category=data.category,
-        title=data.title or PurePath(file.name).stem[:200],
+        title=data.title or PurePath(file.name).stem[:TITLE_LENGTH],
         event_id=data.event,
     )
-    return deposit_document(document, file, member)
+    return record_upload(document, file, member)
 
 
-def deposit_document(document: Document, file: File, member: User) -> Document:
-    """Record the file a member deposits for a document they describe: one they
+def record_upload(document: Document, file: File, member: User) -> Document:
+    """Record the file a member uploads for a document they describe: one they
     classify, or the receipt of a ledger entry (6.2). The file is refused
     before the document's fields.
     """
@@ -88,7 +93,7 @@ def deposit_document(document: Document, file: File, member: User) -> Document:
 
 def record_document(document: Document, stored: StoredFile) -> Document:
     """Store the file of a document already checked, then record the document,
-    which the chosen accounts are told of (D7): a deposit, the receipt of a
+    which the chosen accounts are told of (D7): an upload, the receipt of a
     ledger entry, or a sworn statement (D14).
     """
     # Written once checked, so that a refused document leaves no file; and
@@ -97,7 +102,7 @@ def record_document(document: Document, stored: StoredFile) -> Document:
     try:
         with transaction.atomic():
             document.save()
-            # Told once the deposit is done: a deposit undone tells no one (D7).
+            # Told once the upload is done: an upload undone tells no one (D7).
             transaction.on_commit(partial(notify_document_upload, document.pk))
     except BaseException:
         document.file.delete(save=False)
@@ -138,8 +143,12 @@ def update_document(document: Document, data: DocumentIn) -> Document:
     extracted = data.extracted.model_dump(mode="json")
     document.extracted = {key: extracted[key] for key in EXTRACTED_KEYS[data.category]}
     document.full_clean()
+    # The tasks of the minutes are checked as tasks as soon as they are written,
+    # not only when the minutes are validated.
     for index, task in enumerate(document.extracted.get("tasks", [])):
-        _check_task(index, Task(title=task["title"], assignee_id=task["assignee"]))
+        line = Task(title=task["title"], assignee_id=task["assignee"])
+        if errors := line_errors("extracted.tasks", index, line, {"event", "created_by"}):
+            raise ValidationError(errors)
     document.save()
     return documents().get(pk=document.pk)
 
@@ -189,33 +198,20 @@ def _create_tasks(document: Document, member: User) -> None:
         try:
             create_task(data, member)
         except ValidationError as error:
-            raise _task_error(index, error) from error
-
-
-def _check_task(index: int, task: Task) -> None:
-    # The tasks of the minutes are checked as tasks as soon as they are written,
-    # not only when the minutes are validated.
-    try:
-        task.full_clean(exclude={"event", "created_by"})
-    except ValidationError as error:
-        raise _task_error(index, error) from error
-
-
-def _task_error(index: int, error: ValidationError) -> ValidationError:
-    # Located like a field of a list's item: "extracted.tasks.2.title".
-    return ValidationError(
-        {
-            f"extracted.tasks.{index}.{field}": messages
-            for field, messages in error.error_dict.items()
-        }
-    )
+            # Located like a field of a list's item: "extracted.tasks.2.title".
+            raise ValidationError(
+                {
+                    f"extracted.tasks.{index}.{field}": messages
+                    for field, messages in error.error_dict.items()
+                }
+            ) from error
 
 
 def _check(document: Document) -> None:
     try:
         document.full_clean(exclude={"file"})
     except ValidationError as error:
-        # The same file deposited twice is told on the file the member chose,
+        # The same file uploaded twice is told on the file the member chose,
         # not on its fingerprint.
         raise ValidationError(
             {

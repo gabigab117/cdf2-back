@@ -1,4 +1,4 @@
-"""The only email of the documents (D7): a document deposited is told to the
+"""The only email of the documents (D7): a document uploaded is told to the
 accounts the superuser chose.
 
 The superuser puts them in the « Notifications documents » group, from the
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 def notification_recipients(uploader: User) -> QuerySet[User]:
-    """The active board members of the group, but whoever deposited the document."""
+    """The active board members of the group, but whoever uploaded the document."""
     # A second filter, a second join: in a single one, the condition of the
     # board and that of the group would bear on the same group.
     recipients = board_members().filter(groups__name=DOCUMENT_NOTIFICATION_GROUP)
@@ -34,12 +34,12 @@ def notification_recipients(uploader: User) -> QuerySet[User]:
 
 
 def notify_document_upload(document_id: int) -> None:
-    """Tell the chosen accounts that a document was deposited, to review, or as
+    """Tell the chosen accounts that a document was uploaded, to review, or as
     the receipt of a ledger entry: one message each, all over a single
     connection.
 
-    The deposit is done already: a failure to send is written to the
-    application's journal, and the member who deposited never sees it.
+    The upload is done already: a failure to send is written to the log,
+    and the member who uploaded it never sees it.
     """
     document = Document.objects.select_related("uploaded_by").get(pk=document_id)
     messages = [
@@ -66,17 +66,17 @@ def _subject(document: Document) -> str:
 
 
 def _body(document: Document) -> str:
-    # Told right after its deposit, by a member: the account is there.
+    # Told right after its upload, by a member: the account is there.
     uploader = document.uploaded_by
     who = uploader.get_full_name() or uploader.email
-    deposited = timezone.localtime(document.created_at)
+    uploaded_at = timezone.localtime(document.created_at)
     return (
         f"Un document vient d’être déposé dans l’espace du bureau.\n"
         f"\n"
         f"Titre : {document.title}\n"
         f"Catégorie : {document.get_category_display()}\n"
         f"Déposé par : {who}\n"
-        f"Date du dépôt : {deposited:%d/%m/%Y} à {deposited:%H} h {deposited:%M}\n"
+        f"Date du dépôt : {uploaded_at:%d/%m/%Y} à {uploaded_at:%H} h {uploaded_at:%M}\n"
         f"\n"
         f"Pour le {'voir' if document.status == DocumentStatus.VALIDATED else 'vérifier'}"
         f" (la page demande de se connecter) :\n"

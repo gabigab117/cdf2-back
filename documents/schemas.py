@@ -135,7 +135,7 @@ class DocumentItemOut(Schema):
     source: DocumentSource
     event: DocumentEventOut | None
     amount: Decimal | None
-    # The date it is listed by: the document's own, or the day it was deposited.
+    # The date it is listed by: the document's own, or the day it was uploaded.
     date: dt.date
 
 
@@ -201,7 +201,7 @@ class DocumentOut(Schema):
     # In bytes.
     size: int
     document_date: dt.date | None
-    # The date it is listed by: the document's own, or the day it was deposited.
+    # The date it is listed by: the document's own, or the day it was uploaded.
     date: dt.date
     issuer: str
     reference: str
