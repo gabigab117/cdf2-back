@@ -177,14 +177,16 @@ def cancel_delivery(document: Document, *, today: dt.date | None = None) -> Orde
         raise ValidationError("Cette commande n’est pas réceptionnée.")
     if not current.undoable:
         raise ValidationError("Une réception ne s’annule que le jour même.")
+    movements = list(delivery.movements.all())
+    # Locked first: a stocktake of these items, which locks them too, comes
+    # either before, and is found below, or once the delivery is undone.
+    locked = lock(movement.item_id for movement in movements)
     # A stocktake that came after counted what was delivered, whether it found
     # a difference or not: undoing the delivery would make its counts wrong.
     if StockOperation.objects.filter(
         reason=StockOperationReason.STOCKTAKE, created_at__gt=delivery.created_at
     ).exists():
         raise ValidationError("Un inventaire a suivi cette réception : elle ne s’annule plus.")
-    movements = list(delivery.movements.all())
-    locked = lock(movement.item_id for movement in movements)
     held = quantities(locked)
     gone = [
         locked[movement.item_id]
