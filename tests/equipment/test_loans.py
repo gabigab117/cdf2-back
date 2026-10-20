@@ -1,7 +1,4 @@
-import datetime as dt
-
 import pytest
-from django.core.serializers.json import DjangoJSONEncoder
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
@@ -16,6 +13,7 @@ from tests.equipment.factories import (
     lend,
 )
 from tests.events.factories import EventFactory
+from tests.helpers import ahead, iso, send
 
 pytestmark = pytest.mark.django_db
 
@@ -24,15 +22,6 @@ LOANS = "/api/board/loans"
 
 def url(loan_id):
     return f"{LOANS}/{loan_id}"
-
-
-def ahead(days):
-    return timezone.localdate() + dt.timedelta(days=days)
-
-
-def iso(moment):
-    """A time as the API writes it: to the millisecond, as Django's JSON does."""
-    return DjangoJSONEncoder().default(moment)
 
 
 def payload(*lines, **changes):
@@ -51,10 +40,6 @@ def payload(*lines, **changes):
             {"equipment": equipment.id, "quantity": quantity} for equipment, quantity in lines
         ],
     } | changes
-
-
-def send(client, method, path, body):
-    return getattr(client, method)(path, body, content_type="application/json")
 
 
 def refusal(*errors):

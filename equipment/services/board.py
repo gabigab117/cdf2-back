@@ -78,7 +78,7 @@ def pending_loans(today: dt.date) -> list[Loan]:
     return list(calling[:PENDING_LOANS_COUNT])
 
 
-def event_reservation(event: Event, today: dt.date) -> Loan | None:
-    """The equipment an event keeps: its reservation, unless cancelled."""
+def event_committee_loan(event: Event, today: dt.date) -> Loan | None:
+    """The equipment an event keeps: its committee loan, unless cancelled."""
     kept = loans().filter(event=event).exclude(status=LoanStatus.CANCELLED)
     return with_states(kept, today).first()

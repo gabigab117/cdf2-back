@@ -1,10 +1,9 @@
-import datetime as dt
-
 import pytest
 from django.utils import timezone
 
 from equipment.models import Equipment, LoanStatus
 from tests.equipment.factories import CommitteeLoanFactory, EquipmentFactory, LoanLineFactory, lend
+from tests.helpers import ahead
 
 pytestmark = pytest.mark.django_db
 
@@ -13,10 +12,6 @@ LOANS = "/api/board/loans"
 
 def url(loan_id, action):
     return f"{LOANS}/{loan_id}/{action}"
-
-
-def ahead(days):
-    return timezone.localdate() + dt.timedelta(days=days)
 
 
 def form_refusal(*messages):

@@ -17,6 +17,7 @@ from django.db.models import Count, Prefetch, Q, QuerySet
 from django.utils import timezone
 
 from accounts.models import User
+from core.errors import line_errors
 from core.text import counted
 from equipment.models import (
     Equipment,
@@ -41,9 +42,6 @@ DEFAULT_DEPOSITS = {
 
 # The planning of the loans: from the Monday of the week before, for nine weeks.
 PLANNING_WEEKS = 9
-
-# The statuses a loan is still written in: a returned loan is reopened first.
-WRITABLE = {LoanStatus.CONFIRMED, LoanStatus.OUT}
 
 
 def loans() -> QuerySet[Loan]:
@@ -96,10 +94,15 @@ def loan_counts(*, today: dt.date | None = None) -> dict[str, int]:
     return loans_today.aggregate(total=Count("pk"), **by_state)
 
 
-def with_state(loan: Loan, *, today: dt.date | None = None) -> Loan:
+def with_state(loan: Loan) -> Loan:
     """A loan read alone, with its state of today, as a list annotates it."""
-    loan.state = loan_state(loan, today or timezone.localdate())
+    loan.state = loan_state(loan, timezone.localdate())
     return loan
+
+
+def reread(loan: Loan) -> Loan:
+    """A loan just written, read again as the API shows it, with its state."""
+    return with_state(loans().get(pk=loan.pk))
 
 
 def loan_deposits() -> dict[str, list[dict[str, object]]]:
@@ -171,7 +174,7 @@ def _write(loan: Loan, data: LoanIn) -> Loan:
     loan.save()
     loan.lines.all().delete()
     LoanLine.objects.bulk_create(lines)
-    return with_state(loans().get(pk=loan.pk))
+    return reread(loan)
 
 
 def _validate(loan: Loan, lines: list[LoanLine]) -> None:
@@ -188,11 +191,7 @@ def _validate(loan: Loan, lines: list[LoanLine]) -> None:
     for index, line in enumerate(lines):
         # The loan may not be recorded yet: its unique constraint with the
         # equipment is checked below, among the lines of the request.
-        try:
-            line.full_clean(exclude={"loan"})
-        except ValidationError as error:
-            for field, messages in error.message_dict.items():
-                errors[f"lines.{index}.{field}"] = messages
+        errors |= line_errors("lines", index, line, {"loan"})
         if line.equipment_id in seen:
             errors.setdefault(f"lines.{index}.equipment", []).append(
                 "Ce matériel figure déjà dans le prêt."

@@ -8,11 +8,21 @@ from django.db.models import F, Q
 from django.db.models.functions import Lower
 
 from documents.models import Document
-from events.models import Event
+from events.models import EVENT_ERROR_MESSAGES, Event
 
 # The longest a loan lasts, both its days counted: beyond, a date was mistyped
 # (decision of 10/10/2026).
 LOAN_MAX_DAYS = 31
+
+
+def period_error(start, end):
+    """Why no loan could cover these days, backwards or too long: or None."""
+    days = (end - start).days + 1
+    if days < 1:
+        return "La date de retour est avant la date de sortie."
+    if days > LOAN_MAX_DAYS:
+        return f"Un prêt dure au plus {LOAN_MAX_DAYS} jours."
+    return None
 
 
 # Named after their model rather than nested in it: the OpenAPI document names an
@@ -84,6 +94,11 @@ class Equipment(models.Model):
     def __str__(self):
         return self.name
 
+    @property
+    def offered(self):
+        """The pieces a loan may take: all of them, but those under repair."""
+        return self.total_quantity - self.repair_quantity
+
     def clean(self):
         # The constraint keeps the rule in the database; this places its error
         # under the field the member typed. A quantity missing is the field's
@@ -138,7 +153,7 @@ class Loan(models.Model):
         null=True,
         blank=True,
         related_name="loans",
-        error_messages={"invalid": "Choisissez un événement existant."},
+        error_messages=EVENT_ERROR_MESSAGES,
     )
     # For the board alone: never printed on the agreement.
     notes = models.TextField("remarques", blank=True)
@@ -153,7 +168,7 @@ class Loan(models.Model):
     created_at = models.DateTimeField("saisi le", auto_now_add=True)
     # When the equipment came back: the purge of personal data counts from it.
     returned_at = models.DateTimeField("rendu le", null=True, blank=True)
-    # The agreement its borrower signed, deposited as a document (A16): a new
+    # The agreement its borrower signed, uploaded as a document (A16): a new
     # one takes the link, the former stays among the documents.
     agreement = models.ForeignKey(
         Document,
@@ -236,12 +251,12 @@ class Loan(models.Model):
         elif not self.borrower_name:
             errors["borrower_name"] = self._meta.get_field("borrower_name").error_messages["blank"]
         # A date missing is the field's own error.
-        if self.start_date is not None and self.end_date is not None:
-            days = (self.end_date - self.start_date).days + 1
-            if days < 1:
-                errors["end_date"] = "La date de retour est avant la date de sortie."
-            elif days > LOAN_MAX_DAYS:
-                errors["end_date"] = f"Un prêt dure au plus {LOAN_MAX_DAYS} jours."
+        if (
+            self.start_date is not None
+            and self.end_date is not None
+            and (error := period_error(self.start_date, self.end_date))
+        ):
+            errors["end_date"] = error
         if errors:
             raise ValidationError(errors)
 

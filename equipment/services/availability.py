@@ -22,7 +22,7 @@ from django.db.models import Case, F, Q, QuerySet, Value, When
 from django.db.models.functions import Greatest, Least
 from django.utils import timezone
 
-from equipment.models import LOAN_MAX_DAYS, Equipment, Loan, LoanLine, LoanStatus
+from equipment.models import Equipment, Loan, LoanLine, LoanStatus, period_error
 from equipment.services.states import loan_state
 
 ONE_DAY = dt.timedelta(days=1)
@@ -78,11 +78,8 @@ class Shortage:
 
 def check_period(start: dt.date, end: dt.date) -> None:
     """Refuse a period no loan could cover: backwards, or longer than a loan."""
-    days = (end - start).days + 1
-    if days < 1:
-        raise ValidationError("La date de retour est avant la date de sortie.")
-    if days > LOAN_MAX_DAYS:
-        raise ValidationError(f"Un prêt dure au plus {LOAN_MAX_DAYS} jours.")
+    if error := period_error(start, end):
+        raise ValidationError(error)
 
 
 def holding_lines(today: dt.date) -> QuerySet[LoanLine]:
@@ -127,7 +124,7 @@ def availability(
     for item in equipment:
         held = conflicts[item.pk]
         taken = _peak(held, start, end)
-        offered = item.total_quantity - item.repair_quantity
+        offered = item.offered
         report.append(Availability(item, taken, max(offered - taken, 0), held))
     return report
 
@@ -205,7 +202,7 @@ def _shortage(item: Equipment, conflicts: list[Conflict], today: dt.date) -> Sho
     """The days, from today on, the loans take more of an equipment than it
     offers, if any.
     """
-    offered = item.total_quantity - item.repair_quantity
+    offered = item.offered
     last = max((conflict.end for conflict in conflicts), default=today)
     holding: set[int] = set()
     short: set[int] = set()

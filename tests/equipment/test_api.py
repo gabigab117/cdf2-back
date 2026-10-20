@@ -1,13 +1,9 @@
-import datetime as dt
-
 import pytest
-from django.test import Client
-from django.utils import timezone
-from ninja_jwt.tokens import AccessToken
 
-from tests.accounts.factories import UserFactory
+from tests.accounts.factories import UserFactory, client_of
 from tests.equipment.factories import EquipmentFactory, lend
 from tests.events.factories import EventFactory
+from tests.helpers import ahead
 
 pytestmark = pytest.mark.django_db
 
@@ -36,14 +32,6 @@ OPERATIONS = [
     ("post", "/api/board/loans/1/cancel"),
     ("post", "/api/board/loans/1/agreement"),
 ]
-
-
-def client_of(member):
-    return Client(headers={"Authorization": f"Bearer {AccessToken.for_user(member)}"})
-
-
-def ahead(days):
-    return timezone.localdate() + dt.timedelta(days=days)
 
 
 def period(start, end):

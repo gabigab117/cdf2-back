@@ -1,9 +1,10 @@
 """The life of a loan (A14, A17): its checkout, its return and what it leaves
 under repair, its reopening, its cancellation.
 
-Each transition locks the loan and checks its status, then locks its
-equipment, in the order of the loan's writes: a transition that takes pieces
-again checks what is free, as a write does.
+Each transition locks the loan and checks its status. One that changes the
+pieces of its equipment locks them too, in the order of the loan's writes: a
+transition that takes pieces again checks what is free, as a write does. A
+cancellation frees pieces, and locks the loan alone.
 """
 
 from dataclasses import dataclass
@@ -16,7 +17,7 @@ from core.text import counted
 from equipment.models import Equipment, Loan, LoanBorrowerType, LoanLine, LoanStatus
 from equipment.schemas import LoanReturnIn
 from equipment.services.availability import Shortage, shortages
-from equipment.services.loans import beyond_free, loans, lock, with_state
+from equipment.services.loans import beyond_free, lock, reread
 
 
 @dataclass(frozen=True)
@@ -44,7 +45,7 @@ def check_out(loan: Loan) -> Loan:
     loan.status = LoanStatus.OUT
     _refuse_beyond(loan, lines, locked)
     loan.save(update_fields=["status"])
-    return with_state(loans().get(pk=loan.pk))
+    return reread(loan)
 
 
 @transaction.atomic
@@ -61,8 +62,8 @@ def return_loan(loan: Loan, data: LoanReturnIn) -> ReturnReport:
     _count_back(lines, data)
     locked = lock({line.equipment_id for line in lines.values()})
     repaired: list[Equipment] = []
+    LoanLine.objects.bulk_update(lines.values(), ["damaged_quantity", "missing_quantity"])
     for line in lines.values():
-        line.save(update_fields=["damaged_quantity", "missing_quantity"])
         if line.damaged_quantity:
             equipment = locked[line.equipment_id]
             equipment.repair_quantity = min(
@@ -74,7 +75,7 @@ def return_loan(loan: Loan, data: LoanReturnIn) -> ReturnReport:
     loan.status = LoanStatus.RETURNED
     loan.returned_at = timezone.now()
     loan.save(update_fields=["status", "returned_at"])
-    return ReturnReport(with_state(loans().get(pk=loan.pk)), shortages(repaired))
+    return ReturnReport(reread(loan), shortages(repaired))
 
 
 @transaction.atomic
@@ -95,12 +96,12 @@ def reopen(loan: Loan) -> Loan:
             equipment.repair_note = _without_mention(equipment.repair_note, _mention(loan, line))
             equipment.save(update_fields=["repair_quantity", "repair_note"])
         line.damaged_quantity = line.missing_quantity = 0
-        line.save(update_fields=["damaged_quantity", "missing_quantity"])
+    LoanLine.objects.bulk_update(lines, ["damaged_quantity", "missing_quantity"])
     loan.status = LoanStatus.OUT
     loan.returned_at = None
     _refuse_beyond(loan, lines, locked)
     loan.save(update_fields=["status", "returned_at"])
-    return with_state(loans().get(pk=loan.pk))
+    return reread(loan)
 
 
 @transaction.atomic
@@ -111,7 +112,7 @@ def cancel(loan: Loan) -> Loan:
         raise ValidationError("Seul un prêt confirmé s’annule : un prêt sorti se rend.")
     loan.status = LoanStatus.CANCELLED
     loan.save(update_fields=["status"])
-    return with_state(loans().get(pk=loan.pk))
+    return reread(loan)
 
 
 def _locked(loan: Loan) -> Loan:

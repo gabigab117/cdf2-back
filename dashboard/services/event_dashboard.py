@@ -12,7 +12,7 @@ from django.utils import timezone
 from documents.models import Document
 from documents.services.documents import listed_documents
 from equipment.models import Loan
-from equipment.services.board import event_reservation
+from equipment.services.board import event_committee_loan
 from events.models import Event
 from reservations.services.reservations import reserved_seats
 from stations.services.stations import station_totals
@@ -59,7 +59,7 @@ def event_dashboard(event: Event) -> EventDashboard:
     """
     tasks_done, tasks_total = task_counts(event.pk)
     assigned_count, required_count = station_totals(event)
-    reservation = event_reservation(event, timezone.localdate())
+    reservation = event_committee_loan(event, timezone.localdate())
     return EventDashboard(
         notes_count=event.notes.count(),
         tasks_done=tasks_done,

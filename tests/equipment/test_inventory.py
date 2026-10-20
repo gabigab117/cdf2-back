@@ -10,6 +10,7 @@ from equipment.services.inventory import inventory
 from tests.equipment.factories import EquipmentFactory, lend
 from tests.equipment.mockup import TODAY, build_mockup
 from tests.events.factories import EventFactory
+from tests.helpers import ahead, send
 
 pytestmark = pytest.mark.django_db
 
@@ -20,10 +21,6 @@ def url(equipment_id):
     return f"{EQUIPMENT}/{equipment_id}"
 
 
-def ahead(days):
-    return timezone.localdate() + dt.timedelta(days=days)
-
-
 def payload(**changes):
     """An equipment as the inventory's form sends it, whole."""
     return {
@@ -32,10 +29,6 @@ def payload(**changes):
         "repair_quantity": 0,
         "repair_note": "",
     } | changes
-
-
-def send(client, method, path, body):
-    return getattr(client, method)(path, body, content_type="application/json")
 
 
 def refusal(field, message):

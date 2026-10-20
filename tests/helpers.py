@@ -1,6 +1,9 @@
 """Helpers the tests of every app share."""
 
+import datetime as dt
+
 from django.core.serializers.json import DjangoJSONEncoder
+from django.utils import timezone
 
 
 def iso(moment):
@@ -26,3 +29,8 @@ def member_json(member):
 def messages(response):
     """The location and the message of each error of a 422."""
     return [(error["loc"], error["msg"]) for error in response.json()["detail"]]
+
+
+def ahead(days):
+    """The day so many days from today, in Paris."""
+    return timezone.localdate() + dt.timedelta(days=days)

@@ -206,7 +206,7 @@ class LoanOut(Schema):
     created_by: BoardMemberOut | None
     created_at: dt.datetime
     returned_at: dt.datetime | None
-    # None until it is deposited, and for a committee loan.
+    # None until it is uploaded, and for a committee loan.
     agreement: LoanAgreementOut | None
 
 

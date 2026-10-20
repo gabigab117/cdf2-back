@@ -5,7 +5,6 @@ from io import StringIO
 
 import pytest
 from django.core.management import call_command
-from django.utils import timezone
 
 from equipment.models import Equipment, Loan, LoanState
 from equipment.services.demo import DEMO_EQUIPMENT, seed_demo_equipment
@@ -13,17 +12,11 @@ from equipment.services.states import loan_state
 from events.services.demo import seed_demo_events
 from tests.equipment.factories import EquipmentFactory, lend
 
-pytestmark = pytest.mark.django_db
+# Every rule that reads today reads the mockup's day: the services ask Django's
+# clock, which the fixture sets.
+pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("mockup_day")]
 
 TODAY = dt.date(2026, 10, 1)
-
-
-@pytest.fixture(autouse=True)
-def mockup_day(monkeypatch):
-    """Every rule that reads today reads the mockup's day: the services ask
-    Django's clock, which this test sets.
-    """
-    monkeypatch.setattr(timezone, "localdate", lambda *args, **kwargs: TODAY)
 
 
 def seed():

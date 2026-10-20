@@ -2,7 +2,7 @@ from django.shortcuts import get_object_or_404
 from ninja import File, Query, Router, Status, UploadedFile
 from ninja.pagination import paginate
 
-from core.schemas import ErrorOut, ValidationErrorOut
+from core.schemas import REFUSALS, ErrorOut, ValidationErrorOut
 from equipment.models import Equipment, Loan
 from equipment.schemas import (
     AvailabilityOut,
@@ -44,9 +44,6 @@ from equipment.services.loans import (
 
 router = Router(tags=["equipment"])
 loans_router = Router(tags=["loans"])
-
-# What every operation on an existing equipment may answer besides its success.
-REFUSALS = {401: ErrorOut, 403: ErrorOut, 404: ErrorOut, 422: ValidationErrorOut}
 
 
 @router.get(

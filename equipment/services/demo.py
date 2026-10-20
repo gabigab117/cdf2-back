@@ -17,12 +17,13 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from equipment.models import Equipment, Loan, LoanBorrowerType
+from equipment.models import Equipment, Loan, LoanBorrowerType, LoanStatus
 from equipment.schemas import EquipmentIn, LoanIn, LoanLineIn, LoanReturnIn, ReturnLineIn
 from equipment.services.inventory import create_equipment, update_equipment
 from equipment.services.lifecycle import check_out, return_loan
 from equipment.services.loans import create_loan
 from events.models import Event
+from events.services.periods import events_in_period
 
 # Its name, pieces, pieces under repair and repair note, before the loans: the
 # bench damaged at the school's fête goes under repair with its return.
@@ -49,12 +50,12 @@ class DemoLoan:
     """A loan of the mockup, its days counted from today."""
 
     borrower: str
-    kind: LoanBorrowerType
+    borrower_type: LoanBorrowerType
     purpose: str
     starts: int
     ends: int
-    # Its step: "returned", "out", or confirmed.
-    step: str
+    # Where it stands: returned, out, or confirmed.
+    status: LoanStatus
     pieces: dict[str, int]
     # What came back damaged, for a loan returned.
     damaged: dict[str, int] | None = None
@@ -69,7 +70,7 @@ DEMO_LOANS = [
         "Journées du patrimoine",
         -13,
         -10,
-        "returned",
+        LoanStatus.RETURNED,
         {"Barrières de ville": 20, "Chaises empilables": 10},
     ),
     DemoLoan(
@@ -78,7 +79,7 @@ DEMO_LOANS = [
         "Fête de l’école",
         -6,
         -3,
-        "returned",
+        LoanStatus.RETURNED,
         {"Bancs pliants": 12, "Tables pliantes 180 cm": 6, "Barnums 3 × 3 m": 1},
         damaged={"Bancs pliants": 1},
     ),
@@ -88,7 +89,7 @@ DEMO_LOANS = [
         "Cross",
         -1,
         1,
-        "out",
+        LoanStatus.OUT,
         {"Tables pliantes 180 cm": 4, "Barnums 3 × 3 m": 2, "Enceintes sur pied": 1},
     ),
     DemoLoan(
@@ -97,7 +98,7 @@ DEMO_LOANS = [
         "Anniversaire",
         2,
         4,
-        "confirmed",
+        LoanStatus.CONFIRMED,
         {"Barnums 3 × 6 m": 1, "Chaises empilables": 30, "Guirlandes guinguette 20 m": 2},
     ),
     DemoLoan(
@@ -106,7 +107,7 @@ DEMO_LOANS = [
         "Tournoi jeunes",
         15,
         17,
-        "confirmed",
+        LoanStatus.CONFIRMED,
         {"Barnums 3 × 3 m": 2, "Tables pliantes 180 cm": 8, "Bancs pliants": 16},
     ),
     DemoLoan(
@@ -115,13 +116,13 @@ DEMO_LOANS = [
         "Fête de la pomme",
         22,
         25,
-        "confirmed",
+        LoanStatus.CONFIRMED,
         {"Barrières de ville": 20, "Lestes de barnum 15 kg": 8},
     ),
 ]
 
 # The equipment the committee keeps for its demo events, by their title.
-DEMO_RESERVATIONS = {
+DEMO_COMMITTEE_LOANS = {
     "Halloween des enfants": {
         "Tables pliantes 180 cm": 8,
         "Bancs pliants": 16,
@@ -160,12 +161,12 @@ def seed_demo_equipment(today: dt.date) -> DemoInventory:
     of the demonstration are written anew. A loan typed by hand stays.
     """
     Loan.objects.filter(borrower_name__in=[demo.borrower for demo in DEMO_LOANS]).delete()
-    Loan.objects.filter(event__title__in=DEMO_RESERVATIONS).delete()
+    Loan.objects.filter(event__title__in=DEMO_COMMITTEE_LOANS).delete()
     equipment = {name: _equipment(name, *values) for name, *values in DEMO_EQUIPMENT}
     loans = [
         loan
         for loan in (
-            *(_reservation(event, equipment) for event in _demo_events(today)),
+            *(_committee_loan(event, equipment) for event in _demo_events()),
             *(_loan(demo, equipment, today) for demo in DEMO_LOANS),
         )
         if loan is not None
@@ -179,11 +180,9 @@ def _equipment(name: str, total: int, repair: int, note: str) -> Equipment:
     return create_equipment(data) if existing is None else update_equipment(existing, data)
 
 
-def _demo_events(today: dt.date) -> list[Event]:
+def _demo_events() -> list[Event]:
     """The demo events to come that keep equipment."""
-    start_of_day = timezone.make_aware(dt.datetime.combine(today, dt.time.min))
-    upcoming = Event.objects.filter(title__in=DEMO_RESERVATIONS, starts_at__gte=start_of_day)
-    return list(upcoming.order_by("starts_at"))
+    return list(events_in_period("upcoming").filter(title__in=DEMO_COMMITTEE_LOANS))
 
 
 def _lines(pieces: dict[str, int], equipment: dict[str, Equipment]) -> list[LoanLineIn]:
@@ -192,7 +191,7 @@ def _lines(pieces: dict[str, int], equipment: dict[str, Equipment]) -> list[Loan
     ]
 
 
-def _reservation(event: Event, equipment: dict[str, Equipment]) -> Loan | None:
+def _committee_loan(event: Event, equipment: dict[str, Equipment]) -> Loan | None:
     day = timezone.localtime(event.starts_at).date()
     data = LoanIn(
         borrower_type=LoanBorrowerType.COMMITTEE,
@@ -204,14 +203,14 @@ def _reservation(event: Event, equipment: dict[str, Equipment]) -> Loan | None:
         deposit_amount=None,
         event=event.pk,
         notes="",
-        lines=_lines(DEMO_RESERVATIONS[event.title], equipment),
+        lines=_lines(DEMO_COMMITTEE_LOANS[event.title], equipment),
     )
     return _written(lambda: create_loan(data, None))
 
 
 def _loan(demo: DemoLoan, equipment: dict[str, Equipment], today: dt.date) -> Loan | None:
     data = LoanIn(
-        borrower_type=demo.kind,
+        borrower_type=demo.borrower_type,
         borrower_name=demo.borrower,
         purpose=demo.purpose,
         phone="",
@@ -225,10 +224,10 @@ def _loan(demo: DemoLoan, equipment: dict[str, Equipment], today: dt.date) -> Lo
 
     def write() -> Loan:
         loan = create_loan(data, None)
-        if demo.step == "confirmed":
+        if demo.status == LoanStatus.CONFIRMED:
             return loan
         loan = check_out(loan)
-        if demo.step == "out":
+        if demo.status == LoanStatus.OUT:
             return loan
         damaged = demo.damaged or {}
         lines = [

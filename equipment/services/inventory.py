@@ -12,8 +12,8 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import ProtectedError
 from django.utils import timezone
-from django.utils.translation import ngettext
 
+from core.text import counted
 from equipment.models import Equipment, Loan
 from equipment.schemas import EquipmentIn
 from equipment.services.availability import Availability, Conflict, availability, shortages
@@ -68,11 +68,11 @@ def inventory(*, today: dt.date | None = None) -> Inventory:
     )
 
 
-def occupancy(equipment: Equipment, *, today: dt.date | None = None) -> Occupancy:
+def occupancy(equipment: Equipment) -> Occupancy:
     """The loans that take an equipment, from the Monday of this week, for
     eleven weeks.
     """
-    today = today or timezone.localdate()
+    today = timezone.localdate()
     start = today - dt.timedelta(days=today.weekday())
     end = start + dt.timedelta(weeks=OCCUPANCY_WEEKS, days=-1)
     [item] = availability([equipment], start, end, today=today)
@@ -94,11 +94,11 @@ def update_equipment(equipment: Equipment, data: EquipmentIn) -> Equipment:
     a lower total, are refused if a loan to come would then lack some (A17).
     """
     equipment = Equipment.objects.select_for_update().get(pk=equipment.pk)
-    offered = equipment.total_quantity - equipment.repair_quantity
+    offered = equipment.offered
     repair = equipment.repair_quantity
     _write(equipment, data)
     equipment.full_clean()
-    if equipment.total_quantity - equipment.repair_quantity < offered:
+    if equipment.offered < offered:
         _check_shortage(equipment, repair)
     equipment.save()
     return equipment
@@ -110,14 +110,9 @@ def delete_equipment(equipment: Equipment) -> None:
     try:
         equipment.delete()
     except ProtectedError as error:
-        loans = len(error.protected_objects)
+        loans = counted(len(error.protected_objects), "prêt", "prêts")
         raise ValidationError(
-            ngettext(
-                "Impossible de supprimer « %(name)s » : il figure dans %(count)d prêt.",
-                "Impossible de supprimer « %(name)s » : il figure dans %(count)d prêts.",
-                loans,
-            )
-            % {"name": equipment.name, "count": loans}
+            f"Impossible de supprimer « {equipment.name} » : il figure dans {loans}."
         ) from error
 
 
@@ -142,7 +137,9 @@ def _check_shortage(equipment: Equipment, repair: int) -> None:
         if shortage.offered
         else "il n’en resterait aucun"
     )
-    edit = ngettext("Modifiez d’abord ce prêt.", "Modifiez d’abord ces prêts.", len(shortage.loans))
+    edit = (
+        "Modifiez d’abord ce prêt." if len(shortage.loans) == 1 else "Modifiez d’abord ces prêts."
+    )
     loans = " ; ".join(_loan_label(loan) for loan in shortage.loans)
     raise ValidationError(
         {
