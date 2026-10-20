@@ -26,6 +26,7 @@ from events.api import router as events_router
 from notes.api import router as notes_router
 from reservations.api import router as reservations_router
 from stations.api import router as stations_router
+from stock.api import router as stock_router
 from tasks.api import router as tasks_router
 from treasury.api import router as treasury_router
 
@@ -126,4 +127,5 @@ api.add_router("/board/", documents_router)
 api.add_router("/board/", equipment_router)
 api.add_router("/board/", loans_router)
 api.add_router("/board/", treasury_router)
+api.add_router("/board/", stock_router)
 api.add_router("/public/", events_public_router)

@@ -19,6 +19,8 @@ from equipment.services.loans import loan_counts
 from events.models import Event
 from events.services.periods import events_in_period
 from notes.models import Note
+from stock.models import StockItem
+from stock.services.items import low_items
 from tasks.models import Task
 from tasks.services.tasks import next_tasks, recently_done_tasks, task_counts
 from treasury.models import LedgerEntry
@@ -93,10 +95,16 @@ class PendingAdvances:
 
 
 @dataclass(frozen=True)
+class PendingStock:
+    """The items of the stock below their threshold: how many, and the first."""
+
+    count: int
+    items: list[StockItem]
+
+
+@dataclass(frozen=True)
 class Pending:
-    """What awaits the board (A6): the bell's panel and the sidebar's badges.
-    The phase 7 adds its own: the stock.
-    """
+    """What awaits the board (A6): the bell's panel and the sidebar's badges."""
 
     # Every item awaiting, whatever its kind: the bell shows a dot if any.
     total: int
@@ -105,6 +113,7 @@ class Pending:
     receipts: PendingReceipts
     invoices: PendingInvoices
     advances: PendingAdvances
+    stock: PendingStock
 
 
 @dataclass(frozen=True)
@@ -195,18 +204,22 @@ def _pending(loans_by_state: dict[str, int], today: dt.date) -> Pending:
     owing = advances_to_reimburse()
     count, total = owed(owing)
     advances = PendingAdvances(count=count, total=total, items=list(owing[:PENDING_COUNT]))
+    low = low_items()
+    stock = PendingStock(count=low.count(), items=list(low[:PENDING_COUNT]))
     return Pending(
         total=counts["total"]
         + loans.overdue
         + loans.to_prepare
         + receipts.count
         + invoices.count
-        + advances.count,
+        + advances.count
+        + stock.count,
         documents=PendingDocuments(counts=counts, items=list(latest)),
         loans=loans,
         receipts=receipts,
         invoices=invoices,
         advances=advances,
+        stock=stock,
     )
 
 

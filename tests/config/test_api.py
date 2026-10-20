@@ -223,6 +223,7 @@ def test_schemas_and_choices_have_unique_names():
         "notes",
         "reservations",
         "stations",
+        "stock",
         "tasks",
         "treasury",
     } <= project_apps

@@ -44,8 +44,9 @@ def delete_event(event: Event) -> None:
     """Delete an event, with its programme and practical info.
 
     A later edition loses its link to it. Each phase that attaches records to
-    events sets its own rule: delete them along, or refuse. An event that has
-    ledger entries is refused: its accounts never go without a word.
+    events sets its own rule: delete them along, keep them without it, or
+    refuse. An event that has ledger entries is refused: its accounts never go
+    without a word. The operations of the stock stay, without their event.
     """
     # PROTECT refuses it before any deletion: the transaction stays usable.
     try:

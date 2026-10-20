@@ -2009,6 +2009,32 @@
         "title": "InvoiceExpenseIn",
         "type": "object"
       },
+      "LastStocktakeOut": {
+        "description": "The latest stocktake, which dates the stock's title.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "event": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StockEventOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "created_at",
+          "event"
+        ],
+        "title": "LastStocktakeOut",
+        "type": "object"
+      },
       "LatestNoteOut": {
         "description": "A note of the board, as the dashboard lists the latest.",
         "properties": {
@@ -3279,6 +3305,42 @@
         "title": "LoginIn",
         "type": "object"
       },
+      "LowStockItemOut": {
+        "description": "An item below its threshold, as the bell names it.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "quantity": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Quantity",
+            "type": "string"
+          },
+          "threshold": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Threshold",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "unit",
+          "quantity",
+          "threshold"
+        ],
+        "title": "LowStockItemOut",
+        "type": "object"
+      },
       "MeOut": {
         "properties": {
           "email": {
@@ -4104,6 +4166,9 @@
           "receipts": {
             "$ref": "#/components/schemas/PendingReceiptsOut"
           },
+          "stock": {
+            "$ref": "#/components/schemas/PendingStockOut"
+          },
           "total": {
             "title": "Total",
             "type": "integer"
@@ -4115,7 +4180,8 @@
           "loans",
           "receipts",
           "invoices",
-          "advances"
+          "advances",
+          "stock"
         ],
         "title": "PendingOut",
         "type": "object"
@@ -4140,6 +4206,28 @@
           "items"
         ],
         "title": "PendingReceiptsOut",
+        "type": "object"
+      },
+      "PendingStockOut": {
+        "description": "The items of the stock below their threshold (7.1).",
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LowStockItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "items"
+        ],
+        "title": "PendingStockOut",
         "type": "object"
       },
       "PracticalInfoIcon": {
@@ -4921,6 +5009,273 @@
           "assignments"
         ],
         "title": "StationOut",
+        "type": "object"
+      },
+      "StockAdjustmentIn": {
+        "description": "A click on minus or plus: the item's step, in or out.",
+        "properties": {
+          "direction": {
+            "$ref": "#/components/schemas/StockDirection"
+          }
+        },
+        "required": [
+          "direction"
+        ],
+        "title": "StockAdjustmentIn",
+        "type": "object"
+      },
+      "StockCountsOut": {
+        "description": "How many items the stock holds, in all, low, and by category: the chips.",
+        "properties": {
+          "drinks": {
+            "title": "Drinks",
+            "type": "integer"
+          },
+          "food": {
+            "title": "Food",
+            "type": "integer"
+          },
+          "lotto_raffle": {
+            "title": "Lotto Raffle",
+            "type": "integer"
+          },
+          "low": {
+            "title": "Low",
+            "type": "integer"
+          },
+          "supplies": {
+            "title": "Supplies",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "low",
+          "drinks",
+          "food",
+          "supplies",
+          "lotto_raffle"
+        ],
+        "title": "StockCountsOut",
+        "type": "object"
+      },
+      "StockDirection": {
+        "description": "Which way an operation moves the stock (« Entrée ou sortie »).",
+        "enum": [
+          "in",
+          "out"
+        ],
+        "title": "StockDirection",
+        "type": "string"
+      },
+      "StockEventOut": {
+        "description": "The event of an operation.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "StockEventOut",
+        "type": "object"
+      },
+      "StockItemCategory": {
+        "description": "The chips of the stock, in their order.",
+        "enum": [
+          "drinks",
+          "food",
+          "supplies",
+          "lotto_raffle"
+        ],
+        "title": "StockItemCategory",
+        "type": "string"
+      },
+      "StockItemIn": {
+        "description": "An item as the board writes it: whole, every key required.\n\nIts values are checked by the model, whose messages are in French.",
+        "properties": {
+          "best_before": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Best Before"
+          },
+          "category": {
+            "$ref": "#/components/schemas/StockItemCategory"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "step": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Step"
+          },
+          "threshold": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Threshold"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "category",
+          "unit",
+          "threshold",
+          "step",
+          "best_before"
+        ],
+        "title": "StockItemIn",
+        "type": "object"
+      },
+      "StockItemOut": {
+        "description": "An item, as its form writes it.",
+        "properties": {
+          "best_before": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Best Before"
+          },
+          "category": {
+            "$ref": "#/components/schemas/StockItemCategory"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "step": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Step",
+            "type": "string"
+          },
+          "threshold": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Threshold",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "category",
+          "unit",
+          "threshold",
+          "step",
+          "best_before"
+        ],
+        "title": "StockItemOut",
+        "type": "object"
+      },
+      "StockOverviewOut": {
+        "description": "The stock, item by item, and its figures: a bounded aggregate (A7).",
+        "properties": {
+          "counts": {
+            "$ref": "#/components/schemas/StockCountsOut"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/StockedItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "last_stocktake": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LastStocktakeOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "counts",
+          "last_stocktake"
+        ],
+        "title": "StockOverviewOut",
+        "type": "object"
+      },
+      "StockedItemOut": {
+        "description": "An item and where its stock stands.",
+        "properties": {
+          "item": {
+            "$ref": "#/components/schemas/StockItemOut"
+          },
+          "level": {
+            "title": "Level",
+            "type": "integer"
+          },
+          "low": {
+            "title": "Low",
+            "type": "boolean"
+          },
+          "quantity": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Quantity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "item",
+          "quantity",
+          "low",
+          "level"
+        ],
+        "title": "StockedItemOut",
         "type": "object"
       },
       "SwornStatementIn": {
@@ -10587,6 +10942,396 @@
         "summary": "Put a volunteer at a station",
         "tags": [
           "stations"
+        ]
+      }
+    },
+    "/api/board/stock": {
+      "get": {
+        "description": "Every item, by category then by name, with its quantity, whether it is\nlow and how full its bar is; the figures of the chips; the latest stocktake.",
+        "operationId": "stock_api_read_stock",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockOverviewOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Read the stock",
+        "tags": [
+          "stock"
+        ]
+      }
+    },
+    "/api/board/stock/items": {
+      "post": {
+        "operationId": "stock_api_create",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StockItemIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockItemOut"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Add a stock item",
+        "tags": [
+          "stock"
+        ]
+      }
+    },
+    "/api/board/stock/items/{item_id}": {
+      "delete": {
+        "description": "Delete an item that has never moved: the history keeps the others.",
+        "operationId": "stock_api_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Delete a stock item",
+        "tags": [
+          "stock"
+        ]
+      },
+      "put": {
+        "description": "Rewrite an item whole: its movements stay as they are.",
+        "operationId": "stock_api_correct",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StockItemIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockItemOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Correct a stock item",
+        "tags": [
+          "stock"
+        ]
+      }
+    },
+    "/api/board/stock/items/{item_id}/adjustments": {
+      "post": {
+        "description": "A click on minus or plus: the item's step, in or out, recorded with the member.\nOut, what is left when less than a step is.",
+        "operationId": "stock_api_adjust_item",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StockAdjustmentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockedItemOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Adjust a stock item by its step",
+        "tags": [
+          "stock"
         ]
       }
     },

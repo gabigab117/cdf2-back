@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "notes",
     "reservations",
     "stations",
+    "stock",
     "tasks",
     "treasury",
 ]

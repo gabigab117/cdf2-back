@@ -8,6 +8,7 @@ from accounts.schemas import BoardMemberOut
 from documents.schemas import DocumentCountsOut, DocumentItemOut
 from equipment.schemas import LoanBriefOut, LoanItemOut
 from events.schemas import EventItemOut
+from stock.schemas import LowStockItemOut
 from tasks.schemas import TaskOut
 from treasury.schemas import LedgerEntryOut, UnpaidInvoiceOut
 
@@ -95,6 +96,14 @@ class PendingAdvancesOut(Schema):
     items: list[LedgerEntryOut]
 
 
+class PendingStockOut(Schema):
+    """The items of the stock below their threshold (7.1)."""
+
+    count: int
+    # In the stock's order, at most ten.
+    items: list[LowStockItemOut]
+
+
 class PendingOut(Schema):
     """What awaits the board (A6): the bell's panel, the sidebar's badges."""
 
@@ -105,6 +114,7 @@ class PendingOut(Schema):
     receipts: PendingReceiptsOut
     invoices: PendingInvoicesOut
     advances: PendingAdvancesOut
+    stock: PendingStockOut
 
 
 class LoanedEquipmentOut(Schema):

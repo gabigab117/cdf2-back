@@ -14,6 +14,7 @@ from tests.events.factories import EventFactory
 from tests.notes.factories import NoteFactory, ReplyFactory
 from tests.reservations.factories import TicketTypeFactory, reserve
 from tests.stations.factories import AssignmentFactory, StationFactory
+from tests.stock.factories import StockItemFactory, put_in_stock
 from tests.tasks.factories import TaskFactory
 from tests.treasury.factories import AdvanceFactory
 
@@ -168,6 +169,7 @@ def test_an_empty_board_has_no_event_to_come(board_client):
             "receipts": {"count": 0, "items": []},
             "invoices": {"count": 0, "items": []},
             "advances": {"count": 0, "total": "0.00", "items": []},
+            "stock": {"count": 0, "items": []},
         },
         "recent_documents": [],
         "loans": {"out_count": 0, "to_prepare_count": 0, "next_return": None},
@@ -206,17 +208,18 @@ def test_each_event_to_come_counts_its_tasks_and_notes(board_client):
 def test_the_counts_take_a_fixed_number_of_queries(board_client, django_assert_max_num_queries):
     """
     Given five events to come, each with tasks and notes, loans out and to
-    prepare, each with its lines, advances of events missing their receipt, and
-    invoices to pay
+    prepare, each with its lines, advances of events missing their receipt,
+    invoices to pay, and items of the stock below their threshold
     When a member opens the dashboard
     Then the rows, their counts, the count of events, the latest notes, the
-    loans and the treasury take a fixed number of queries
+    loans, the treasury and the stock take a fixed number of queries
     """
     for event in EventFactory.create_batch(5):
         TaskFactory.create_batch(2, event=event)
         NoteFactory.create_batch(2, event=event)
         AdvanceFactory(event=event, created_by=BoardMemberFactory())
         DocumentFactory(validated=True)
+        put_in_stock(StockItemFactory(), 1)
     for days in (-1, 2, 4):
         lent = LoanFactory(start_date=in_days(days).date(), end_date=in_days(days + 1).date())
         LoanLineFactory.create_batch(2, loan=lent)
@@ -227,8 +230,9 @@ def test_the_counts_take_a_fixed_number_of_queries(board_client, django_assert_m
     # the loans: their counts, the next return, the fortnight's movements with
     # their lines (2), and those to list in the bell; then the treasury: the
     # receipts missing, the invoices to pay and the advances owed (count and
+    # first ones); then the items of the stock below their threshold (count and
     # first ones).
-    with django_assert_max_num_queries(22):
+    with django_assert_max_num_queries(24):
         board_client.get(OVERVIEW)
 
 
