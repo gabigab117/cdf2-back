@@ -145,7 +145,7 @@ def test_loan_over_availability_rejected(api_client):
   - Un fichier n'est écrit qu'une fois l'objet validé (`full_clean`), et il est effacé si l'enregistrement échoue : aucun fichier orphelin.
   - Les tests écrivent leurs fichiers dans un dossier temporaire (fixture automatique `private_files`), jamais dans le dépôt.
 - **E-mails** (`documents/services/notifications.py`).
-  - Le réglage `MAILERS` de Django 6.1, jamais un réglage `EMAIL_*` : la console en dev, le SMTP du compte de l'association sur le serveur (SSL implicite, délai de 10 s), une boîte en mémoire dans les tests (`mailoutbox`).
+  - Le réglage `MAILERS` de Django 6.1, jamais un réglage `EMAIL_*` du backend (hôte, port, SSL…) : la console en dev, le SMTP du compte de l'association sur le serveur (SSL implicite, délai de 10 s), une boîte en mémoire dans les tests (`mailoutbox`).
   - Un e-mail part après la transaction qui le motive (`transaction.on_commit`) : une écriture annulée n'envoie rien.
   - Un message par destinataire, qui ne voit pas les autres, et tous sur une seule connexion (`mail.mailers.default.send_messages`).
   - Un échec d'envoi est écrit au journal, et n'annule pas l'écriture faite : une `OSError` (dont `SMTPException`, une connexion refusée ou un délai dépassé), ou la `ValueError` que lève le backend SMTP pour une adresse qu'il ne peut pas employer, comme un expéditeur laissé vide. Ces deux exceptions forment `MAIL_FAILURES` (`core/services/mail.py`), que chaque envoi attrape.

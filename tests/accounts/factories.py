@@ -1,5 +1,7 @@
 import factory
 from django.contrib.auth.models import Group
+from django.test import Client
+from ninja_jwt.tokens import AccessToken
 
 from accounts.models import BoardPosition, User
 from accounts.services.roles import BOARD_GROUP
@@ -32,3 +34,8 @@ class BoardMemberFactory(UserFactory):
     def board_group(self, create, extracted, **kwargs):
         if create:
             self.groups.add(Group.objects.get(name=BOARD_GROUP))
+
+
+def client_of(account):
+    """A client signed in as this account, with a valid access token."""
+    return Client(headers={"Authorization": f"Bearer {AccessToken.for_user(account)}"})

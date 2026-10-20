@@ -14,13 +14,12 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db import connection
 from django.test import Client
 from django.test.utils import CaptureQueriesContext
-from ninja_jwt.tokens import AccessToken
 
 from accounts.models import AccountState, BoardPosition, User
 from accounts.schemas import PasswordIn
 from accounts.services.invitations import INVALID_LINK, set_password
 from accounts.services.roles import is_board_member
-from tests.accounts.factories import PASSWORD, BoardMemberFactory, UserFactory
+from tests.accounts.factories import PASSWORD, BoardMemberFactory, UserFactory, client_of
 
 pytestmark = pytest.mark.django_db
 
@@ -34,10 +33,6 @@ NEW_PASSWORD = "Une-fanfare-sous-les-tilleuls"
 clear_positions_migration = importlib.import_module(
     "accounts.migrations.0005_clear_unknown_positions"
 )
-
-
-def client_of(account):
-    return Client(headers={"Authorization": f"Bearer {AccessToken.for_user(account)}"})
 
 
 @pytest.fixture
@@ -261,7 +256,7 @@ def test_an_email_that_does_not_go_leaves_the_account_and_is_told(
     Given a mail server that refuses to send
     When the superuser invites Julie
     Then her account is made, without a link sent, the answer says the email
-    did not go, and the journal writes why
+    did not go, and the log writes why
     """
 
     def refused(self, messages):

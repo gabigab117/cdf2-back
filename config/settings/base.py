@@ -11,20 +11,13 @@ import environ
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-env = environ.Env(
-    DEBUG=(bool, False),
-    ALLOWED_HOSTS=(list, []),
-    CSRF_TRUSTED_ORIGINS=(list, []),
-    ADMIN_URL=(str, "admin/"),
-    STATIC_ROOT=(str, str(BASE_DIR / "staticfiles")),
-    DEMO_DATA_ENABLED=(bool, False),
-)
+env = environ.Env()
 environ.Env.read_env(BASE_DIR / ".env")
 
 SECRET_KEY = env("SECRET_KEY")
-DEBUG = env("DEBUG")
-ALLOWED_HOSTS = env("ALLOWED_HOSTS")
-CSRF_TRUSTED_ORIGINS = env("CSRF_TRUSTED_ORIGINS")
+DEBUG = env.bool("DEBUG", default=False)
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[])
+CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -114,7 +107,7 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
-STATIC_ROOT = Path(env("STATIC_ROOT"))
+STATIC_ROOT = Path(env("STATIC_ROOT", default=str(BASE_DIR / "staticfiles")))
 
 # The private files (A8): outside the web root, never served by a URL of their
 # own, only by the API once it has checked who asks. The repository's private/
@@ -140,7 +133,8 @@ PASSWORD_RESET_TIMEOUT = 7 * 24 * 60 * 60
 # The emails of the application (D7, D8). The console shows them in
 # development, and the tests replace every mailer with an outbox in memory;
 # the server sends them through the association's SMTP (prod.py). No EMAIL_*
-# setting: they are deprecated by MAILERS, which refuses to mix with them.
+# setting of the backend (host, port, SSL…): MAILERS deprecates them, and
+# refuses to mix with them.
 MAILERS = {
     "default": {"BACKEND": "django.core.mail.backends.console.EmailBackend"},
 }
@@ -149,32 +143,32 @@ DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="Comité des fêtes <comi
 # The subject of a server error emailed to the administrators (prod.py).
 EMAIL_SUBJECT_PREFIX = "[Comité des fêtes] "
 
-# The application's journal (A9: 7 days on the server, by systemd): what the
+# The application's log (A9: 7 days on the server, by systemd): what the
 # project's loggers report goes to the error stream. Django's own loggers are
 # left as they are: theirs is the handler that emails server errors to ADMINS.
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
-    "handlers": {"journal": {"class": "logging.StreamHandler"}},
+    "handlers": {"log": {"class": "logging.StreamHandler"}},
     "loggers": {
-        "accounts": {"handlers": ["journal"], "level": "WARNING"},
-        "documents": {"handlers": ["journal"], "level": "WARNING"},
+        "accounts": {"handlers": ["log"], "level": "WARNING"},
+        "documents": {"handlers": ["log"], "level": "WARNING"},
     },
 }
 
 # The admin is moved off its well-known path by the environment.
-ADMIN_URL = env("ADMIN_URL")
+ADMIN_URL = env("ADMIN_URL", default="admin/")
 
 # The OpenAPI schema and the interactive docs are only served where the front
 # end needs them (development, tests). An explicit setting rather than DEBUG,
 # which the test suite always forces to False.
 SERVE_API_SCHEMA = False
 
-# `manage.py seed_demo` writes the fictitious events of the mockup. It is
+# `manage.py seed_demo` writes the mockup's demo data. It is
 # allowed by the environment alone, development and preproduction, and refused
 # elsewhere. No settings file turns it on: on a server, manage.py run without
 # DJANGO_SETTINGS_MODULE loads the development settings.
-DEMO_DATA_ENABLED = env("DEMO_DATA_ENABLED")
+DEMO_DATA_ENABLED = env.bool("DEMO_DATA_ENABLED", default=False)
 
 # Every collection of resources is paginated by page number (see CLAUDE.md).
 NINJA_PAGINATION_CLASS = "ninja.pagination.PageNumberPagination"

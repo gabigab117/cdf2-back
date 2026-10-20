@@ -6,7 +6,7 @@ from ninja_jwt.token_blacklist.models import BlacklistedToken
 from ninja_jwt.tokens import AccessToken, RefreshToken
 
 from accounts.api import REFRESH_COOKIE, REFRESH_COOKIE_PATH
-from tests.accounts.factories import PASSWORD, BoardMemberFactory, UserFactory
+from tests.accounts.factories import PASSWORD, BoardMemberFactory, UserFactory, client_of
 
 pytestmark = pytest.mark.django_db
 
@@ -454,15 +454,13 @@ def test_the_board_members_are_reserved_to_signed_in_members(client):
     assert response.json() == UNAUTHENTICATED
 
 
-def test_the_board_members_are_refused_to_accounts_outside_the_board(client):
+def test_the_board_members_are_refused_to_accounts_outside_the_board():
     """
     Given an account outside the board, signed in
     When it asks for the board members
     Then it is refused with a 403
     """
-    token = AccessToken.for_user(UserFactory())
-
-    response = client.get(MEMBERS, headers={"Authorization": f"Bearer {token}"})
+    response = client_of(UserFactory()).get(MEMBERS)
 
     assert response.status_code == 403
     assert response.json() == FORBIDDEN

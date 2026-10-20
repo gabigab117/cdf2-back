@@ -40,7 +40,7 @@ SERVER_EMAIL = DEFAULT_FROM_EMAIL
 
 # The emails go through the SMTP of the association's account (D7): implicit
 # SSL, on port 465 by default. The timeout is short: an email is sent during
-# the request of the deposit, which must not wait long on it.
+# the request that motivates it, which must not wait long on it.
 MAILERS = {
     "default": {
         "BACKEND": "django.core.mail.backends.smtp.EmailBackend",

@@ -25,7 +25,7 @@ class Command(BaseCommand):
         loans = purge_loans(today)
         reservations = purge_reservations(today)
         volunteers = purge_volunteers(today)
-        # Counts only: the journal keeps this output for a week.
+        # Counts only: the log keeps this output for a week.
         self.stdout.write(
             self.style.SUCCESS(
                 f"Personal data erased. Phones: {loans.phones}. Borrowers' names: "

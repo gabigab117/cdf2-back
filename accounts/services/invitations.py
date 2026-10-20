@@ -9,8 +9,10 @@ for PASSWORD_RESET_TIMEOUT.
 
 import logging
 from dataclasses import dataclass
+from datetime import timedelta
 
 from django.conf import settings
+from django.contrib.auth.forms import SetPasswordForm
 from django.contrib.auth.hashers import UNUSABLE_PASSWORD_PREFIX
 from django.contrib.auth.models import Group
 from django.contrib.auth.password_validation import validate_password
@@ -41,8 +43,6 @@ INVALID_LINK = (
     "Ce lien n’est plus valable. Demandez-en un nouveau à la personne qui gère "
     "les comptes du bureau."
 )
-
-DAY = 24 * 60 * 60
 
 
 @dataclass(frozen=True)
@@ -79,7 +79,7 @@ def invite(data: AccountIn) -> Invitation:
     """
     with transaction.atomic():
         account = User(
-            email=User.objects.normalize_email(data.email),
+            email=data.email,
             first_name=data.first_name,
             last_name=data.last_name,
             position=data.position or "",
@@ -132,7 +132,7 @@ def set_password(data: PasswordIn) -> User:
     except ValidationError as error:
         errors["password"] = error.messages
     if data.confirmation != data.password:
-        errors["confirmation"] = ["Les deux mots de passe ne correspondent pas."]
+        errors["confirmation"] = [str(SetPasswordForm.error_messages["password_mismatch"])]
     if errors:
         raise ValidationError(errors)
     account.set_password(data.password)
@@ -181,7 +181,7 @@ def _subject(account: User) -> str:
 def _body(account: User) -> str:
     uid = urlsafe_base64_encode(force_bytes(account.pk))
     token = default_token_generator.make_token(account)
-    days = counted(settings.PASSWORD_RESET_TIMEOUT // DAY, "jour", "jours")
+    days = counted(timedelta(seconds=settings.PASSWORD_RESET_TIMEOUT).days, "jour", "jours")
     greeting = f"Bonjour {account.first_name}," if account.first_name else "Bonjour,"
     if account.has_usable_password():
         purpose = (
