@@ -27,9 +27,14 @@ def member_notes(member: User) -> QuerySet[Note]:
     )
 
 
-def event_notes(member: User, event_id: int) -> QuerySet[Note]:
-    """The notes of an event, replies aside: the pinned ones first, then the latest."""
-    return member_notes(member).filter(event_id=event_id).order_by("-pinned", "-created_at", "-pk")
+def event_notes(member: User, event_id: int | None) -> QuerySet[Note]:
+    """The notes of an event, or the general notes for none, replies aside: the
+    pinned ones first, then the latest.
+    """
+    # Compared with None, the event matches the notes that have none (IS NULL):
+    # the replies too, which stay under their note.
+    notes = member_notes(member).filter(event_id=event_id, parent__isnull=True)
+    return notes.order_by("-pinned", "-created_at", "-pk")
 
 
 def notes_written_by(member: User) -> QuerySet[Note]:

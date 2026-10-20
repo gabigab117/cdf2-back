@@ -30,6 +30,21 @@ def list_notes(request, event: int):
     return event_notes(request.auth, event)
 
 
+# Declared before the operations on /notes/{note_id}: Ninja tries the paths in
+# their order, and the id would take "general" for itself, then answer 405.
+@router.get(
+    "/notes/general",
+    response={200: list[NoteOut], 401: ErrorOut, 403: ErrorOut, 422: ValidationErrorOut},
+    summary="List the general notes",
+)
+@paginate
+def list_general_notes(request):
+    """The notes without an event (A11), by page, in the same order as an
+    event's, each with its replies.
+    """
+    return event_notes(request.auth, None)
+
+
 @router.post(
     "/notes",
     response={

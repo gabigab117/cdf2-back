@@ -21,6 +21,7 @@ NOTES = "/api/board/notes"
 # refusal comes before the note is looked up.
 OPERATIONS = [
     ("get", f"{NOTES}?event=1"),
+    ("get", f"{NOTES}/general"),
     ("post", NOTES),
     ("put", f"{NOTES}/1"),
     ("delete", f"{NOTES}/1"),
@@ -275,6 +276,70 @@ def test_the_notes_are_listed_for_an_event_only(board_client):
     assert response.json()["detail"] == [
         {"type": "missing", "loc": ["query", "event"], "msg": "Ce champ est obligatoire."}
     ]
+
+
+def test_the_general_notes_come_pinned_first_then_the_latest(board_client):
+    """
+    Given three general notes, the oldest one pinned and the latest answered,
+    and a note of an event
+    When the board lists the general notes
+    Then the pinned note comes first, then the latest, the reply under its note
+    only, the event's note left out
+    """
+    now = timezone.now()
+    notes = {}
+    for text, days_ago, pinned in [
+        ("Assemblée générale en janvier", 30, True),
+        ("Liste de courses : jus 6", 8, False),
+        ("Clés du local à récupérer", 2, False),
+    ]:
+        notes[text] = NoteFactory(event=None, text=text, pinned=pinned)
+        written_at(notes[text], now - dt.timedelta(days_ago))
+    ReplyFactory(parent=notes["Clés du local à récupérer"], text="Je m’en occupe.")
+    NoteFactory(text="Parcours validé")
+
+    body = board_client.get(f"{NOTES}/general").json()
+
+    assert body["count"] == 3
+    assert [
+        (note["text"], [reply["text"] for reply in note["replies"]]) for note in body["items"]
+    ] == [
+        ("Assemblée générale en janvier", []),
+        ("Clés du local à récupérer", ["Je m’en occupe."]),
+        ("Liste de courses : jus 6", []),
+    ]
+
+
+def test_the_general_notes_are_not_taken_for_a_note_id(board_client):
+    """
+    Given the path of the general notes, which reads like the path of a note
+    When a member lists them
+    Then the list answers: the path of a note, which only writes, does not
+    take "general" for an id and refuse the reading
+    """
+    assert board_client.get(f"{NOTES}/general").status_code == 200
+
+
+def test_listing_the_general_notes_reads_their_authors_and_replies_at_once(
+    board_client, django_assert_max_num_queries
+):
+    """
+    Given five general notes, each with an attachment and answered twice
+    When the board lists the general notes
+    Then the notes, their authors, attachments and replies take a fixed number
+    of queries
+    """
+    for note in NoteFactory.create_batch(5, event=None):
+        note.document = DocumentFactory()
+        note.save()
+        ReplyFactory.create_batch(2, parent=note)
+
+    # Authentication (2), count and page of notes with their authors and
+    # attachments, replies with their authors.
+    with django_assert_max_num_queries(5):
+        response = board_client.get(f"{NOTES}/general")
+
+    assert len(response.json()["items"]) == 5
 
 
 # Writing
