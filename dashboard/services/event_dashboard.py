@@ -17,12 +17,7 @@ from events.models import Event
 from reservations.services.reservations import reserved_seats
 from stations.services.stations import station_totals
 from tasks.models import Task
-from tasks.services.tasks import next_tasks, recently_done_tasks, task_counts
-
-# The tasks block of the event's page: the next tasks, then the last ones done,
-# struck through, as in the mockup.
-NEXT_TASKS_COUNT = 3
-RECENTLY_DONE_TASKS_COUNT = 2
+from tasks.services.tasks import tasks_block
 
 # The « Documents liés » block beside the notes: the latest, then a link to the
 # documents' tab.
@@ -31,7 +26,9 @@ RELATED_DOCUMENTS_COUNT = 5
 
 @dataclass(frozen=True)
 class EventDashboard:
-    """An event's figures. Each card of phase 3 adds its own."""
+    """An event's figures: the counts of its tabs, its tasks block, its
+    reservations, its documents and the equipment it keeps.
+    """
 
     # Its notes, replies aside: a reply has no event of its own.
     notes_count: int
@@ -48,7 +45,7 @@ class EventDashboard:
     documents_count: int
     # Its latest documents, in the order of the list.
     documents: list[Document]
-    # The lines of the equipment it keeps, and that reservation, if any.
+    # The lines of the equipment it keeps, and its committee loan, if any.
     equipment_count: int
     committee_loan: Loan | None
 
@@ -57,21 +54,21 @@ def event_dashboard(event: Event) -> EventDashboard:
     """The counts of an event's tabs, the tasks its block shows, and the
     equipment it keeps.
     """
-    tasks_done, tasks_total = task_counts(event.pk)
+    tasks = tasks_block(event.pk)
     assigned_count, required_count = station_totals(event)
-    reservation = event_committee_loan(event, timezone.localdate())
+    committee_loan = event_committee_loan(event, timezone.localdate())
     return EventDashboard(
         notes_count=event.notes.count(),
-        tasks_done=tasks_done,
-        tasks_total=tasks_total,
-        next_tasks=next_tasks(event.pk, NEXT_TASKS_COUNT),
-        recently_done_tasks=recently_done_tasks(event.pk, RECENTLY_DONE_TASKS_COUNT),
+        tasks_done=tasks.tasks_done,
+        tasks_total=tasks.tasks_total,
+        next_tasks=tasks.next_tasks,
+        recently_done_tasks=tasks.recently_done_tasks,
         assigned_count=assigned_count,
         required_count=required_count,
         reserved_seats=reserved_seats(event),
         capacity=event.capacity,
         documents_count=event.documents.count(),
         documents=list(listed_documents().filter(event=event)[:RELATED_DOCUMENTS_COUNT]),
-        equipment_count=len(reservation.lines.all()) if reservation else 0,
-        committee_loan=reservation,
+        equipment_count=len(committee_loan.lines.all()) if committee_loan else 0,
+        committee_loan=committee_loan,
     )

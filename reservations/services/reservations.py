@@ -12,7 +12,7 @@ from django.db import transaction
 from django.db.models import Count, Max, QuerySet, RestrictedError, Sum
 
 from core.errors import line_errors
-from core.text import counted
+from core.text import count_text
 from events.models import Event
 from reservations.models import Reservation, ReservationLine, TicketType
 from reservations.schemas import ReservationIn, TicketTypeIn
@@ -171,6 +171,6 @@ def _check_capacity(event: Event, requested: int, current: int) -> None:
     if remaining <= 0:
         raise ValidationError(f"Complet : les {event.capacity} places sont déjà réservées.")
     raise ValidationError(
-        f"Capacité dépassée : il ne reste que {counted(remaining, 'place', 'places')} "
+        f"Capacité dépassée : il ne reste que {count_text(remaining, 'place', 'places')} "
         f"sur {event.capacity}."
     )

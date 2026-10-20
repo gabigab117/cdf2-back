@@ -29,7 +29,7 @@ from accounts.models import AccountState, User
 from accounts.schemas import AccountIn, PasswordIn, PasswordLinkIn
 from accounts.services.roles import BOARD_GROUP
 from core.services.mail import MAIL_FAILURES
-from core.text import counted
+from core.text import count_text
 
 logger = logging.getLogger(__name__)
 
@@ -181,7 +181,7 @@ def _subject(account: User) -> str:
 def _body(account: User) -> str:
     uid = urlsafe_base64_encode(force_bytes(account.pk))
     token = default_token_generator.make_token(account)
-    days = counted(timedelta(seconds=settings.PASSWORD_RESET_TIMEOUT).days, "jour", "jours")
+    days = count_text(timedelta(seconds=settings.PASSWORD_RESET_TIMEOUT).days, "jour", "jours")
     greeting = f"Bonjour {account.first_name}," if account.first_name else "Bonjour,"
     if account.has_usable_password():
         purpose = (

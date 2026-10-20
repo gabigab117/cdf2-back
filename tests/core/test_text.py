@@ -1,6 +1,6 @@
 import pytest
 
-from core.text import counted
+from core.text import count_text
 
 
 @pytest.mark.parametrize(("count", "text"), [(0, "0 libre"), (1, "1 libre"), (2, "2 libres")])
@@ -10,4 +10,4 @@ def test_a_count_takes_the_singular_below_two(count, text):
     When their count is written
     Then French takes the singular for none and one, the plural from two
     """
-    assert counted(count, "libre", "libres") == text
+    assert count_text(count, "libre", "libres") == text

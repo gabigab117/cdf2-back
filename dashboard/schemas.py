@@ -57,7 +57,7 @@ class PendingDocumentsOut(Schema):
     """The documents awaiting review: how many, by category, and the latest."""
 
     counts: DocumentCountsOut
-    # The latest deposited, at most ten: the count leads to them all.
+    # The latest uploaded, at most ten: the count leads to them all.
     items: list[DocumentItemOut]
 
 
@@ -176,6 +176,6 @@ class EventDashboardOut(Schema):
     documents_count: int
     # Its latest documents, in the order of the list.
     documents: list[DocumentItemOut]
-    # The lines of the equipment it keeps, and that reservation: none if it keeps none.
+    # The lines of the equipment it keeps, and its committee loan: none if it keeps none.
     equipment_count: int
     committee_loan: LoanItemOut | None

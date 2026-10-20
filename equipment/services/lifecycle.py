@@ -13,7 +13,7 @@ from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from core.text import counted
+from core.text import count_text
 from equipment.models import Equipment, Loan, LoanBorrowerType, LoanLine, LoanStatus
 from equipment.schemas import LoanReturnIn
 from equipment.services.availability import Shortage, shortages
@@ -156,7 +156,7 @@ def _refuse_beyond(loan: Loan, lines: list[LoanLine], locked: dict[int, Equipmen
 
 def _mention(loan: Loan, line: LoanLine) -> str:
     """« 1 abîmé au retour du prêt P-2026-018. », in the repair note (A17)."""
-    damaged = counted(line.damaged_quantity, "abîmé", "abîmés")
+    damaged = count_text(line.damaged_quantity, "abîmé", "abîmés")
     return f"{damaged} au retour du prêt {loan.number}."
 
 

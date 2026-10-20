@@ -1,7 +1,5 @@
 """The loans on the dashboard, in the bell and on an event's page (card 5.8)."""
 
-import datetime as dt
-
 import pytest
 from django.utils import timezone
 
@@ -15,14 +13,11 @@ from tests.equipment.factories import (
     lend,
 )
 from tests.events.factories import EventFactory
+from tests.helpers import ahead
 
 pytestmark = pytest.mark.django_db
 
 OVERVIEW = "/api/board/overview"
-
-
-def ahead(days):
-    return timezone.localdate() + dt.timedelta(days=days)
 
 
 def out(**fields):

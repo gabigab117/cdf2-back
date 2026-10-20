@@ -1,16 +1,14 @@
 import datetime as dt
 
 import pytest
-from django.core.serializers.json import DjangoJSONEncoder
-from django.test import Client
 from django.utils import timezone
-from ninja_jwt.tokens import AccessToken
 
 from documents.models import Document, DocumentCategory, DocumentStatus
-from tests.accounts.factories import BoardMemberFactory, UserFactory
+from tests.accounts.factories import BoardMemberFactory, UserFactory, client_of
 from tests.documents.factories import DocumentFactory
 from tests.equipment.factories import CommitteeLoanFactory, LoanFactory, LoanLineFactory
 from tests.events.factories import EventFactory
+from tests.helpers import iso
 from tests.notes.factories import NoteFactory, ReplyFactory
 from tests.reservations.factories import TicketTypeFactory, reserve
 from tests.stations.factories import AssignmentFactory, StationFactory
@@ -27,13 +25,8 @@ def in_days(days):
     return timezone.now() + dt.timedelta(days=days)
 
 
-def iso(moment):
-    """A time as the API writes it: to the millisecond, as Django's JSON does."""
-    return DjangoJSONEncoder().default(moment)
-
-
-def deposited(document, moment):
-    """Date a document's deposit, its creation time being set by the database."""
+def uploaded_at(document, moment):
+    """Date a document's upload, its creation time being set by the database."""
     Document.objects.filter(pk=document.pk).update(created_at=moment)
 
 
@@ -59,7 +52,7 @@ def test_the_overview_is_refused_to_accounts_outside_the_board():
     When it asks for the board's overview
     Then it is refused with a 403
     """
-    client = Client(headers={"Authorization": f"Bearer {AccessToken.for_user(UserFactory())}"})
+    client = client_of(UserFactory())
 
     assert client.get(OVERVIEW).status_code == 403
 
@@ -241,10 +234,10 @@ def test_the_counts_take_a_fixed_number_of_queries(board_client, django_assert_m
 
 def test_the_dashboard_tells_the_documents_to_review(board_client):
     """
-    Given two invoices and minutes to review, deposited in turn, the latest
-    deposited being the oldest paper, and a validated order
+    Given two invoices and minutes to review, uploaded in turn, the latest
+    uploaded being the oldest paper, and a validated order
     When a member opens the dashboard
-    Then three documents await, counted by category, the latest deposited first,
+    Then three documents await, counted by category, the latest uploaded first,
     whatever the date of the paper
     """
     first = DocumentFactory(document_date=dt.date(2026, 9, 28))
@@ -256,7 +249,7 @@ def test_the_dashboard_tells_the_documents_to_review(board_client):
         validated_at=timezone.now(),
     )
     for document, minutes_ago in ((first, 30), (minutes, 20), (last, 10)):
-        deposited(document, timezone.now() - dt.timedelta(minutes=minutes_ago))
+        uploaded_at(document, timezone.now() - dt.timedelta(minutes=minutes_ago))
 
     pending = board_client.get(OVERVIEW).json()["pending"]
 
@@ -394,7 +387,7 @@ def test_an_events_dashboard_is_refused_to_accounts_outside_the_board():
     When it asks for an event's dashboard
     Then it is refused with a 403
     """
-    client = Client(headers={"Authorization": f"Bearer {AccessToken.for_user(UserFactory())}"})
+    client = client_of(UserFactory())
 
     assert client.get(event_dashboard_url(1)).status_code == 403
 

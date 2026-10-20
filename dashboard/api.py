@@ -1,7 +1,7 @@
 from django.shortcuts import get_object_or_404
 from ninja import Router
 
-from core.schemas import ErrorOut, ValidationErrorOut
+from core.schemas import REFUSALS, ErrorOut
 from dashboard.schemas import BoardOverviewOut, EventDashboardOut
 from dashboard.services.event_dashboard import event_dashboard
 from dashboard.services.overview import board_overview
@@ -22,13 +22,7 @@ def overview(request):
 
 @router.get(
     "/events/{event_id}/dashboard",
-    response={
-        200: EventDashboardOut,
-        401: ErrorOut,
-        403: ErrorOut,
-        404: ErrorOut,
-        422: ValidationErrorOut,
-    },
+    response={200: EventDashboardOut, **REFUSALS},
     summary="Dashboard of an event",
 )
 def for_event(request, event_id: int):

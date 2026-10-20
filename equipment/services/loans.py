@@ -18,7 +18,7 @@ from django.utils import timezone
 
 from accounts.models import User
 from core.errors import line_errors
-from core.text import counted
+from core.text import count_text
 from equipment.models import (
     Equipment,
     Loan,
@@ -232,8 +232,8 @@ def lock(ids: set[int]) -> dict[int, Equipment]:
 
 def _beyond(equipment: Equipment, asked: int, free: int) -> str:
     """« Barnums 3 × 3 m : 2 demandés, 1 libre sur la période. »"""
-    demanded = counted(asked, "demandé", "demandés")
-    return f"{equipment.name} : {demanded}, {counted(free, 'libre', 'libres')} sur la période."
+    demanded = count_text(asked, "demandé", "demandés")
+    return f"{equipment.name} : {demanded}, {count_text(free, 'libre', 'libres')} sur la période."
 
 
 def _next_number() -> str:

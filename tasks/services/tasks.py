@@ -5,6 +5,8 @@ Open tasks come first, the one due the soonest first, those without a due date
 last; then the tasks done, in the order they were done.
 """
 
+from dataclasses import dataclass
+
 from django.db.models import Count, F, Q, QuerySet
 from django.utils import timezone
 
@@ -41,6 +43,34 @@ def recently_done_tasks(event_id: int | None, count: int) -> list[Task]:
     """The tasks of an event, or general tasks, done last, in the order they were done."""
     done = event_tasks(event_id).filter(done_at__isnull=False).order_by("-done_at", "-pk")
     return list(reversed(done[:count]))
+
+
+# The tasks block, on an event's page and for the general tasks of the
+# dashboard: the next tasks, then the last ones done, struck through, as in the
+# mockup.
+NEXT_TASKS_COUNT = 3
+RECENTLY_DONE_TASKS_COUNT = 2
+
+
+@dataclass(frozen=True)
+class TasksBlock:
+    """The tasks of an event, or the general tasks, as their block shows them."""
+
+    tasks_done: int
+    tasks_total: int
+    next_tasks: list[Task]
+    recently_done_tasks: list[Task]
+
+
+def tasks_block(event_id: int | None) -> TasksBlock:
+    """The tasks block of an event, or of the general tasks without one."""
+    tasks_done, tasks_total = task_counts(event_id)
+    return TasksBlock(
+        tasks_done=tasks_done,
+        tasks_total=tasks_total,
+        next_tasks=next_tasks(event_id, NEXT_TASKS_COUNT),
+        recently_done_tasks=recently_done_tasks(event_id, RECENTLY_DONE_TASKS_COUNT),
+    )
 
 
 def create_task(data: TaskIn, created_by: User) -> Task:

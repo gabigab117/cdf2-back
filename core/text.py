@@ -9,7 +9,7 @@ COMMITTEE = "Comité des fêtes d’Ons-en-Bray"
 ERASED_NAME = "Nom effacé"
 
 
-def counted(count: int, one: str, many: str) -> str:
+def count_text(count: int, one: str, many: str) -> str:
     """« 0 libre », « 1 libre », « 2 libres »: French takes the singular below two.
 
     Django's ngettext follows the plural rule of its translation catalog. The

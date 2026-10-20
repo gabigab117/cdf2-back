@@ -9,7 +9,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 from core.errors import line_errors
-from core.text import counted
+from core.text import count_text
 from events.models import Event, PracticalInfo, ProgrammeItem
 from events.schemas import EventIn
 
@@ -54,9 +54,10 @@ def delete_event(event: Event) -> None:
         event.delete()
     except ProtectedError as error:
         entries = len(error.protected_objects)
+        lines = count_text(entries, "ligne de trésorerie", "lignes de trésorerie")
         them = "la" if entries == 1 else "les"
         raise ValidationError(
-            f"Cet événement a {counted(entries, 'ligne de trésorerie', 'lignes de trésorerie')} :"
+            f"Cet événement a {lines} :"
             f" rattachez-{them} à un autre événement ou au fonctionnement du comité"
             " avant de le supprimer."
         ) from error

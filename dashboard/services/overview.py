@@ -21,8 +21,7 @@ from events.services.periods import events_in_period
 from notes.models import Note
 from stock.models import StockItem
 from stock.services.items import low_items
-from tasks.models import Task
-from tasks.services.tasks import next_tasks, recently_done_tasks, task_counts
+from tasks.services.tasks import TasksBlock, tasks_block
 from treasury.models import LedgerEntry
 from treasury.services.entries import missing_receipts
 from treasury.services.invoices import unpaid_invoices
@@ -35,10 +34,6 @@ UPCOMING_EVENTS_COUNT = 5
 # How many notes the « Notes du bureau » block shows, every event together.
 LATEST_NOTES_COUNT = 3
 
-# The « Tâches générales » block, like the tasks block of an event's page: the
-# next tasks, then the last ones done, struck through.
-NEXT_GENERAL_TASKS_COUNT = 3
-RECENTLY_DONE_GENERAL_TASKS_COUNT = 2
 
 # The « Documents récents » block: the first of the list.
 RECENT_DOCUMENTS_COUNT = 4
@@ -128,23 +123,13 @@ class LoanedEquipment:
 
 
 @dataclass(frozen=True)
-class GeneralTasks:
-    """The tasks without an event (D10), as their block shows them."""
-
-    tasks_done: int
-    tasks_total: int
-    next_tasks: list[Task]
-    recently_done_tasks: list[Task]
-
-
-@dataclass(frozen=True)
 class BoardOverview:
     """The dashboard's figures. Each phase adds its own."""
 
     upcoming_events: list[Event]
     upcoming_events_count: int
     latest_notes: list[Note]
-    general_tasks: GeneralTasks
+    general_tasks: TasksBlock
     pending: Pending
     recent_documents: list[Document]
     loans: LoanedEquipment
@@ -176,7 +161,7 @@ def board_overview() -> BoardOverview:
             .select_related("author", "event")
             .order_by("-created_at", "-pk")[:LATEST_NOTES_COUNT]
         ),
-        general_tasks=_general_tasks(),
+        general_tasks=tasks_block(None),
         pending=_pending(by_state, today),
         recent_documents=list(listed_documents()[:RECENT_DOCUMENTS_COUNT]),
         loans=LoanedEquipment(
@@ -220,14 +205,4 @@ def _pending(loans_by_state: dict[str, int], today: dt.date) -> Pending:
         invoices=invoices,
         advances=advances,
         stock=stock,
-    )
-
-
-def _general_tasks() -> GeneralTasks:
-    tasks_done, tasks_total = task_counts(None)
-    return GeneralTasks(
-        tasks_done=tasks_done,
-        tasks_total=tasks_total,
-        next_tasks=next_tasks(None, NEXT_GENERAL_TASKS_COUNT),
-        recently_done_tasks=recently_done_tasks(None, RECENTLY_DONE_GENERAL_TASKS_COUNT),
     )

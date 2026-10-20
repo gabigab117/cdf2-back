@@ -13,7 +13,7 @@ from django.db import transaction
 from django.db.models import ProtectedError
 from django.utils import timezone
 
-from core.text import counted
+from core.text import count_text
 from equipment.models import Equipment, Loan
 from equipment.schemas import EquipmentIn
 from equipment.services.availability import Availability, Conflict, availability, shortages
@@ -110,7 +110,7 @@ def delete_equipment(equipment: Equipment) -> None:
     try:
         equipment.delete()
     except ProtectedError as error:
-        loans = counted(len(error.protected_objects), "prêt", "prêts")
+        loans = count_text(len(error.protected_objects), "prêt", "prêts")
         raise ValidationError(
             f"Impossible de supprimer « {equipment.name} » : il figure dans {loans}."
         ) from error
