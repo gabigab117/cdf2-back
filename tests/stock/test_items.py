@@ -115,7 +115,7 @@ def test_the_stock_of_the_mockup_tells_the_items_below_their_threshold(board_cli
     Given the fourteen items of the mockup
     When a member reads the stock
     Then the juice, the sweets and the fries are low, the kegs at their
-    threshold are not, and each bar is as full as the mockup draws it
+    threshold are not, and each bar is full from its threshold up
     """
     build_mockup()
 
@@ -189,7 +189,7 @@ def test_an_item_tells_its_fields_and_its_quantity(board_client):
         },
         "quantity": "1.50",
         "low": True,
-        "level": 25,
+        "level": 50,
     }
 
 
@@ -501,7 +501,7 @@ def test_plus_adds_a_step_recorded_with_the_member(board_client, board_member):
         cans.pk,
         "168.00",
         False,
-        88,
+        100,
     )
     operation = StockOperation.objects.get(reason=StockOperationReason.ADJUSTMENT)
     assert (operation.author, operation.label, operation.event) == (board_member, "", None)
@@ -589,13 +589,13 @@ def test_adjusting_locks_the_item_first(board_client):
 # The shopping list
 
 
-def test_the_shopping_list_of_the_mockup_brings_each_low_item_back_to_twice_its_threshold(
+def test_the_shopping_list_of_the_mockup_brings_each_low_item_back_to_its_threshold(
     board_client,
 ):
     """
     Given the fourteen items of the mockup
     When a member reads the stock
-    Then the shopping list buys 30 litres of juice, 4,5 kg of sweets and 8 bags
+    Then the shopping list buys 6 litres of juice, 1,5 kg of sweets and 2 bags
     of fries, in the stock's order; the kegs at their threshold are not on it
     """
     items = build_mockup()
@@ -605,11 +605,11 @@ def test_the_shopping_list_of_the_mockup_brings_each_low_item_back_to_twice_its_
     assert shopping == [
         {
             "item": {"id": items["Jus de fruits 1 L"].pk, "name": "Jus de fruits 1 L", "unit": ""},
-            "quantity": "30.00",
+            "quantity": "6.00",
         },
         {
             "item": {"id": items["Bonbons assortis"].pk, "name": "Bonbons assortis", "unit": "kg"},
-            "quantity": "4.50",
+            "quantity": "1.50",
         },
         {
             "item": {
@@ -617,20 +617,20 @@ def test_the_shopping_list_of_the_mockup_brings_each_low_item_back_to_twice_its_
                 "name": "Frites surgelées 2,5 kg",
                 "unit": "",
             },
-            "quantity": "8.00",
+            "quantity": "2.00",
         },
     ]
 
 
 @pytest.mark.parametrize(
     ("held", "to_buy"),
-    [("0", "48.00"), ("18", "30.00"), ("19", "30.00"), ("23", "30.00")],
+    [("0", "24.00"), ("12", "12.00"), ("13", "12.00"), ("23", "6.00")],
 )
 def test_the_shopping_list_buys_by_the_step(board_client, held, to_buy):
     """
     Given juice below its threshold of 24, bought by the pack of 6
     When a member reads the stock
-    Then what brings it back to 48 is rounded up to a whole pack
+    Then what brings it back to 24 is rounded up to a whole pack
     """
     juice = StockItemFactory(threshold=Decimal(24), step=Decimal(6))
     if held != "0":

@@ -116,8 +116,8 @@ class StockedItemOut(Schema):
     quantity: Decimal
     # Below its threshold, strictly (A19).
     low: bool
-    # How full its bar is, in percent: the quantity against twice the
-    # threshold, at most 100.
+    # How full its bar is, in percent: the quantity against the threshold, at
+    # most 100.
     level: int
 
 
@@ -182,8 +182,8 @@ class StockOperationOut(Schema):
 
 
 class ShoppingLineOut(Schema):
-    """An item below its threshold, and what brings it back to twice its
-    threshold, rounded up to its step (A19).
+    """An item below its threshold, and what brings it back to it, rounded up
+    to its step (A19).
     """
 
     item: StockMovementItemOut

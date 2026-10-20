@@ -4914,7 +4914,7 @@
         "type": "object"
       },
       "ShoppingLineOut": {
-        "description": "An item below its threshold, and what brings it back to twice its\nthreshold, rounded up to its step (A19).",
+        "description": "An item below its threshold, and what brings it back to it, rounded up\nto its step (A19).",
         "properties": {
           "item": {
             "$ref": "#/components/schemas/StockMovementItemOut"

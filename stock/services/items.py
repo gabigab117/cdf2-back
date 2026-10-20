@@ -66,21 +66,21 @@ def stocked(item: StockItem) -> StockedItem:
 
 
 def level(quantity: Decimal, threshold: Decimal) -> int:
-    """How full an item's bar is, in percent: its quantity against twice its
-    threshold (A19), at most 100, rounded as the mockup does. Without a
-    threshold, it is full while some is left.
+    """How full an item's bar is, in percent: its quantity against its
+    threshold, what the next event needs (A19), at most 100, rounded as the
+    mockup does. Without a threshold, it is full while some is left.
     """
     if not threshold:
         return 100 if quantity > 0 else 0
-    percent = (quantity * 100 / (2 * threshold)).quantize(Decimal(1), rounding=ROUND_HALF_UP)
+    percent = (quantity * 100 / threshold).quantize(Decimal(1), rounding=ROUND_HALF_UP)
     return min(100, int(percent))
 
 
 def quantity_to_buy(quantity: Decimal, threshold: Decimal, step: Decimal) -> Decimal:
-    """What brings an item back to twice its threshold, rounded up to its step
-    (A19): the shopping list buys by the pack.
+    """What brings an item back to its threshold, rounded up to its step (A19):
+    the shopping list buys by the pack.
     """
-    steps = ((2 * threshold - quantity) / step).to_integral_value(rounding=ROUND_CEILING)
+    steps = ((threshold - quantity) / step).to_integral_value(rounding=ROUND_CEILING)
     return steps * step
 
 

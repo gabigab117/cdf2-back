@@ -33,22 +33,24 @@ ITEMS = [
 # fries (4 < 6). The kegs (2 = 2) are not.
 LOW = ["Jus de fruits 1 L", "Bonbons assortis", "Frites surgelées 2,5 kg"]
 
-# How full each bar is, as the mockup rounds it (Math.round).
+# How full each bar is, rounded as the mockup does (Math.round). Full at the
+# threshold, not at twice it as the mockup draws it (A19, 20/10/2026): only the
+# low items are not.
 LEVELS = {
-    "Canettes de soda 33 cl": 75,
-    "Bouteilles d’eau 50 cl": 63,
-    "Jus de fruits 1 L": 38,
-    "Fûts de bière 20 L": 50,
-    "Café moulu 1 kg": 67,
-    "Bonbons assortis": 25,
-    "Frites surgelées 2,5 kg": 33,
+    "Canettes de soda 33 cl": 100,
+    "Bouteilles d’eau 50 cl": 100,
+    "Jus de fruits 1 L": 75,
+    "Fûts de bière 20 L": 100,
+    "Café moulu 1 kg": 100,
+    "Bonbons assortis": 50,
+    "Frites surgelées 2,5 kg": 67,
     "Sucre en morceaux 1 kg": 100,
-    "Gobelets réutilisables": 69,
-    "Gobelets carton": 63,
-    "Barquettes à frites": 63,
-    "Serviettes (paquets de 100)": 75,
+    "Gobelets réutilisables": 100,
+    "Gobelets carton": 100,
+    "Barquettes à frites": 100,
+    "Serviettes (paquets de 100)": 100,
     "Cartons de loto": 100,
-    "Carnets de tombola": 70,
+    "Carnets de tombola": 100,
 }
 
 
