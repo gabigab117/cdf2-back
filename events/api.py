@@ -4,7 +4,7 @@ from django.utils.http import content_disposition_header
 from ninja import Query, Router, Status
 from ninja.pagination import paginate
 
-from core.schemas import ErrorOut, ValidationErrorOut
+from core.schemas import REFUSALS, ErrorOut, ValidationErrorOut
 from events.models import Event
 from events.schemas import (
     AgendaOut,
@@ -79,13 +79,7 @@ def create(request, payload: EventIn):
 
 @router.get(
     "/events/{event_id}",
-    response={
-        200: EventOut,
-        401: ErrorOut,
-        403: ErrorOut,
-        404: ErrorOut,
-        422: ValidationErrorOut,
-    },
+    response={200: EventOut, **REFUSALS},
     summary="Get an event",
 )
 def detail(request, event_id: int):
@@ -100,14 +94,7 @@ def detail(request, event_id: int):
 
 @router.put(
     "/events/{event_id}",
-    response={
-        200: EventOut,
-        400: ErrorOut,
-        401: ErrorOut,
-        403: ErrorOut,
-        404: ErrorOut,
-        422: ValidationErrorOut,
-    },
+    response={200: EventOut, 400: ErrorOut, **REFUSALS},
     summary="Update an event",
 )
 def update(request, event_id: int, payload: EventIn):
@@ -118,7 +105,7 @@ def update(request, event_id: int, payload: EventIn):
 
 @router.delete(
     "/events/{event_id}",
-    response={204: None, 401: ErrorOut, 403: ErrorOut, 404: ErrorOut, 422: ValidationErrorOut},
+    response={204: None, **REFUSALS},
     summary="Delete an event",
 )
 def delete(request, event_id: int):

@@ -29,7 +29,7 @@ from accounts.services.invitations import (
 )
 from accounts.services.roles import board_members
 from accounts.services.sessions import close_session, open_session, renew_session
-from core.schemas import ErrorOut, ValidationErrorOut
+from core.schemas import REFUSALS, ErrorOut, ValidationErrorOut
 
 router = Router(tags=["auth"])
 
@@ -199,13 +199,7 @@ def invite_member(request, payload: AccountIn):
 
 @accounts_router.post(
     "/accounts/{account_id}/link",
-    response={
-        200: InvitationOut,
-        401: ErrorOut,
-        403: ErrorOut,
-        404: ErrorOut,
-        422: ValidationErrorOut,
-    },
+    response={200: InvitationOut, **REFUSALS},
     summary="Send a new link",
 )
 def send_new_link(request, account_id: int):

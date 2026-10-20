@@ -8,7 +8,6 @@ station's surplus hide another's shortfall.
 from dataclasses import dataclass
 
 from django.core.exceptions import ValidationError
-from django.db import transaction
 from django.db.models import BooleanField, Case, Count, F, Max, QuerySet, Sum, Value, When
 
 from events.models import Event
@@ -71,8 +70,8 @@ def station_totals(event: Event) -> tuple[int, int]:
 
 def create_station(event: Event, data: StationIn) -> Station:
     """Add a station to an event, after its others."""
-    last = event.stations.aggregate(last=Max("sort_order"))["last"]
-    station = Station(event=event, sort_order=0 if last is None else last + 1)
+    last = event.stations.aggregate(last=Max("sort_order", default=-1))["last"]
+    station = Station(event=event, sort_order=last + 1)
     return _save(station, data)
 
 
@@ -86,7 +85,6 @@ def delete_station(station: Station) -> None:
     station.delete()
 
 
-@transaction.atomic
 def reorder_stations(event: Event, order: list[int]) -> StationBoard:
     """Give an event's stations a new order: each of them, once."""
     stations = {station.pk: station for station in event.stations.all()}

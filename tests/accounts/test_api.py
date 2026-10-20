@@ -7,6 +7,7 @@ from ninja_jwt.tokens import AccessToken, RefreshToken
 
 from accounts.api import REFRESH_COOKIE, REFRESH_COOKIE_PATH
 from tests.accounts.factories import PASSWORD, BoardMemberFactory, UserFactory, client_of
+from tests.helpers import member_json
 
 pytestmark = pytest.mark.django_db
 
@@ -24,16 +25,6 @@ def login(client, email, password=PASSWORD):
     return client.post(
         LOGIN, {"email": email, "password": password}, content_type="application/json"
     )
-
-
-def listed(member):
-    """A board member as the list of the board members shows them."""
-    return {
-        "id": member.pk,
-        "first_name": member.first_name,
-        "last_name": member.last_name,
-        "email": member.email,
-    }
 
 
 def expired(token):
@@ -486,7 +477,12 @@ def test_the_board_members_are_listed_by_name(board_client, board_member):
     assert response.status_code == 200
     assert response.json() == {
         "count": 4,
-        "items": [listed(nameless), listed(alain), listed(board_member), listed(julie)],
+        "items": [
+            member_json(nameless),
+            member_json(alain),
+            member_json(board_member),
+            member_json(julie),
+        ],
     }
 
 

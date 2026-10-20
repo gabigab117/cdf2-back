@@ -10,8 +10,9 @@ from dataclasses import dataclass
 from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
 from django.db import transaction
 from django.db.models import Count, Max, QuerySet, RestrictedError, Sum
-from django.utils.translation import ngettext
 
+from core.errors import line_errors
+from core.text import counted
 from events.models import Event
 from reservations.models import Reservation, ReservationLine, TicketType
 from reservations.schemas import ReservationIn, TicketTypeIn
@@ -86,10 +87,8 @@ def delete_reservation(reservation: Reservation) -> None:
 
 def create_ticket_type(event: Event, data: TicketTypeIn) -> TicketType:
     """Add a type of place to an event, after its others."""
-    last = event.ticket_types.aggregate(last=Max("sort_order"))["last"]
-    ticket_type = TicketType(
-        event=event, name=data.name, sort_order=0 if last is None else last + 1
-    )
+    last = event.ticket_types.aggregate(last=Max("sort_order", default=-1))["last"]
+    ticket_type = TicketType(event=event, name=data.name, sort_order=last + 1)
     ticket_type.full_clean()
     ticket_type.save()
     return ticket_type
@@ -147,11 +146,7 @@ def _validate(reservation: Reservation, lines: list[ReservationLine]) -> None:
     for index, line in enumerate(lines):
         # The reservation may not be recorded yet: its unique constraint with
         # the type is checked below, among the lines of the request.
-        try:
-            line.full_clean(exclude={"reservation"})
-        except ValidationError as error:
-            for field, messages in error.message_dict.items():
-                errors[f"lines.{index}.{field}"] = messages
+        errors |= line_errors("lines", index, line, {"reservation"})
         if line.ticket_type_id in seen:
             errors.setdefault(f"lines.{index}.ticket_type", []).append(
                 "Ce type de place figure déjà dans la réservation."
@@ -176,10 +171,6 @@ def _check_capacity(event: Event, requested: int, current: int) -> None:
     if remaining <= 0:
         raise ValidationError(f"Complet : les {event.capacity} places sont déjà réservées.")
     raise ValidationError(
-        ngettext(
-            "Capacité dépassée : il ne reste que %(remaining)d place sur %(capacity)d.",
-            "Capacité dépassée : il ne reste que %(remaining)d places sur %(capacity)d.",
-            remaining,
-        )
-        % {"remaining": remaining, "capacity": event.capacity}
+        f"Capacité dépassée : il ne reste que {counted(remaining, 'place', 'places')} "
+        f"sur {event.capacity}."
     )

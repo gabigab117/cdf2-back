@@ -34,3 +34,7 @@ class ValidationErrorOut(Schema):
     """A 422 answer: one item per error, located under its field (core/errors.py)."""
 
     detail: list[ValidationErrorItem]
+
+
+# What every operation on an existing object may answer besides its success.
+REFUSALS = {401: ErrorOut, 403: ErrorOut, 404: ErrorOut, 422: ValidationErrorOut}

@@ -1,14 +1,12 @@
 import datetime as dt
 
 import pytest
-from django.core.serializers.json import DjangoJSONEncoder
-from django.test import Client
 from django.utils import timezone
-from ninja_jwt.tokens import AccessToken
 
 from tasks.models import Task
-from tests.accounts.factories import BoardMemberFactory, UserFactory
+from tests.accounts.factories import BoardMemberFactory, UserFactory, client_of
 from tests.events.factories import EventFactory
+from tests.helpers import iso, member_json, messages, send
 from tests.tasks.factories import TaskFactory
 
 pytestmark = pytest.mark.django_db
@@ -28,24 +26,6 @@ OPERATIONS = [
 
 def task_url(task_id):
     return f"{TASKS}/{task_id}"
-
-
-def send(client, method, path, payload=None):
-    return getattr(client, method)(path, payload, content_type="application/json")
-
-
-def iso(moment):
-    """A time as the API writes it: to the millisecond, as Django's JSON does."""
-    return DjangoJSONEncoder().default(moment)
-
-
-def member_json(member):
-    return {
-        "id": member.id,
-        "first_name": member.first_name,
-        "last_name": member.last_name,
-        "email": member.email,
-    }
 
 
 def listed_titles(client, event):
@@ -83,9 +63,7 @@ def test_tasks_are_refused_to_accounts_outside_the_board(method, path):
     When it calls any operation on the tasks
     Then it is refused with a 403
     """
-    client = Client(headers={"Authorization": f"Bearer {AccessToken.for_user(UserFactory())}"})
-
-    assert getattr(client, method)(path).status_code == 403
+    assert getattr(client_of(UserFactory()), method)(path).status_code == 403
 
 
 # List
@@ -358,9 +336,7 @@ def test_a_faulty_task_is_refused_in_french_under_its_field(
     response = send(board_client, "post", TASKS, task_payload(EventFactory()) | change)
 
     assert response.status_code == 422
-    assert [(error["loc"], error["msg"]) for error in response.json()["detail"]] == [
-        (location, message)
-    ]
+    assert messages(response) == [(location, message)]
 
 
 def test_a_member_deletes_a_task(board_client):

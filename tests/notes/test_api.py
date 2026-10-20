@@ -2,15 +2,13 @@ import datetime as dt
 
 import pytest
 from django.core.exceptions import ValidationError
-from django.core.serializers.json import DjangoJSONEncoder
-from django.test import Client
 from django.utils import timezone
-from ninja_jwt.tokens import AccessToken
 
 from notes.models import Note
-from tests.accounts.factories import BoardMemberFactory, UserFactory
+from tests.accounts.factories import BoardMemberFactory, UserFactory, client_of
 from tests.documents.factories import DocumentFactory
 from tests.events.factories import EventFactory
+from tests.helpers import iso, member_json, send
 from tests.notes.factories import NoteFactory, ReplyFactory
 
 pytestmark = pytest.mark.django_db
@@ -35,28 +33,6 @@ def note_url(note_id):
 
 def replies_url(note_id):
     return f"{NOTES}/{note_id}/replies"
-
-
-def send(client, method, path, payload=None):
-    return getattr(client, method)(path, payload, content_type="application/json")
-
-
-def iso(moment):
-    """A time as the API writes it: to the millisecond, as Django's JSON does."""
-    return DjangoJSONEncoder().default(moment)
-
-
-def member_json(member):
-    return {
-        "id": member.id,
-        "first_name": member.first_name,
-        "last_name": member.last_name,
-        "email": member.email,
-    }
-
-
-def client_of(member):
-    return Client(headers={"Authorization": f"Bearer {AccessToken.for_user(member)}"})
 
 
 def listed_texts(client, event):

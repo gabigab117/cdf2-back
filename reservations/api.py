@@ -4,7 +4,7 @@ from django.utils.http import content_disposition_header
 from ninja import Router, Status
 from ninja.pagination import paginate
 
-from core.schemas import ErrorOut, ValidationErrorOut
+from core.schemas import REFUSALS, ErrorOut
 from events.models import Event
 from reservations.models import Reservation, TicketType
 from reservations.schemas import (
@@ -39,9 +39,6 @@ XLSX_FILE = {
         }
     }
 }
-
-# What every operation on an existing object may answer besides its success.
-REFUSALS = {401: ErrorOut, 403: ErrorOut, 404: ErrorOut, 422: ValidationErrorOut}
 
 
 @router.get(

@@ -2,7 +2,7 @@ from django.shortcuts import get_object_or_404
 from ninja import Router, Status
 from ninja.pagination import paginate
 
-from core.schemas import ErrorOut, ValidationErrorOut
+from core.schemas import REFUSALS, ErrorOut, ValidationErrorOut
 from notes.schemas import NoteIn, NoteOut, NoteUpdateIn, ReplyIn, ReplyOut
 from notes.services.notes import (
     create_note,
@@ -63,14 +63,7 @@ def create(request, payload: NoteIn):
 
 @router.put(
     "/notes/{note_id}",
-    response={
-        200: NoteOut,
-        400: ErrorOut,
-        401: ErrorOut,
-        403: ErrorOut,
-        404: ErrorOut,
-        422: ValidationErrorOut,
-    },
+    response={200: NoteOut, 400: ErrorOut, **REFUSALS},
     summary="Rewrite a note",
 )
 def update(request, note_id: int, payload: NoteUpdateIn):
@@ -80,7 +73,7 @@ def update(request, note_id: int, payload: NoteUpdateIn):
 
 @router.delete(
     "/notes/{note_id}",
-    response={204: None, 401: ErrorOut, 403: ErrorOut, 404: ErrorOut, 422: ValidationErrorOut},
+    response={204: None, **REFUSALS},
     summary="Delete a note",
 )
 def delete(request, note_id: int):
@@ -91,14 +84,7 @@ def delete(request, note_id: int):
 
 @router.post(
     "/notes/{note_id}/replies",
-    response={
-        201: ReplyOut,
-        400: ErrorOut,
-        401: ErrorOut,
-        403: ErrorOut,
-        404: ErrorOut,
-        422: ValidationErrorOut,
-    },
+    response={201: ReplyOut, 400: ErrorOut, **REFUSALS},
     summary="Reply to a note",
 )
 def create_reply(request, note_id: int, payload: ReplyIn):

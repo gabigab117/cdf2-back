@@ -1,14 +1,12 @@
 import pytest
-from django.core.serializers.json import DjangoJSONEncoder
 from django.db import connection
-from django.test import Client
 from django.test.utils import CaptureQueriesContext
-from ninja_jwt.tokens import AccessToken
 
 from events.models import Event
 from reservations.models import Reservation, ReservationLine, TicketType
-from tests.accounts.factories import BoardMemberFactory, UserFactory
+from tests.accounts.factories import BoardMemberFactory, UserFactory, client_of
 from tests.events.factories import EventFactory
+from tests.helpers import iso, messages, send
 from tests.reservations.factories import TicketTypeFactory, reserve
 
 pytestmark = pytest.mark.django_db
@@ -34,15 +32,6 @@ def reservations_url(event_id):
 
 def reservation_url(reservation_id):
     return f"/api/board/reservations/{reservation_id}"
-
-
-def send(client, method, path, payload=None):
-    return getattr(client, method)(path, payload, content_type="application/json")
-
-
-def iso(moment):
-    """A time as the API writes it: to the millisecond, as Django's JSON does."""
-    return DjangoJSONEncoder().default(moment)
 
 
 @pytest.fixture
@@ -73,10 +62,6 @@ def reservation_payload(*pairs, name="Famille Martin", note=""):
     return {"name": name, "note": note, "lines": lines(*pairs)}
 
 
-def messages(response):
-    return [(error["loc"], error["msg"]) for error in response.json()["detail"]]
-
-
 # Access
 
 
@@ -97,9 +82,7 @@ def test_reservations_are_refused_to_accounts_outside_the_board(method, path):
     When it calls any operation on the reservations
     Then it is refused with a 403
     """
-    client = Client(headers={"Authorization": f"Bearer {AccessToken.for_user(UserFactory())}"})
-
-    assert getattr(client, method)(path).status_code == 403
+    assert getattr(client_of(UserFactory()), method)(path).status_code == 403
 
 
 @pytest.mark.parametrize(

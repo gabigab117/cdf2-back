@@ -1,10 +1,9 @@
 import pytest
-from django.test import Client
-from ninja_jwt.tokens import AccessToken
 
 from stations.models import Assignment, Station
-from tests.accounts.factories import UserFactory
+from tests.accounts.factories import UserFactory, client_of
 from tests.events.factories import EventFactory
+from tests.helpers import messages, send
 from tests.stations.factories import AssignmentFactory, StationFactory
 
 pytestmark = pytest.mark.django_db
@@ -32,10 +31,6 @@ def station_url(station_id):
 
 def assignments_url(station_id):
     return f"{station_url(station_id)}/assignments"
-
-
-def send(client, method, path, payload=None):
-    return getattr(client, method)(path, payload, content_type="application/json")
 
 
 def board(client, event):
@@ -71,9 +66,7 @@ def test_stations_are_refused_to_accounts_outside_the_board(method, path):
     When it calls any operation on the stations
     Then it is refused with a 403
     """
-    client = Client(headers={"Authorization": f"Bearer {AccessToken.for_user(UserFactory())}"})
-
-    assert getattr(client, method)(path).status_code == 403
+    assert getattr(client_of(UserFactory()), method)(path).status_code == 403
 
 
 @pytest.mark.parametrize(
@@ -295,9 +288,7 @@ def test_a_faulty_station_is_refused_in_french_under_its_field(
     )
 
     assert response.status_code == 422
-    assert [(error["loc"], error["msg"]) for error in response.json()["detail"]] == [
-        (location, message)
-    ]
+    assert messages(response) == [(location, message)]
     assert not Station.objects.exists()
 
 

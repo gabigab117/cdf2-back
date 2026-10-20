@@ -1,7 +1,7 @@
 from django.shortcuts import get_object_or_404
 from ninja import Router, Status
 
-from core.schemas import ErrorOut, ValidationErrorOut
+from core.schemas import REFUSALS, ErrorOut
 from events.models import Event
 from stations.models import Assignment, Station
 from stations.schemas import (
@@ -27,13 +27,7 @@ router = Router(tags=["stations"])
 
 @router.get(
     "/events/{event_id}/stations",
-    response={
-        200: StationBoardOut,
-        401: ErrorOut,
-        403: ErrorOut,
-        404: ErrorOut,
-        422: ValidationErrorOut,
-    },
+    response={200: StationBoardOut, **REFUSALS},
     summary="Stations of an event",
 )
 def board(request, event_id: int):
@@ -43,14 +37,7 @@ def board(request, event_id: int):
 
 @router.post(
     "/events/{event_id}/stations",
-    response={
-        201: StationOut,
-        400: ErrorOut,
-        401: ErrorOut,
-        403: ErrorOut,
-        404: ErrorOut,
-        422: ValidationErrorOut,
-    },
+    response={201: StationOut, 400: ErrorOut, **REFUSALS},
     summary="Add a station to an event",
 )
 def create(request, event_id: int, payload: StationIn):
@@ -60,14 +47,7 @@ def create(request, event_id: int, payload: StationIn):
 
 @router.put(
     "/events/{event_id}/stations/order",
-    response={
-        200: StationBoardOut,
-        400: ErrorOut,
-        401: ErrorOut,
-        403: ErrorOut,
-        404: ErrorOut,
-        422: ValidationErrorOut,
-    },
+    response={200: StationBoardOut, 400: ErrorOut, **REFUSALS},
     summary="Reorder the stations of an event",
 )
 def reorder(request, event_id: int, payload: StationOrderIn):
@@ -77,14 +57,7 @@ def reorder(request, event_id: int, payload: StationOrderIn):
 
 @router.put(
     "/stations/{station_id}",
-    response={
-        200: StationOut,
-        400: ErrorOut,
-        401: ErrorOut,
-        403: ErrorOut,
-        404: ErrorOut,
-        422: ValidationErrorOut,
-    },
+    response={200: StationOut, 400: ErrorOut, **REFUSALS},
     summary="Update a station",
 )
 def update(request, station_id: int, payload: StationIn):
@@ -93,7 +66,7 @@ def update(request, station_id: int, payload: StationIn):
 
 @router.delete(
     "/stations/{station_id}",
-    response={204: None, 401: ErrorOut, 403: ErrorOut, 404: ErrorOut, 422: ValidationErrorOut},
+    response={204: None, **REFUSALS},
     summary="Delete a station",
 )
 def delete(request, station_id: int):
@@ -104,14 +77,7 @@ def delete(request, station_id: int):
 
 @router.post(
     "/stations/{station_id}/assignments",
-    response={
-        201: AssignmentOut,
-        400: ErrorOut,
-        401: ErrorOut,
-        403: ErrorOut,
-        404: ErrorOut,
-        422: ValidationErrorOut,
-    },
+    response={201: AssignmentOut, 400: ErrorOut, **REFUSALS},
     summary="Put a volunteer at a station",
 )
 def assign(request, station_id: int, payload: AssignmentIn):
@@ -120,7 +86,7 @@ def assign(request, station_id: int, payload: AssignmentIn):
 
 @router.delete(
     "/assignments/{assignment_id}",
-    response={204: None, 401: ErrorOut, 403: ErrorOut, 404: ErrorOut, 422: ValidationErrorOut},
+    response={204: None, **REFUSALS},
     summary="Take a volunteer off a station",
 )
 def unassign(request, assignment_id: int):

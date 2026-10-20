@@ -13,20 +13,15 @@ from tasks.models import Task
 from tasks.schemas import TaskIn
 
 
-def ordered(tasks: QuerySet[Task]) -> QuerySet[Task]:
-    """Tasks in the board's order: open first by due date, then done as they were done."""
-    return tasks.order_by(
-        F("done_at").asc(nulls_first=True), F("due_date").asc(nulls_last=True), "pk"
-    )
-
-
 def event_tasks(event_id: int | None) -> QuerySet[Task]:
     """The tasks of an event, or the general tasks for none, in the board's
     order, with their people.
     """
     # Compared with None, the event matches the tasks that have none (IS NULL).
     tasks = Task.objects.filter(event_id=event_id).select_related("assignee", "created_by")
-    return ordered(tasks)
+    return tasks.order_by(
+        F("done_at").asc(nulls_first=True), F("due_date").asc(nulls_last=True), "pk"
+    )
 
 
 def task_counts(event_id: int | None) -> tuple[int, int]:

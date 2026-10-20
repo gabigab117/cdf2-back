@@ -8,8 +8,7 @@ from events.models import Event
 class Task(models.Model):
     """A task of the board: on an event, or general, until it is done."""
 
-    # No event: a general task. The API allows it for the tasks the meeting
-    # reports will bring (phases 4 and 9); the board's screens ask for one.
+    # No event: a general task (D10), listed apart.
     event = models.ForeignKey(
         Event,
         verbose_name="événement",

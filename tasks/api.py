@@ -2,7 +2,7 @@ from django.shortcuts import get_object_or_404
 from ninja import Router, Status
 from ninja.pagination import paginate
 
-from core.schemas import ErrorOut, ValidationErrorOut
+from core.schemas import REFUSALS, ErrorOut, ValidationErrorOut
 from tasks.models import Task
 from tasks.schemas import TaskIn, TaskOut
 from tasks.services.tasks import create_task, delete_task, event_tasks, update_task
@@ -52,14 +52,7 @@ def create(request, payload: TaskIn):
 
 @router.put(
     "/tasks/{task_id}",
-    response={
-        200: TaskOut,
-        400: ErrorOut,
-        401: ErrorOut,
-        403: ErrorOut,
-        404: ErrorOut,
-        422: ValidationErrorOut,
-    },
+    response={200: TaskOut, 400: ErrorOut, **REFUSALS},
     summary="Update a task",
 )
 def update(request, task_id: int, payload: TaskIn):
@@ -69,7 +62,7 @@ def update(request, task_id: int, payload: TaskIn):
 
 @router.delete(
     "/tasks/{task_id}",
-    response={204: None, 401: ErrorOut, 403: ErrorOut, 404: ErrorOut, 422: ValidationErrorOut},
+    response={204: None, **REFUSALS},
     summary="Delete a task",
 )
 def delete(request, task_id: int):

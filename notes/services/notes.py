@@ -38,8 +38,10 @@ def event_notes(member: User, event_id: int | None) -> QuerySet[Note]:
 
 
 def notes_written_by(member: User) -> QuerySet[Note]:
-    """The notes and replies a member may rewrite or delete: their own."""
-    return Note.objects.filter(author=member)
+    """The notes and replies a member may rewrite or delete: their own, each
+    knowing its author without another query.
+    """
+    return member.authored_notes.all()
 
 
 def notes_to_reply_to() -> QuerySet[Note]:
