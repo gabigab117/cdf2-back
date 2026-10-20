@@ -1,12 +1,12 @@
 from decimal import Decimal
 
 import pytest
-from django.core.serializers.json import DjangoJSONEncoder
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 
 from stock.models import StockItem, StockOperation, StockOperationReason
 from tests.events.factories import EventFactory
+from tests.helpers import iso, member_json, messages_by_place, send
 from tests.stock.factories import (
     StockItemFactory,
     StockMovementFactory,
@@ -20,11 +20,6 @@ pytestmark = pytest.mark.django_db
 STOCK = "/api/board/stock"
 OPERATIONS_PATH = f"{STOCK}/operations"
 STOCKTAKES = f"{STOCK}/stocktakes"
-
-
-def iso(moment):
-    """A time as the API writes it: to the millisecond, as Django's JSON does."""
-    return DjangoJSONEncoder().default(moment)
 
 
 def entry(*lines, direction="in", reason="purchase", label="Courses buvette", event=None):
@@ -47,25 +42,6 @@ def stocktake(*counts, label="", event=None):
     }
 
 
-def send(client, path, body):
-    return client.post(path, body, content_type="application/json")
-
-
-def errors(response):
-    """The messages of a 422, by where the API placed them."""
-    assert response.status_code == 422
-    return {tuple(item["loc"]): item["msg"] for item in response.json()["detail"]}
-
-
-def member_json(member):
-    return {
-        "id": member.id,
-        "first_name": member.first_name,
-        "last_name": member.last_name,
-        "email": member.email,
-    }
-
-
 # Entries and exits
 
 
@@ -81,7 +57,7 @@ def test_a_purchase_brings_several_items_in(board_client, board_member):
     put_in_stock(cans, 144)
 
     response = send(
-        board_client, OPERATIONS_PATH, entry((cans, 288), (water, 120), event=brocante.pk)
+        board_client, "post", OPERATIONS_PATH, entry((cans, 288), (water, 120), event=brocante.pk)
     )
 
     assert response.status_code == 201
@@ -120,6 +96,7 @@ def test_a_consumption_takes_items_out(board_client):
 
     response = send(
         board_client,
+        "post",
         OPERATIONS_PATH,
         entry((cans, 216), direction="out", reason="consumption", label="Consommé à la brocante"),
     )
@@ -140,7 +117,10 @@ def test_an_adjustment_goes_either_way(board_client, direction, left):
     put_in_stock(cans, 24)
 
     response = send(
-        board_client, OPERATIONS_PATH, entry((cans, 2), direction=direction, reason="adjustment")
+        board_client,
+        "post",
+        OPERATIONS_PATH,
+        entry((cans, 2), direction=direction, reason="adjustment"),
     )
 
     assert response.status_code == 201
@@ -164,10 +144,10 @@ def test_a_purchase_comes_in_and_a_consumption_goes_out(board_client, direction,
     put_in_stock(cans, 24)
 
     response = send(
-        board_client, OPERATIONS_PATH, entry((cans, 2), direction=direction, reason=reason)
+        board_client, "post", OPERATIONS_PATH, entry((cans, 2), direction=direction, reason=reason)
     )
 
-    assert errors(response) == {("body", "reason"): message}
+    assert messages_by_place(response) == {("body", "reason"): message}
 
 
 @pytest.mark.parametrize("reason", ["stocktake", "delivery"])
@@ -177,9 +157,11 @@ def test_a_stocktake_and_a_delivery_have_their_own_screens(board_client, reason)
     When an entry gives the reason of a stocktake or a delivery
     Then the schema refuses it
     """
-    response = send(board_client, OPERATIONS_PATH, entry((StockItemFactory(), 2), reason=reason))
+    response = send(
+        board_client, "post", OPERATIONS_PATH, entry((StockItemFactory(), 2), reason=reason)
+    )
 
-    assert errors(response) == {
+    assert messages_by_place(response) == {
         ("body", "payload", "reason"): (
             "Sélectionnez un choix valide. Ce choix ne fait pas partie de ceux disponibles."
         )
@@ -192,9 +174,9 @@ def test_an_entry_without_any_line_is_refused(board_client):
     When they record an entry without any line
     Then it is refused, asking for an item
     """
-    response = send(board_client, OPERATIONS_PATH, entry())
+    response = send(board_client, "post", OPERATIONS_PATH, entry())
 
-    assert errors(response) == {("body",): "Ajoutez au moins un article."}
+    assert messages_by_place(response) == {("body",): "Ajoutez au moins un article."}
 
 
 def test_each_line_out_of_rule_is_refused_under_its_position(board_client):
@@ -210,9 +192,9 @@ def test_each_line_out_of_rule_is_refused_under_its_position(board_client):
     body = entry((cans, 2), (water, 0), (cans, "0.125"), event=999)
     body["lines"].append({"item": 999, "quantity": "1"})
 
-    response = send(board_client, OPERATIONS_PATH, body)
+    response = send(board_client, "post", OPERATIONS_PATH, body)
 
-    assert errors(response) == {
+    assert messages_by_place(response) == {
         ("body", "event"): "Choisissez un événement existant.",
         ("body", "lines", 1, "quantity"): "Indiquez une quantité supérieure à zéro.",
         ("body", "lines", 2, "item"): "Cet article figure déjà dans l’opération.",
@@ -247,11 +229,12 @@ def test_an_exit_never_takes_more_than_is_in_stock(board_client, unit, held, mes
 
     response = send(
         board_client,
+        "post",
         OPERATIONS_PATH,
         entry((cans, 24), (item, 20), direction="out", reason="consumption"),
     )
 
-    assert errors(response) == {("body", "lines", 1, "quantity"): message}
+    assert messages_by_place(response) == {("body", "lines", 1, "quantity"): message}
     assert quantity_of(cans) == 48
 
 
@@ -265,7 +248,10 @@ def test_an_exit_may_take_all_that_is_left(board_client):
     put_in_stock(juice, 18)
 
     response = send(
-        board_client, OPERATIONS_PATH, entry((juice, 18), direction="out", reason="consumption")
+        board_client,
+        "post",
+        OPERATIONS_PATH,
+        entry((juice, 18), direction="out", reason="consumption"),
     )
 
     assert response.status_code == 201
@@ -287,6 +273,7 @@ def test_an_exit_locks_its_items_by_key_before_reading_the_stock(board_client):
     with CaptureQueriesContext(connection) as queries:
         send(
             board_client,
+            "post",
             OPERATIONS_PATH,
             entry((cans, 1), (water, 1), direction="out", reason="consumption"),
         )
@@ -319,6 +306,7 @@ def test_a_stocktake_turns_each_difference_into_a_movement(board_client, board_m
 
     response = send(
         board_client,
+        "post",
         STOCKTAKES,
         stocktake(
             (cans, 216), (water, 120), (fries, 4), label="Consommé à la brocante", event=brocante.pk
@@ -349,7 +337,7 @@ def test_a_stocktake_may_find_more_than_the_stock_held(board_client):
     kegs = StockItemFactory()
     put_in_stock(kegs, 4)
 
-    response = send(board_client, STOCKTAKES, stocktake((kegs, 5)))
+    response = send(board_client, "post", STOCKTAKES, stocktake((kegs, 5)))
 
     assert response.json()["movements"][0]["delta"] == "1.00"
 
@@ -363,7 +351,7 @@ def test_a_stocktake_without_any_difference_still_dates_the_stock(board_client):
     cans = StockItemFactory()
     put_in_stock(cans, 24)
 
-    response = send(board_client, STOCKTAKES, stocktake((cans, 24)))
+    response = send(board_client, "post", STOCKTAKES, stocktake((cans, 24)))
 
     assert response.status_code == 201
     assert response.json()["movements"] == []
@@ -379,9 +367,9 @@ def test_a_stocktake_counts_at_least_one_item(board_client):
     When they record a stocktake that counts no item
     Then it is refused, asking for one
     """
-    response = send(board_client, STOCKTAKES, stocktake())
+    response = send(board_client, "post", STOCKTAKES, stocktake())
 
-    assert errors(response) == {("body",): "Comptez au moins un article."}
+    assert messages_by_place(response) == {("body",): "Comptez au moins un article."}
 
 
 def test_each_count_out_of_rule_is_refused_under_its_position(board_client):
@@ -393,9 +381,9 @@ def test_each_count_out_of_rule_is_refused_under_its_position(board_client):
     """
     cans = StockItemFactory()
 
-    response = send(board_client, STOCKTAKES, stocktake((cans, -1), (cans, "0.125")))
+    response = send(board_client, "post", STOCKTAKES, stocktake((cans, -1), (cans, "0.125")))
 
-    assert errors(response) == {
+    assert messages_by_place(response) == {
         (
             "body",
             "counts",

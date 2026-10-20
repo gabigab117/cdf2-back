@@ -15,7 +15,7 @@ from documents.services.statements import UNNAMED, statement_pdf
 from tests.accounts.factories import BoardMemberFactory, client_of
 from tests.documents.samples import stored_files
 from tests.events.factories import EventFactory
-from tests.helpers import iso, send
+from tests.helpers import iso, messages_by_place, send
 
 pytestmark = pytest.mark.django_db
 
@@ -44,10 +44,6 @@ def attest(client, **fields):
 def text_of(content):
     """The words a PDF shows, one space apart, as a reader extracts them."""
     return " ".join(PdfReader(BytesIO(content)).pages[0].extract_text().split())
-
-
-def errors_of(response):
-    return {tuple(item["loc"]): item["msg"] for item in response.json()["detail"]}
 
 
 # The document
@@ -255,7 +251,7 @@ def test_a_purchase_to_come_is_refused(board_client, private_files):
     response = attest(board_client, purchase_date=tomorrow.isoformat())
 
     assert response.status_code == 422
-    assert errors_of(response) == {
+    assert messages_by_place(response) == {
         ("body", "purchase_date"): "La date de l’achat ne peut pas être dans le futur."
     }
     assert not Document.objects.exists()
@@ -271,7 +267,7 @@ def test_an_empty_statement_is_refused_on_each_field(board_client):
     response = attest(board_client, supplier="", purchase="   ", amount="0")
 
     assert response.status_code == 422
-    assert errors_of(response) == {
+    assert messages_by_place(response) == {
         ("body", "supplier"): "Ce champ ne peut pas être vide.",
         ("body", "amount"): "Indiquez un montant supérieur à zéro.",
         ("body", "purchase"): "Ce champ ne peut pas être vide.",
@@ -286,7 +282,9 @@ def test_a_negative_amount_is_refused_once(board_client):
     """
     response = attest(board_client, amount="-5")
 
-    assert errors_of(response) == {("body", "amount"): "Indiquez un montant supérieur à zéro."}
+    assert messages_by_place(response) == {
+        ("body", "amount"): "Indiquez un montant supérieur à zéro."
+    }
 
 
 def test_values_beyond_the_documents_limits_are_refused(board_client):
@@ -297,7 +295,7 @@ def test_values_beyond_the_documents_limits_are_refused(board_client):
     """
     response = attest(board_client, supplier="x" * 201, amount="23.405", event=999999)
 
-    assert errors_of(response) == {
+    assert messages_by_place(response) == {
         ("body", "supplier"): (
             "Assurez-vous que cette valeur comporte au plus 200 caractères (actuellement 201)."
         ),
@@ -315,7 +313,7 @@ def test_a_statement_lacking_its_keys_is_refused(board_client):
     response = send(board_client, "post", STATEMENTS, {})
 
     assert response.status_code == 422
-    assert errors_of(response) == {
+    assert messages_by_place(response) == {
         ("body", "payload", field): "Ce champ est obligatoire."
         for field in ("supplier", "purchase_date", "purchase", "amount", "event")
     }
@@ -332,6 +330,6 @@ def test_an_account_without_a_full_name_cannot_attest(private_files):
     response = attest(client_of(member))
 
     assert response.status_code == 422
-    assert errors_of(response) == {("body",): UNNAMED}
+    assert messages_by_place(response) == {("body",): UNNAMED}
     assert not Document.objects.exists()
     assert stored_files(private_files) == []

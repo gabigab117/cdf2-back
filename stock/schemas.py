@@ -40,7 +40,7 @@ class StockLineIn(InputSchema):
 
     # The id of the item.
     item: int
-    # Positive: the way of the operation signs it.
+    # Positive: the direction of the operation signs it.
     quantity: Decimal
 
 

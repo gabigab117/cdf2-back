@@ -1,10 +1,10 @@
 from decimal import Decimal
 
 import pytest
-from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 
 from stock.models import StockOperationReason
+from tests.helpers import errors_of
 from tests.stock.factories import (
     OrderLineFactory,
     StockItemFactory,
@@ -14,12 +14,6 @@ from tests.stock.factories import (
 )
 
 pytestmark = pytest.mark.django_db
-
-
-def errors_of(model):
-    with pytest.raises(ValidationError) as error:
-        model.full_clean()
-    return error.value.message_dict
 
 
 def test_an_item_reads_as_its_name():

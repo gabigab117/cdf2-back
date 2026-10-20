@@ -11,7 +11,7 @@ from documents.models import Document, DocumentCategory, DocumentSource, Documen
 from tests.accounts.factories import BoardMemberFactory
 from tests.documents.factories import DocumentFactory
 from tests.events.factories import EventFactory
-from tests.helpers import iso, send
+from tests.helpers import iso, messages_by_place, send
 from tests.treasury.factories import IncomeFactory, LedgerEntryFactory
 from treasury.models import LedgerEntry, LedgerEntryKind
 
@@ -54,11 +54,6 @@ def invoice(**fields):
 
 def validated(**fields):
     return invoice(validated=True, **fields)
-
-
-def messages(response):
-    assert response.status_code == 422
-    return {tuple(item["loc"]): item["msg"] for item in response.json()["detail"]}
 
 
 # Recording the expense of an invoice
@@ -172,7 +167,7 @@ def test_the_expense_of_an_invoice_is_checked_as_any_entry(board_client, changes
 
     response = send(board_client, "post", expense_url(document), expense(**changes))
 
-    assert messages(response) == errors
+    assert messages_by_place(response) == errors
     document.refresh_from_db()
     assert (document.status, document.paid_on) == (DocumentStatus.TO_REVIEW, None)
     assert not LedgerEntry.objects.exists()
@@ -189,7 +184,7 @@ def test_the_expense_of_an_invoice_is_checked_as_any_entry(board_client, changes
 def test_only_an_invoice_with_its_amount_becomes_an_expense(board_client, fields, message):
     response = send(board_client, "post", expense_url(invoice(**fields)), expense())
 
-    assert messages(response) == {("body",): message}
+    assert messages_by_place(response) == {("body",): message}
 
 
 def test_an_invoice_gets_a_single_expense(board_client):
@@ -203,7 +198,7 @@ def test_an_invoice_gets_a_single_expense(board_client):
 
     response = send(board_client, "post", expense_url(document), expense())
 
-    assert messages(response) == {("body",): "Cette facture a déjà sa dépense."}
+    assert messages_by_place(response) == {("body",): "Cette facture a déjà sa dépense."}
     assert LedgerEntry.objects.count() == 1
 
 
@@ -269,7 +264,9 @@ def test_an_invoice_attaches_to_an_expense_without_receipt_only(board_client, en
         board_client, "post", attach_url(invoice()), {"entry": target.id if target else 999999}
     )
 
-    assert messages(response) == {("body", "entry"): "Choisissez une dépense sans justificatif."}
+    assert messages_by_place(response) == {
+        ("body", "entry"): "Choisissez une dépense sans justificatif."
+    }
 
 
 def test_an_invoice_with_its_expense_is_not_attached_again(board_client):
@@ -278,7 +275,7 @@ def test_an_invoice_with_its_expense_is_not_attached_again(board_client):
 
     response = send(board_client, "post", attach_url(document), {"entry": LedgerEntryFactory().id})
 
-    assert messages(response) == {("body",): "Cette facture a déjà sa dépense."}
+    assert messages_by_place(response) == {("body",): "Cette facture a déjà sa dépense."}
 
 
 def test_attaching_an_invoice_locks_it_then_the_expense(board_client):

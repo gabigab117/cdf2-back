@@ -2,7 +2,6 @@ import datetime as dt
 from decimal import Decimal
 
 import pytest
-from django.core.serializers.json import DjangoJSONEncoder
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
@@ -12,6 +11,7 @@ from documents.schemas import EMPTY_EXTRACTED
 from stock.models import OrderLine, StockItem, StockOperation, StockOperationReason
 from tests.documents.factories import DocumentFactory
 from tests.events.factories import EventFactory
+from tests.helpers import ahead, iso, member_json, messages_by_place, send
 from tests.stock.factories import (
     OrderLineFactory,
     StockItemFactory,
@@ -30,24 +30,9 @@ def order_url(document_id, part=""):
     return f"{STOCK}/orders/{document_id}{part}"
 
 
-def iso(moment):
-    """A time as the API writes it: to the millisecond, as Django's JSON does."""
-    return DjangoJSONEncoder().default(moment)
-
-
-def send(client, method, path, body=None):
-    return getattr(client, method)(path, body, content_type="application/json")
-
-
 def lines(*rows):
     """The lines of an order as its form sends them: its rows are (item, quantity)."""
     return {"lines": [{"item": item.pk, "quantity": str(quantity)} for item, quantity in rows]}
-
-
-def errors(response):
-    """The messages of a 422, by where the API placed them."""
-    assert response.status_code == 422
-    return {tuple(item["loc"]): item["msg"] for item in response.json()["detail"]}
 
 
 def refusal(message):
@@ -191,7 +176,7 @@ def test_each_line_out_of_rule_is_refused_under_its_position(board_client):
 
     response = send(board_client, "put", order_url(document.pk, "/lines"), body)
 
-    assert errors(response) == {
+    assert messages_by_place(response) == {
         ("body", "lines", 1, "quantity"): "Indiquez une quantité supérieure à zéro.",
         ("body", "lines", 2, "item"): "Cet article figure déjà dans la commande.",
         ("body", "lines", 3, "quantity"): (
@@ -262,12 +247,7 @@ def test_a_member_receives_a_validated_order(board_client, board_member):
     body = response.json()
     assert body["delivery"] == {
         "created_at": iso(delivery.created_at),
-        "author": {
-            "id": board_member.pk,
-            "first_name": board_member.first_name,
-            "last_name": board_member.last_name,
-            "email": board_member.email,
-        },
+        "author": member_json(board_member),
     }
     assert body["undoable"] is True
 
@@ -345,7 +325,7 @@ def test_a_delivery_is_not_cancelled_the_next_day(board_client, monkeypatch):
     """
     document, _sweets, _juice = sweets_and_juice()
     received(document)
-    tomorrow = timezone.localdate() + dt.timedelta(days=1)
+    tomorrow = ahead(1)
     monkeypatch.setattr(timezone, "localdate", lambda *args, **kwargs: tomorrow)
 
     response = send(board_client, "delete", order_url(document.pk, "/delivery"))
@@ -500,7 +480,7 @@ def test_an_order_with_lines_keeps_its_category(board_client):
             },
         )
 
-    assert errors(correct(document)) == {
+    assert messages_by_place(correct(document)) == {
         ("body", "category"): (
             "Cette commande a des lignes de stock : retirez-les avant de changer sa catégorie."
         )

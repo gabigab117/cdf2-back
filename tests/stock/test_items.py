@@ -1,15 +1,13 @@
 from decimal import Decimal
 
 import pytest
-from django.core.serializers.json import DjangoJSONEncoder
 from django.db import connection
-from django.test import Client
 from django.test.utils import CaptureQueriesContext
-from ninja_jwt.tokens import AccessToken
 
 from stock.models import StockItem, StockMovement, StockOperation, StockOperationReason
-from tests.accounts.factories import UserFactory
+from tests.accounts.factories import UserFactory, client_of
 from tests.events.factories import EventFactory
+from tests.helpers import iso, send
 from tests.stock.factories import (
     StockItemFactory,
     StockOperationFactory,
@@ -44,15 +42,6 @@ def url(item_id):
     return f"{ITEMS_PATH}/{item_id}"
 
 
-def client_of(member):
-    return Client(headers={"Authorization": f"Bearer {AccessToken.for_user(member)}"})
-
-
-def iso(moment):
-    """A time as the API writes it: to the millisecond, as Django's JSON does."""
-    return DjangoJSONEncoder().default(moment)
-
-
 def payload(**changes):
     """An item as its form sends it, whole."""
     return {
@@ -63,10 +52,6 @@ def payload(**changes):
         "step": "6",
         "best_before": None,
     } | changes
-
-
-def send(client, method, path, body=None):
-    return getattr(client, method)(path, body, content_type="application/json")
 
 
 def adjust(client, item, direction):

@@ -17,8 +17,8 @@ from stock.schemas import StockItemIn
 # Nothing in stock, written as a quantity is: to the hundredth.
 NOTHING = Decimal("0.00")
 
-# The stock's order: by category, as the chips go, then by name.
-CATEGORY_ORDER = Case(
+# The stock's sort order: by category, as the chips go, then by name.
+CATEGORY_SORT_ORDER = Case(
     *(
         When(category=category, then=Value(position))
         for position, category in enumerate(StockItemCategory.values)
@@ -46,7 +46,7 @@ def stock_items() -> QuerySet[StockItem]:
         .annotate(
             low=Case(When(quantity__lt=F("threshold"), then=Value(True)), default=Value(False))
         )
-        .order_by(CATEGORY_ORDER, "name", "pk")
+        .order_by(CATEGORY_SORT_ORDER, "name", "pk")
     )
 
 

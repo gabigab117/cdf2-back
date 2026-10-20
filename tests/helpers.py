@@ -33,6 +33,12 @@ def messages(response):
     return [(error["loc"], error["msg"]) for error in response.json()["detail"]]
 
 
+def messages_by_place(response):
+    """The messages of a 422, by where the API placed them."""
+    assert response.status_code == 422
+    return {tuple(error["loc"]): error["msg"] for error in response.json()["detail"]}
+
+
 def ahead(days):
     """The day so many days from today, in Paris."""
     return timezone.localdate() + dt.timedelta(days=days)

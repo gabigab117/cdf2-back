@@ -15,7 +15,7 @@ from django.db.models import Q
 from django.db.models.functions import Lower
 
 from documents.models import Document
-from events.models import Event
+from events.models import EVENT_ERROR_MESSAGES, Event
 
 NO_STEP = "Indiquez un pas supérieur à zéro."
 NO_DELTA = "Un mouvement change la quantité."
@@ -129,7 +129,7 @@ class StockOperation(models.Model):
         null=True,
         blank=True,
         related_name="stock_operations",
-        error_messages={"invalid": "Choisissez un événement existant."},
+        error_messages=EVENT_ERROR_MESSAGES,
     )
     # The order a delivery received (7.4). A document deleted leaves the
     # delivery behind, without it: the stock keeps what came in.

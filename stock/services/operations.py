@@ -33,15 +33,16 @@ RECENT_OPERATIONS_COUNT = 5
 # An operation without any row, by the name of its rows.
 NO_ROW = {"lines": "Ajoutez au moins un article.", "counts": "Comptez au moins un article."}
 
-# The way each reason of an entry or an exit goes: a purchase comes in, a
-# consumption goes out, an adjustment either way.
-WRONG_WAYS = {
+# The direction each reason of an entry or an exit takes: a purchase comes in,
+# a consumption goes out, an adjustment either way.
+WRONG_DIRECTIONS = {
     (StockOperationReason.PURCHASE, StockDirection.OUT): "Un achat entre dans le stock.",
     (StockOperationReason.CONSUMPTION, StockDirection.IN): "Une consommation sort du stock.",
 }
 
 # The quantities of the stock, to the hundredth, as its movements keep them.
-HUNDREDTHS = DecimalValidator(max_digits=10, decimal_places=2)
+DELTA = StockMovement._meta.get_field("delta")
+HUNDREDTHS = DecimalValidator(DELTA.max_digits, DELTA.decimal_places)
 # What an entry or an exit moves; what a stocktake counts, nothing included.
 SOME = (MinValueValidator(Decimal("0.01"), NO_QUANTITY), HUNDREDTHS)
 ANY = (MinValueValidator(Decimal(0)), HUNDREDTHS)
@@ -73,9 +74,9 @@ def record_operation(data: StockOperationIn, member: User) -> StockOperation:
     operation = StockOperation(reason=reason, label=data.label, event_id=data.event, author=member)
     rows = [(line.item, line.quantity) for line in data.lines]
     locked, errors = _checked(operation, rows, "lines", "quantity", SOME)
-    wrong_way = WRONG_WAYS.get((reason, data.direction))
-    if wrong_way:
-        errors["reason"] = [wrong_way]
+    wrong_direction = WRONG_DIRECTIONS.get((reason, data.direction))
+    if wrong_direction:
+        errors["reason"] = [wrong_direction]
     if errors:
         raise ValidationError(errors)
     sign = 1 if data.direction == StockDirection.IN else -1

@@ -8,7 +8,7 @@ from django.db import connection
 from django.test.utils import CaptureQueriesContext
 
 from tests.accounts.factories import BoardMemberFactory
-from tests.helpers import send
+from tests.helpers import messages_by_place, send
 from tests.treasury.factories import AdvanceFactory, LedgerEntryFactory
 from treasury.models import LedgerEntry, ReimbursementMethod
 
@@ -24,11 +24,6 @@ def url(entry_id):
 def reimburse(client, entry, **changes):
     payload = {"reimbursed_on": "2026-09-20", "reimbursement_method": "transfer"} | changes
     return send(client, "post", url(entry.pk), payload)
-
-
-def messages(response):
-    assert response.status_code == 422
-    return {tuple(item["loc"]): item["msg"] for item in response.json()["detail"]}
 
 
 def reimbursed(**fields):
@@ -77,7 +72,7 @@ def test_an_advance_of_a_member_who_left_is_reimbursed_all_the_same(board_client
 def test_only_an_advance_owed_is_reimbursed(board_client, entry, message):
     response = reimburse(board_client, entry())
 
-    assert messages(response) == {("body",): message}
+    assert messages_by_place(response) == {("body",): message}
 
 
 @pytest.mark.parametrize(
@@ -103,7 +98,7 @@ def test_a_reimbursement_is_dated_after_its_advance_and_never_ahead(board_client
 
     response = reimburse(board_client, entry, **changes)
 
-    assert messages(response) == errors
+    assert messages_by_place(response) == errors
     entry.refresh_from_db()
     assert entry.reimbursed_on is None
 
@@ -146,7 +141,7 @@ def test_a_reimbursement_marked_by_mistake_is_cancelled(board_client):
 def test_an_advance_owed_has_no_reimbursement_to_cancel(board_client):
     response = board_client.delete(url(AdvanceFactory().pk))
 
-    assert messages(response) == {("body",): "Cette avance n’est pas remboursée."}
+    assert messages_by_place(response) == {("body",): "Cette avance n’est pas remboursée."}
 
 
 @pytest.mark.parametrize("method", ["post", "delete"])

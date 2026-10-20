@@ -1,7 +1,7 @@
 from django.shortcuts import get_object_or_404
 from ninja import Router, Status
 
-from core.schemas import ErrorOut, ValidationErrorOut
+from core.schemas import REFUSALS, ErrorOut, ValidationErrorOut
 from documents.models import Document, DocumentCategory
 from stock.models import StockItem
 from stock.schemas import (
@@ -23,9 +23,6 @@ from stock.services.orders import cancel_delivery, order, orders, receive, repla
 from stock.services.overview import stock_overview
 
 router = Router(tags=["stock"])
-
-# What every operation on an existing item may answer besides its success.
-REFUSALS = {401: ErrorOut, 403: ErrorOut, 404: ErrorOut, 422: ValidationErrorOut}
 
 # What an operation that records a body may answer besides its success.
 WRITE_REFUSALS = {400: ErrorOut, 401: ErrorOut, 403: ErrorOut, 422: ValidationErrorOut}

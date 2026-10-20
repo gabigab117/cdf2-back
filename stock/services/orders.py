@@ -15,6 +15,7 @@ from django.db.models import Prefetch, Q, QuerySet
 from django.utils import timezone
 
 from accounts.models import User
+from core.errors import line_errors
 from documents.models import Document, DocumentCategory, DocumentStatus
 from events.models import Event
 from stock.models import (
@@ -90,12 +91,12 @@ def order(document: Document, *, today: dt.date | None = None) -> Order:
     )
 
 
-def orders_to_receive(*, today: dt.date | None = None) -> list[Order]:
+def orders_to_receive() -> list[Order]:
     """The orders the Stock page shows: those validated with lines, not received
     yet, the first delivered first; then those received today, which « Annuler »
     still undoes.
     """
-    today = today or timezone.localdate()
+    today = timezone.localdate()
     received_today = Q(
         stock_operations__reason=StockOperationReason.DELIVERY,
         stock_operations__created_at__date=today,
@@ -107,7 +108,8 @@ def orders_to_receive(*, today: dt.date | None = None) -> list[Order]:
         order(document, today=today)
         for document in orders().filter(to_receive | received_today).distinct()
     ]
-    # Ordered here, the delivery date being no column: an order without one last.
+    # Ordered here, on what order() reads: received or not, then the delivery
+    # date, an order without one last.
     return sorted(
         found,
         key=lambda entry: (
@@ -167,11 +169,11 @@ def receive(document: Document, member: User) -> Order:
 
 
 @transaction.atomic
-def cancel_delivery(document: Document, *, today: dt.date | None = None) -> Order:
+def cancel_delivery(document: Document) -> Order:
     """« Annuler »: undo the delivery of an order, the day it was received,
     unless some of it has left the stock, or a stocktake has counted it, since.
     """
-    current = order(_locked(document), today=today)
+    current = order(_locked(document))
     delivery = current.delivery
     if delivery is None:
         raise ValidationError("Cette commande n’est pas réceptionnée.")
@@ -201,9 +203,9 @@ def cancel_delivery(document: Document, *, today: dt.date | None = None) -> Orde
 
 
 def _locked(document: Document) -> Document:
-    """Lock an order first, then read it with its lines and its delivery."""
-    Document.objects.select_for_update().filter(pk=document.pk).get()
-    return orders().get(pk=document.pk)
+    """Lock an order first, then read its lines and its delivery."""
+    # Its event, an outer join, is read without being locked.
+    return orders().select_for_update(of=("self",)).get(pk=document.pk)
 
 
 def _check(lines: list[OrderLine]) -> None:
@@ -216,11 +218,7 @@ def _check(lines: list[OrderLine]) -> None:
     # checked here, among the lines of the request.
     seen: set[int] = set()
     for index, line in enumerate(lines):
-        try:
-            line.full_clean(exclude={"document"})
-        except ValidationError as error:
-            for field, messages in error.message_dict.items():
-                errors[f"lines.{index}.{field}"] = messages
+        errors |= line_errors("lines", index, line, {"document"})
         if line.item_id in seen:
             errors.setdefault(f"lines.{index}.item", []).append(ORDER_ITEM_TWICE)
         seen.add(line.item_id)
