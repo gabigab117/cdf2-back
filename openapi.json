@@ -4850,6 +4850,25 @@
         "title": "ReturnLineIn",
         "type": "object"
       },
+      "ShoppingLineOut": {
+        "description": "An item below its threshold, and what brings it back to twice its\nthreshold, rounded up to its step (A19).",
+        "properties": {
+          "item": {
+            "$ref": "#/components/schemas/StockMovementItemOut"
+          },
+          "quantity": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Quantity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "item",
+          "quantity"
+        ],
+        "title": "ShoppingLineOut",
+        "type": "object"
+      },
       "ShortageOut": {
         "description": "An equipment the loans to come take more of than it offers (A17).",
         "properties": {
@@ -5272,7 +5291,7 @@
         "type": "object"
       },
       "StockMovementItemOut": {
-        "description": "The item a movement changed, as the summary of its operation names it.",
+        "description": "An item as a line names it: the movement of an operation, a line of the\nshopping list.",
         "properties": {
           "id": {
             "title": "Id",
@@ -5462,13 +5481,21 @@
             },
             "title": "Recent Operations",
             "type": "array"
+          },
+          "shopping_list": {
+            "items": {
+              "$ref": "#/components/schemas/ShoppingLineOut"
+            },
+            "title": "Shopping List",
+            "type": "array"
           }
         },
         "required": [
           "items",
           "counts",
           "last_stocktake",
-          "recent_operations"
+          "recent_operations",
+          "shopping_list"
         ],
         "title": "StockOverviewOut",
         "type": "object"

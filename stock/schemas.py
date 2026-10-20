@@ -132,7 +132,9 @@ class LastStocktakeOut(Schema):
 
 
 class StockMovementItemOut(Schema):
-    """The item a movement changed, as the summary of its operation names it."""
+    """An item as a line names it: the movement of an operation, a line of the
+    shopping list.
+    """
 
     id: int
     name: str
@@ -163,6 +165,15 @@ class StockOperationOut(Schema):
     movements: list[StockMovementOut]
 
 
+class ShoppingLineOut(Schema):
+    """An item below its threshold, and what brings it back to twice its
+    threshold, rounded up to its step (A19).
+    """
+
+    item: StockMovementItemOut
+    quantity: Decimal
+
+
 class StockOverviewOut(Schema):
     """The stock, item by item, and its figures: a bounded aggregate (A7)."""
 
@@ -173,6 +184,8 @@ class StockOverviewOut(Schema):
     last_stocktake: LastStocktakeOut | None
     # The latest operations, the latest first: a click on minus or plus is one.
     recent_operations: list[StockOperationOut]
+    # The items below their threshold, in the stock's order.
+    shopping_list: list[ShoppingLineOut]
 
 
 class LowStockItemOut(Schema):

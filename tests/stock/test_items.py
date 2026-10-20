@@ -579,3 +579,70 @@ def test_adjusting_locks_the_item_first(board_client):
     summing = next(index for index, sql in enumerate(statements) if "SUM(" in sql)
     assert StockItem._meta.db_table in statements[lock]
     assert lock < summing
+
+
+# The shopping list
+
+
+def test_the_shopping_list_of_the_mockup_brings_each_low_item_back_to_twice_its_threshold(
+    board_client,
+):
+    """
+    Given the fourteen items of the mockup
+    When a member reads the stock
+    Then the shopping list buys 30 litres of juice, 4,5 kg of sweets and 8 bags
+    of fries, in the stock's order; the kegs at their threshold are not on it
+    """
+    items = build_mockup()
+
+    shopping = board_client.get(STOCK).json()["shopping_list"]
+
+    assert shopping == [
+        {
+            "item": {"id": items["Jus de fruits 1 L"].pk, "name": "Jus de fruits 1 L", "unit": ""},
+            "quantity": "30.00",
+        },
+        {
+            "item": {"id": items["Bonbons assortis"].pk, "name": "Bonbons assortis", "unit": "kg"},
+            "quantity": "4.50",
+        },
+        {
+            "item": {
+                "id": items["Frites surgelées 2,5 kg"].pk,
+                "name": "Frites surgelées 2,5 kg",
+                "unit": "",
+            },
+            "quantity": "8.00",
+        },
+    ]
+
+
+@pytest.mark.parametrize(
+    ("held", "to_buy"),
+    [("0", "48.00"), ("18", "30.00"), ("19", "30.00"), ("23", "30.00")],
+)
+def test_the_shopping_list_buys_by_the_step(board_client, held, to_buy):
+    """
+    Given juice below its threshold of 24, bought by the pack of 6
+    When a member reads the stock
+    Then what brings it back to 48 is rounded up to a whole pack
+    """
+    juice = StockItemFactory(threshold=Decimal(24), step=Decimal(6))
+    if held != "0":
+        put_in_stock(juice, held)
+
+    [line] = board_client.get(STOCK).json()["shopping_list"]
+
+    assert line["quantity"] == to_buy
+
+
+def test_nothing_to_buy_while_every_item_is_above_its_threshold(board_client):
+    """
+    Given juice at its threshold, and syrup without one
+    When a member reads the stock
+    Then the shopping list is empty
+    """
+    put_in_stock(StockItemFactory(threshold=Decimal(24)), 24)
+    StockItemFactory(threshold=Decimal(0))
+
+    assert board_client.get(STOCK).json()["shopping_list"] == []

@@ -6,7 +6,7 @@ bell alike.
 """
 
 from dataclasses import dataclass
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import ROUND_CEILING, ROUND_HALF_UP, Decimal
 
 from django.core.exceptions import ValidationError
 from django.db.models import Case, F, ProtectedError, QuerySet, Sum, Value, When
@@ -74,6 +74,14 @@ def level(quantity: Decimal, threshold: Decimal) -> int:
         return 100 if quantity > 0 else 0
     percent = (quantity * 100 / (2 * threshold)).quantize(Decimal(1), rounding=ROUND_HALF_UP)
     return min(100, int(percent))
+
+
+def quantity_to_buy(quantity: Decimal, threshold: Decimal, step: Decimal) -> Decimal:
+    """What brings an item back to twice its threshold, rounded up to its step
+    (A19): the shopping list buys by the pack.
+    """
+    steps = ((2 * threshold - quantity) / step).to_integral_value(rounding=ROUND_CEILING)
+    return steps * step
 
 
 def create_item(data: StockItemIn) -> StockItem:
