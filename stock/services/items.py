@@ -5,14 +5,13 @@ threshold, strictly. Both are worked out by the database, for the stock and the
 bell alike.
 """
 
-from collections import Counter
 from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 
 from django.core.exceptions import ValidationError
 from django.db.models import Case, F, ProtectedError, QuerySet, Sum, Value, When
 
-from stock.models import StockItem, StockItemCategory, StockOperation, StockOperationReason
+from stock.models import StockItem, StockItemCategory
 from stock.schemas import StockItemIn
 
 # Nothing in stock, written as a quantity is: to the hundredth.
@@ -38,16 +37,6 @@ class StockedItem:
     level: int
 
 
-@dataclass(frozen=True)
-class StockOverview:
-    """The stock, item by item, and its figures: a bounded aggregate (A7)."""
-
-    items: list[StockedItem]
-    # In all, low, and by category: the chips.
-    counts: dict[str, int]
-    last_stocktake: StockOperation | None
-
-
 def stock_items() -> QuerySet[StockItem]:
     """The items with their quantity, and whether they are low, in the stock's
     order. The sum groups the rows: the order is given again.
@@ -64,25 +53,6 @@ def stock_items() -> QuerySet[StockItem]:
 def low_items() -> QuerySet[StockItem]:
     """The items below their threshold, in the stock's order: the bell lists them."""
     return stock_items().filter(low=True)
-
-
-def stock_overview() -> StockOverview:
-    """Every item and where its stock stands, the figures of the chips, and the
-    latest stocktake.
-    """
-    items = [stocked(item) for item in stock_items()]
-    by_category = Counter(entry.item.category for entry in items)
-    return StockOverview(
-        items=items,
-        counts={
-            "total": len(items),
-            "low": sum(entry.low for entry in items),
-            **{category: by_category[category] for category in StockItemCategory.values},
-        },
-        last_stocktake=StockOperation.objects.filter(reason=StockOperationReason.STOCKTAKE)
-        .select_related("event")
-        .first(),
-    )
 
 
 def stocked(item: StockItem) -> StockedItem:

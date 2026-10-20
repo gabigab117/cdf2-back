@@ -5024,6 +5024,33 @@
         "title": "StockAdjustmentIn",
         "type": "object"
       },
+      "StockCountIn": {
+        "description": "What a stocktake counted of an item.",
+        "properties": {
+          "counted": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Counted"
+          },
+          "item": {
+            "title": "Item",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "item",
+          "counted"
+        ],
+        "title": "StockCountIn",
+        "type": "object"
+      },
       "StockCountsOut": {
         "description": "How many items the stock holds, in all, low, and by category: the chips.",
         "properties": {
@@ -5217,6 +5244,195 @@
         "title": "StockItemOut",
         "type": "object"
       },
+      "StockLineIn": {
+        "description": "A line of an entry or an exit: an item, and how much of it.",
+        "properties": {
+          "item": {
+            "title": "Item",
+            "type": "integer"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Quantity"
+          }
+        },
+        "required": [
+          "item",
+          "quantity"
+        ],
+        "title": "StockLineIn",
+        "type": "object"
+      },
+      "StockMovementItemOut": {
+        "description": "The item a movement changed, as the summary of its operation names it.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "unit"
+        ],
+        "title": "StockMovementItemOut",
+        "type": "object"
+      },
+      "StockMovementOut": {
+        "description": "What an operation changed of one item.",
+        "properties": {
+          "delta": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Delta",
+            "type": "string"
+          },
+          "item": {
+            "$ref": "#/components/schemas/StockMovementItemOut"
+          }
+        },
+        "required": [
+          "item",
+          "delta"
+        ],
+        "title": "StockMovementOut",
+        "type": "object"
+      },
+      "StockOperationIn": {
+        "description": "« Entrée ou sortie »: several items in or out at once, for one reason,\nevery key required. A purchase comes in, a consumption goes out, an\nadjustment either way.",
+        "properties": {
+          "direction": {
+            "$ref": "#/components/schemas/StockDirection"
+          },
+          "event": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/StockLineIn"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "reason": {
+            "enum": [
+              "purchase",
+              "consumption",
+              "adjustment"
+            ],
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "direction",
+          "reason",
+          "label",
+          "event",
+          "lines"
+        ],
+        "title": "StockOperationIn",
+        "type": "object"
+      },
+      "StockOperationOut": {
+        "description": "An operation of the stock, as « Mouvements récents » tells it.",
+        "properties": {
+          "author": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BoardMemberOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "event": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StockEventOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "movements": {
+            "items": {
+              "$ref": "#/components/schemas/StockMovementOut"
+            },
+            "title": "Movements",
+            "type": "array"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/StockOperationReason"
+          }
+        },
+        "required": [
+          "id",
+          "reason",
+          "label",
+          "event",
+          "author",
+          "created_at",
+          "movements"
+        ],
+        "title": "StockOperationOut",
+        "type": "object"
+      },
+      "StockOperationReason": {
+        "description": "Why the stock moved. A purchase comes in, a consumption goes out, an\nadjustment goes either way; a stocktake and a delivery have their own\nscreens.",
+        "enum": [
+          "purchase",
+          "consumption",
+          "stocktake",
+          "delivery",
+          "adjustment"
+        ],
+        "title": "StockOperationReason",
+        "type": "string"
+      },
       "StockOverviewOut": {
         "description": "The stock, item by item, and its figures: a bounded aggregate (A7).",
         "properties": {
@@ -5239,12 +5455,20 @@
                 "type": "null"
               }
             ]
+          },
+          "recent_operations": {
+            "items": {
+              "$ref": "#/components/schemas/StockOperationOut"
+            },
+            "title": "Recent Operations",
+            "type": "array"
           }
         },
         "required": [
           "items",
           "counts",
-          "last_stocktake"
+          "last_stocktake",
+          "recent_operations"
         ],
         "title": "StockOverviewOut",
         "type": "object"
@@ -5276,6 +5500,40 @@
           "level"
         ],
         "title": "StockedItemOut",
+        "type": "object"
+      },
+      "StocktakeIn": {
+        "description": "« Faire l'inventaire »: the items counted, every key required. An item\nleft out is not counted.",
+        "properties": {
+          "counts": {
+            "items": {
+              "$ref": "#/components/schemas/StockCountIn"
+            },
+            "title": "Counts",
+            "type": "array"
+          },
+          "event": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "event",
+          "counts"
+        ],
+        "title": "StocktakeIn",
         "type": "object"
       },
       "SwornStatementIn": {
@@ -10947,7 +11205,7 @@
     },
     "/api/board/stock": {
       "get": {
-        "description": "Every item, by category then by name, with its quantity, whether it is\nlow and how full its bar is; the figures of the chips; the latest stocktake.",
+        "description": "Every item, by category then by name, with its quantity, whether it is\nlow and how full its bar is; the figures of the chips; the latest stocktake;\nthe latest operations.",
         "operationId": "stock_api_read_stock",
         "parameters": [],
         "responses": {
@@ -11330,6 +11588,162 @@
           }
         ],
         "summary": "Adjust a stock item by its step",
+        "tags": [
+          "stock"
+        ]
+      }
+    },
+    "/api/board/stock/operations": {
+      "post": {
+        "description": "« Entrée ou sortie »: several items in or out at once, for one reason,\nrecorded with the member. An exit never takes more than is in stock.",
+        "operationId": "stock_api_record_entry_or_exit",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StockOperationIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockOperationOut"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Record an entry or an exit of the stock",
+        "tags": [
+          "stock"
+        ]
+      }
+    },
+    "/api/board/stock/stocktakes": {
+      "post": {
+        "description": "« Faire l'inventaire »: each difference between what was counted and\nwhat the stock held becomes a movement of a single stocktake.",
+        "operationId": "stock_api_take_stock",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StocktakeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockOperationOut"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Record a stocktake",
         "tags": [
           "stock"
         ]

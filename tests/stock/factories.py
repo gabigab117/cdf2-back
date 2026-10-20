@@ -46,3 +46,8 @@ class StockMovementFactory(factory.django.DjangoModelFactory):
 def put_in_stock(item, quantity):
     """Put some of an item in stock, by an operation of its own."""
     return StockMovementFactory(item=item, delta=Decimal(quantity))
+
+
+def quantity_of(item):
+    """What the stock holds of an item: the sum of its movements."""
+    return sum(movement.delta for movement in StockMovement.objects.filter(item=item))

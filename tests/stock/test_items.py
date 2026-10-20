@@ -10,7 +10,12 @@ from ninja_jwt.tokens import AccessToken
 from stock.models import StockItem, StockMovement, StockOperation, StockOperationReason
 from tests.accounts.factories import UserFactory
 from tests.events.factories import EventFactory
-from tests.stock.factories import StockItemFactory, StockOperationFactory, put_in_stock
+from tests.stock.factories import (
+    StockItemFactory,
+    StockOperationFactory,
+    put_in_stock,
+    quantity_of,
+)
 from tests.stock.mockup import LEVELS, LOW, build_mockup
 
 pytestmark = pytest.mark.django_db
@@ -26,6 +31,8 @@ OPERATIONS = [
     ("put", f"{ITEMS_PATH}/1"),
     ("delete", f"{ITEMS_PATH}/1"),
     ("post", f"{ITEMS_PATH}/1/adjustments"),
+    ("post", f"{STOCK}/operations"),
+    ("post", f"{STOCK}/stocktakes"),
 ]
 
 
@@ -65,10 +72,6 @@ def adjust(client, item, direction):
 def refusal(field, message):
     location = ["body", field] if field else ["body"]
     return {"detail": [{"type": "validation_error", "loc": location, "msg": message}]}
-
-
-def quantity(item):
-    return sum(movement.delta for movement in StockMovement.objects.filter(item=item))
 
 
 # Access
@@ -282,10 +285,13 @@ def test_the_stock_takes_a_fixed_number_of_queries(board_client, django_assert_m
     Then it comes in a fixed number of queries
     """
     build_mockup()
-    StockOperationFactory(reason=StockOperationReason.STOCKTAKE, event=EventFactory())
+    StockOperationFactory(
+        reason=StockOperationReason.STOCKTAKE, event=EventFactory(), author=UserFactory()
+    )
 
-    # Authentication (2), the items with their quantities, the latest stocktake.
-    with django_assert_max_num_queries(4):
+    # Authentication (2), the items with their quantities, the latest stocktake,
+    # the latest operations with their event and member, their movements.
+    with django_assert_max_num_queries(6):
         board_client.get(STOCK)
 
 
@@ -311,7 +317,7 @@ def test_a_member_adds_an_item(board_client):
         "step": "6.00",
         "best_before": "2027-02-01",
     }
-    assert quantity(item) == 0
+    assert quantity_of(item) == 0
 
 
 @pytest.mark.parametrize(
@@ -395,7 +401,7 @@ def test_a_member_corrects_an_item_whose_movements_stay(board_client):
         "step": "6.00",
         "best_before": "2027-03-01",
     }
-    assert quantity(juice) == 18
+    assert quantity_of(juice) == 18
 
 
 def test_an_item_keeps_its_own_name(board_client):

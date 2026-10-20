@@ -18,6 +18,8 @@ from events.models import Event
 
 NO_STEP = "Indiquez un pas supérieur à zéro."
 NO_DELTA = "Un mouvement change la quantité."
+UNKNOWN_ITEM = "Choisissez un article existant."
+ITEM_TWICE = "Cet article figure déjà dans l’opération."
 
 
 # Named after their model rather than nested in it: the OpenAPI document names an
@@ -160,7 +162,7 @@ class StockMovement(models.Model):
         verbose_name="article",
         on_delete=models.PROTECT,
         related_name="movements",
-        error_messages={"invalid": "Choisissez un article existant."},
+        error_messages={"invalid": UNKNOWN_ITEM},
     )
     delta = models.DecimalField("variation", max_digits=10, decimal_places=2)
 
@@ -176,7 +178,7 @@ class StockMovement(models.Model):
             models.UniqueConstraint(
                 fields=["operation", "item"],
                 name="stock_movement_unique_item",
-                violation_error_message="Cet article figure déjà dans l’opération.",
+                violation_error_message=ITEM_TWICE,
             ),
         ]
 
