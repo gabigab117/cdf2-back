@@ -1,19 +1,24 @@
 """The operations of the stock (7.2): an entry or an exit of several items at
-once, and a stocktake, each a single operation of its member.
+once, and a stocktake, each a single operation of its member; and the costs of
+a purchase or a delivery, completed or corrected (D16).
 
-Like every write of the stock, each locks its items first, by key, then sums
-their movements: no quantity goes below zero.
+An entry, an exit and a stocktake lock their items first, by key, then sum their
+movements: no quantity goes below zero. The costs lock their operation alone:
+they move no quantity.
 """
 
+import datetime as dt
+from dataclasses import dataclass
 from decimal import Decimal
 
 from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
 from django.core.validators import DecimalValidator, MinValueValidator
 from django.db import transaction
-from django.db.models import Prefetch, QuerySet
+from django.db.models import Case, Exists, OuterRef, Prefetch, Q, QuerySet, Value, When
 from django.utils.formats import number_format
 
 from accounts.models import User
+from events.models import Event
 from stock.models import (
     ITEM_TWICE,
     NO_QUANTITY,
@@ -24,8 +29,9 @@ from stock.models import (
     StockOperation,
     StockOperationReason,
 )
-from stock.schemas import StockOperationIn, StocktakeIn
+from stock.schemas import StockCostsIn, StockOperationIn, StocktakeIn
 from stock.services.movements import NOTHING_LEFT, lock, quantities
+from stock.services.valuation import NO_VALUE, PRICED_REASONS, valued_movements
 
 # How many operations « Mouvements récents » shows.
 RECENT_OPERATIONS_COUNT = 5
@@ -50,17 +56,105 @@ ANY = (MinValueValidator(Decimal(0)), HUNDREDTHS)
 # a prize given costs nothing.
 COSTS = StockMovement._meta.get_field("cost").validators
 PURCHASE_COST_ONLY = "Seul un achat a un prix."
+PRICED_ONLY = "Seuls un achat et une réception ont des prix."
+NOT_IN_OPERATION = "Cet article n’est pas dans l’opération."
+EVERY_LINE = "Donnez le prix de chaque ligne de l’opération, ou laissez-le vide."
 
 Rows = list[tuple[int, Decimal]]
 
+# A purchase or a delivery waiting for the cost of a line (D16).
+UNPRICED = Q(
+    Exists(StockMovement.objects.filter(operation=OuterRef("pk"), cost__isnull=True)),
+    reason__in=PRICED_REASONS,
+)
+
+
+@dataclass(frozen=True)
+class OperationLine:
+    """A line of an operation, valued: what it moved of an item, and at what cost."""
+
+    item: StockItem
+    delta: Decimal
+    # What the line of a purchase or a delivery cost; None while unknown.
+    cost: Decimal | None
+    # The unit cost it moved at, to the ten-thousandth, and what it moved, to
+    # the cent; None for an item whose stock has no cost to come at.
+    unit_cost: Decimal | None
+    value: Decimal | None
+    # A line of a purchase or a delivery waiting for its cost.
+    unpriced: bool
+
+
+@dataclass(frozen=True)
+class OperationDetail:
+    """An operation, as its page shows it: its lines valued."""
+
+    id: int
+    reason: str
+    label: str
+    event: Event | None
+    author: User | None
+    created_at: dt.datetime
+    unpriced: bool
+    # A purchase or a delivery: the costs of its lines are completed or corrected.
+    priceable: bool
+    # What the lines that have a cost cost, in all.
+    cost: Decimal
+    lines: list[OperationLine]
+
 
 def operations() -> QuerySet[StockOperation]:
-    """The operations, the latest first, with their event, their member, and
-    their movements in the order they were written.
+    """The operations, the latest first, with their event, their member, their
+    movements in the order they were written, and whether they wait for a cost.
     """
     movements = StockMovement.objects.select_related("item").order_by("pk")
-    return StockOperation.objects.select_related("event", "author").prefetch_related(
-        Prefetch("movements", queryset=movements)
+    return (
+        StockOperation.objects.select_related("event", "author")
+        .annotate(unpriced=Case(When(UNPRICED, then=Value(True)), default=Value(False)))
+        .prefetch_related(Prefetch("movements", queryset=movements))
+    )
+
+
+def unpriced_purchases() -> QuerySet[StockOperation]:
+    """The purchases and deliveries waiting for the cost of a line, the oldest
+    first, with their member: what the bell asks for (A6).
+    """
+    return (
+        StockOperation.objects.filter(UNPRICED)
+        .select_related("author")
+        .order_by("created_at", "pk")
+    )
+
+
+def operation_detail(operation: StockOperation) -> OperationDetail:
+    """An operation read by operations(), its lines valued at the cost of their
+    time.
+    """
+    movements = list(operation.movements.all())
+    histories = valued_movements(movement.item_id for movement in movements)
+    valued = {line.id: line for history in histories.values() for line in history}
+    lines = [
+        OperationLine(
+            item=movement.item,
+            delta=movement.delta,
+            cost=movement.cost,
+            unit_cost=valued[movement.pk].unit_cost,
+            value=valued[movement.pk].value,
+            unpriced=valued[movement.pk].unpriced,
+        )
+        for movement in movements
+    ]
+    return OperationDetail(
+        id=operation.pk,
+        reason=operation.reason,
+        label=operation.label,
+        event=operation.event,
+        author=operation.author,
+        created_at=operation.created_at,
+        unpriced=any(line.unpriced for line in lines),
+        priceable=operation.reason in PRICED_REASONS,
+        cost=sum((line.cost for line in lines if line.cost is not None), NO_VALUE),
+        lines=lines,
     )
 
 
@@ -79,7 +173,9 @@ def record_operation(data: StockOperationIn, member: User) -> StockOperation:
     operation = StockOperation(reason=reason, label=data.label, event_id=data.event, author=member)
     rows = [(line.item, line.quantity) for line in data.lines]
     locked, errors = _checked(operation, rows, "lines", "quantity", SOME)
-    errors |= _cost_errors(reason, [line.cost for line in data.lines])
+    errors |= _cost_errors(
+        [line.cost for line in data.lines], allowed=reason == StockOperationReason.PURCHASE
+    )
     wrong_direction = WRONG_DIRECTIONS.get((reason, data.direction))
     if wrong_direction:
         errors["reason"] = [wrong_direction]
@@ -158,15 +254,46 @@ def _checked(
     return locked, errors
 
 
-def _cost_errors(reason: StockOperationReason, costs: list[Decimal | None]) -> dict[str, list[str]]:
-    """Check the cost of each line, under its position: a purchase's alone,
+@transaction.atomic
+def update_costs(operation: StockOperation, data: StockCostsIn) -> OperationDetail:
+    """« Compléter les prix », « Corriger les prix »: what each line of a purchase
+    or a delivery cost, all at once (D16), the only correction of an operation.
+    Its quantities stay as they are, and every value follows.
+    """
+    # Its event, an outer join, is read without being locked.
+    operation = operations().select_for_update(of=("self",)).get(pk=operation.pk)
+    if operation.reason not in PRICED_REASONS:
+        raise ValidationError(PRICED_ONLY)
+    movements = {movement.item_id: movement for movement in operation.movements.all()}
+    errors: dict[str, list[str]] = {}
+    seen: set[int] = set()
+    for index, line in enumerate(data.lines):
+        if line.item not in movements:
+            errors[f"lines.{index}.item"] = [NOT_IN_OPERATION]
+        elif line.item in seen:
+            errors[f"lines.{index}.item"] = [ITEM_TWICE]
+        seen.add(line.item)
+    if movements.keys() - seen:
+        errors[NON_FIELD_ERRORS] = [EVERY_LINE]
+    errors |= _cost_errors([line.cost for line in data.lines])
+    if errors:
+        raise ValidationError(errors)
+    for line in data.lines:
+        movements[line.item].cost = line.cost
+    StockMovement.objects.bulk_update(movements.values(), ["cost"])
+    # Its prefetched lines hold their new costs: the values are read anew.
+    return operation_detail(operation)
+
+
+def _cost_errors(costs: list[Decimal | None], *, allowed: bool = True) -> dict[str, list[str]]:
+    """Check the cost of each line, under its position: where a cost is allowed,
     never negative, to the cent. A line without one waits for it.
     """
     errors: dict[str, list[str]] = {}
     for index, cost in enumerate(costs):
         if cost is None:
             continue
-        if reason != StockOperationReason.PURCHASE:
+        if not allowed:
             errors[f"lines.{index}.cost"] = [PURCHASE_COST_ONLY]
             continue
         try:

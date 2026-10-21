@@ -72,7 +72,9 @@ class OrderLineFactory(factory.django.DjangoModelFactory):
 
 
 def put_in_stock(item, quantity):
-    """Put some of an item in stock, by an operation of its own."""
+    """Put some of an item in stock, by an operation of its own: a purchase of
+    no cost, which waits for it among what awaits the board.
+    """
     return StockMovementFactory(item=item, delta=Decimal(quantity))
 
 

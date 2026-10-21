@@ -81,6 +81,7 @@ def test_a_purchase_brings_several_items_in(board_client, board_member):
                 "delta": "120.00",
             },
         ],
+        "unpriced": True,
     }
     assert (quantity_of(cans), quantity_of(water)) == (432, 120)
 
@@ -479,6 +480,7 @@ def test_the_stock_tells_its_five_latest_operations(board_client, board_member):
         "author": member_json(board_member),
         "created_at": iso(click.created_at),
         "movements": [{"item": {"id": cans.pk, "name": "Canettes", "unit": ""}, "delta": "24.00"}],
+        "unpriced": False,
     }
     assert [operation["movements"][0]["delta"] for operation in recent[1:]] == [
         "5.00",
@@ -486,3 +488,295 @@ def test_the_stock_tells_its_five_latest_operations(board_client, board_member):
         "3.00",
         "2.00",
     ]
+
+
+# The list of the operations, an operation, and its costs (D16)
+
+
+def costs(*lines):
+    """The costs of an operation as its form sends them: its lines are (item, cost)."""
+    return {"lines": [{"item": item.pk, "cost": cost} for item, cost in lines]}
+
+
+def shopping_of_the_bar(member=None):
+    """The shopping of the bar: 48 cans for 26,40 €, and 24 bottles of water whose
+    cost waits.
+    """
+    cans = StockItemFactory(name="Canettes de soda 33 cl")
+    water = StockItemFactory(name="Bouteilles d’eau 50 cl")
+    shopping = StockOperationFactory(label="Courses buvette", author=member)
+    StockMovementFactory(operation=shopping, item=cans, delta=Decimal(48), cost=Decimal("26.40"))
+    StockMovementFactory(operation=shopping, item=water, delta=Decimal(24))
+    return shopping, cans, water
+
+
+def test_the_operations_come_the_latest_first_by_page(board_client):
+    """
+    Given the shopping of the bar, then a consumption
+    When a member lists the operations
+    Then both come, the latest first, by page, each telling whether it waits
+    for a cost
+    """
+    shopping, cans, _water = shopping_of_the_bar()
+    consumption = StockOperationFactory(reason=StockOperationReason.CONSUMPTION)
+    StockMovementFactory(operation=consumption, item=cans, delta=Decimal(-6))
+
+    body = board_client.get(OPERATIONS_PATH).json()
+
+    assert body["count"] == 2
+    assert [(operation["id"], operation["unpriced"]) for operation in body["items"]] == [
+        (consumption.pk, False),
+        (shopping.pk, True),
+    ]
+
+
+def test_the_list_keeps_the_operations_waiting_for_a_cost(board_client):
+    """
+    Given the shopping of the bar, waiting for the cost of the water, and a
+    purchase whose lines all have one
+    When a member lists the operations waiting for a cost
+    Then only the shopping comes
+    """
+    shopping, cans, _water = shopping_of_the_bar()
+    priced = StockOperationFactory()
+    StockMovementFactory(operation=priced, item=cans, cost=Decimal("13.20"))
+
+    body = board_client.get(OPERATIONS_PATH, {"unpriced": "true"}).json()
+
+    assert [operation["id"] for operation in body["items"]] == [shopping.pk]
+
+
+def test_the_operations_are_listed_in_a_fixed_number_of_queries(
+    board_client, django_assert_max_num_queries
+):
+    """
+    Given the shopping of the bar, and three consumptions
+    When a member lists the operations
+    Then they come in a fixed number of queries
+    """
+    _shopping, cans, _water = shopping_of_the_bar()
+    for _ in range(3):
+        StockMovementFactory(
+            operation=StockOperationFactory(reason=StockOperationReason.CONSUMPTION),
+            item=cans,
+            delta=Decimal(-1),
+        )
+
+    # Authentication (2), the count, the page of operations with their event
+    # and member, and their movements with their items.
+    with django_assert_max_num_queries(5):
+        board_client.get(OPERATIONS_PATH)
+
+
+def test_an_operation_tells_its_lines_valued(board_client, board_member):
+    """
+    Given the shopping of the bar: 48 cans for 26,40 €, 24 bottles of water
+    whose cost waits
+    When a member reads it
+    Then each line tells its cost, its unit cost and its value: the water, of
+    no cost to come at, has none, and waits for its cost
+    """
+    shopping, cans, water = shopping_of_the_bar(board_member)
+
+    response = board_client.get(f"{OPERATIONS_PATH}/{shopping.pk}")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "id": shopping.pk,
+        "reason": "purchase",
+        "label": "Courses buvette",
+        "event": None,
+        "author": member_json(board_member),
+        "created_at": iso(shopping.created_at),
+        "unpriced": True,
+        "priceable": True,
+        "cost": "26.40",
+        "lines": [
+            {
+                "item": {"id": cans.pk, "name": "Canettes de soda 33 cl", "unit": ""},
+                "delta": "48.00",
+                "cost": "26.40",
+                "unit_cost": "0.5500",
+                "value": "26.40",
+                "unpriced": False,
+            },
+            {
+                "item": {"id": water.pk, "name": "Bouteilles d’eau 50 cl", "unit": ""},
+                "delta": "24.00",
+                "cost": None,
+                "unit_cost": None,
+                "value": None,
+                "unpriced": True,
+            },
+        ],
+    }
+
+
+def test_an_operation_is_read_in_a_fixed_number_of_queries(
+    board_client, django_assert_max_num_queries
+):
+    """
+    Given the shopping of the bar
+    When a member reads it
+    Then it comes in a fixed number of queries
+    """
+    shopping, _cans, _water = shopping_of_the_bar()
+
+    # Authentication (2), the operation with its event and member, its
+    # movements with their items, and the movements of its items valued.
+    with django_assert_max_num_queries(5):
+        board_client.get(f"{OPERATIONS_PATH}/{shopping.pk}")
+
+
+def test_an_operation_that_does_not_exist_is_not_found(board_client):
+    """
+    Given no operation of id 999
+    When a member reads it, or writes its costs
+    Then it is not found
+    """
+    assert board_client.get(f"{OPERATIONS_PATH}/999").status_code == 404
+    assert (
+        send(board_client, "put", f"{OPERATIONS_PATH}/999/costs", {"lines": []}).status_code == 404
+    )
+
+
+def test_a_member_completes_the_costs_of_a_purchase(board_client):
+    """
+    Given the shopping of the bar, waiting for the cost of the water
+    When a member gives the water its cost, 6,00 €, and corrects the cans' to
+    28,80 €
+    Then both lines keep their new cost, the shopping waits no more, and the
+    values follow
+    """
+    shopping, cans, water = shopping_of_the_bar()
+
+    response = send(
+        board_client,
+        "put",
+        f"{OPERATIONS_PATH}/{shopping.pk}/costs",
+        costs((cans, "28.80"), (water, "6.00")),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert (body["unpriced"], body["cost"]) == (False, "34.80")
+    assert [(line["unit_cost"], line["value"]) for line in body["lines"]] == [
+        ("0.6000", "28.80"),
+        ("0.2500", "6.00"),
+    ]
+    assert dict(StockMovement.objects.values_list("item", "cost")) == {
+        cans.pk: Decimal("28.80"),
+        water.pk: Decimal("6.00"),
+    }
+
+
+def test_a_cost_may_go_back_to_waiting(board_client):
+    """
+    Given the shopping of the bar, the cans at 26,40 €
+    When a member leaves the cans' cost empty
+    Then the cans wait for their cost again
+    """
+    shopping, cans, water = shopping_of_the_bar()
+
+    send(
+        board_client,
+        "put",
+        f"{OPERATIONS_PATH}/{shopping.pk}/costs",
+        costs((cans, None), (water, None)),
+    )
+
+    assert StockMovement.objects.filter(cost__isnull=False).count() == 0
+
+
+def test_only_a_purchase_or_a_delivery_has_costs(board_client):
+    """
+    Given a consumption of cans
+    When a member writes its costs
+    Then it is refused: only a purchase and a delivery have costs
+    """
+    cans = StockItemFactory()
+    consumption = StockOperationFactory(reason=StockOperationReason.CONSUMPTION)
+    StockMovementFactory(operation=consumption, item=cans, delta=Decimal(-6))
+
+    response = send(
+        board_client, "put", f"{OPERATIONS_PATH}/{consumption.pk}/costs", costs((cans, "3.00"))
+    )
+
+    assert messages_by_place(response) == {
+        ("body",): "Seuls un achat et une réception ont des prix."
+    }
+
+
+def test_the_costs_of_a_delivery_are_written_like_a_purchase(board_client):
+    """
+    Given a delivery of 12 kg of sweets, of no cost
+    When a member gives it its cost, 108,00 €, from the invoice
+    Then the delivery keeps it
+    """
+    sweets = StockItemFactory(unit="kg")
+    delivery = StockOperationFactory(reason=StockOperationReason.DELIVERY)
+    StockMovementFactory(operation=delivery, item=sweets, delta=Decimal(12))
+
+    response = send(
+        board_client, "put", f"{OPERATIONS_PATH}/{delivery.pk}/costs", costs((sweets, "108.00"))
+    )
+
+    assert response.json()["lines"][0]["unit_cost"] == "9.0000"
+
+
+def test_the_costs_out_of_rule_are_refused_under_their_lines(board_client):
+    """
+    Given the shopping of the bar
+    When the costs sent name the cans twice, the first time below zero, and an
+    item of no line of the shopping, leaving the water out
+    Then each is refused under its line, the water asked for, and nothing is
+    written
+    """
+    shopping, cans, _water = shopping_of_the_bar()
+    other = StockItemFactory()
+
+    response = send(
+        board_client,
+        "put",
+        f"{OPERATIONS_PATH}/{shopping.pk}/costs",
+        costs((cans, "-1"), (cans, "2.125"), (other, "1.00")),
+    )
+
+    assert messages_by_place(response) == {
+        ("body",): "Donnez le prix de chaque ligne de l’opération, ou laissez-le vide.",
+        ("body", "lines", 0, "cost"): "Assurez-vous que cette valeur est supérieure ou égale à 0.",
+        ("body", "lines", 1, "item"): "Cet article figure déjà dans l’opération.",
+        ("body", "lines", 1, "cost"): (
+            "Assurez-vous qu’il n’y a pas plus de 2 chiffres après la virgule."
+        ),
+        ("body", "lines", 2, "item"): "Cet article n’est pas dans l’opération.",
+    }
+    assert StockMovement.objects.get(item=cans).cost == Decimal("26.40")
+
+
+def test_writing_the_costs_locks_the_operation_first(board_client):
+    """
+    Given the shopping of the bar
+    When a member writes its costs
+    Then the operation is locked before its lines are read: two members
+    writing them at once wait for each other
+    """
+    shopping, cans, water = shopping_of_the_bar()
+
+    with CaptureQueriesContext(connection) as queries:
+        send(
+            board_client,
+            "put",
+            f"{OPERATIONS_PATH}/{shopping.pk}/costs",
+            costs((cans, "26.40"), (water, "6.00")),
+        )
+
+    statements = [query["sql"] for query in queries.captured_queries]
+    [lock] = [index for index, sql in enumerate(statements) if "FOR UPDATE" in sql]
+    lines = next(
+        index
+        for index, sql in enumerate(statements)
+        if f'"{StockMovement._meta.db_table}"."operation_id" IN' in sql
+    )
+    assert StockOperation._meta.db_table in statements[lock]
+    assert lock < lines

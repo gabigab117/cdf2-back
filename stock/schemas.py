@@ -2,7 +2,8 @@ import datetime as dt
 from decimal import Decimal
 from typing import Literal
 
-from ninja import Schema
+from django.db.models import Q
+from ninja import FilterSchema, Schema
 
 from accounts.schemas import BoardMemberOut
 from core.schemas import InputSchema
@@ -62,6 +63,34 @@ class StockOperationIn(InputSchema):
     # The id of the event; None for none.
     event: int | None
     lines: list[StockLineIn]
+
+
+class StockOperationFilters(FilterSchema):
+    """The operations the list keeps."""
+
+    # The purchases and deliveries waiting for the cost of a line (D16).
+    unpriced: bool = False
+
+    def filter_unpriced(self, value: bool) -> Q:
+        # Called even when the filter is left out: false keeps every operation.
+        return Q(unpriced=True) if value else Q()
+
+
+class StockCostIn(InputSchema):
+    """What a line of a purchase or a delivery cost."""
+
+    # The id of the item of the line.
+    item: int
+    # All taxes included; None while unknown.
+    cost: Decimal | None
+
+
+class StockCostsIn(InputSchema):
+    """« Compléter les prix », « Corriger les prix »: what each line of a purchase
+    or a delivery cost, every line at once (D16).
+    """
+
+    lines: list[StockCostIn]
 
 
 class OrderLineIn(InputSchema):
@@ -193,6 +222,60 @@ class StockOperationOut(Schema):
     created_at: dt.datetime
     # In the order they were written; none for a stocktake that found no difference.
     movements: list[StockMovementOut]
+    # A purchase or a delivery waiting for the cost of a line (D16).
+    unpriced: bool
+
+
+class StockOperationLineOut(Schema):
+    """A line of an operation, valued at the cost of its time (D16)."""
+
+    item: StockMovementItemOut
+    # Positive in, negative out.
+    delta: Decimal
+    # What the line of a purchase or a delivery cost; None while unknown.
+    cost: Decimal | None
+    # The unit cost it moved at, to the ten-thousandth; None for an item whose
+    # stock has no cost to come at.
+    unit_cost: Decimal | None
+    # What it brought in, positive, or took out, negative, to the cent; None
+    # likewise.
+    value: Decimal | None
+    # A line of a purchase or a delivery waiting for its cost.
+    unpriced: bool
+
+
+class StockOperationDetailOut(Schema):
+    """An operation of the stock, as its page shows it: its lines valued."""
+
+    id: int
+    reason: StockOperationReason
+    # Empty, the reason names the operation.
+    label: str
+    # None for an operation of no event, or once its event is deleted.
+    event: StockEventOut | None
+    # None once the account is deleted.
+    author: BoardMemberOut | None
+    created_at: dt.datetime
+    # A purchase or a delivery waiting for the cost of a line.
+    unpriced: bool
+    # A purchase or a delivery: the costs of its lines are completed or corrected.
+    priceable: bool
+    # What the lines that have a cost cost, in all, to the cent.
+    cost: Decimal
+    # In the order they were written.
+    lines: list[StockOperationLineOut]
+
+
+class UnpricedPurchaseOut(Schema):
+    """A purchase or a delivery waiting for the cost of a line, as the bell names it."""
+
+    id: int
+    reason: StockOperationReason
+    # Empty, the reason names it.
+    label: str
+    created_at: dt.datetime
+    # None once the account is deleted.
+    author: BoardMemberOut | None
 
 
 class ShoppingLineOut(Schema):

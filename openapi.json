@@ -4030,6 +4030,27 @@
         "title": "PagedReservationOut",
         "type": "object"
       },
+      "PagedStockOperationOut": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/StockOperationOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "count"
+        ],
+        "title": "PagedStockOperationOut",
+        "type": "object"
+      },
       "PagedTaskOut": {
         "properties": {
           "count": {
@@ -4235,6 +4256,9 @@
           "total": {
             "title": "Total",
             "type": "integer"
+          },
+          "unpriced_purchases": {
+            "$ref": "#/components/schemas/PendingUnpricedOut"
           }
         },
         "required": [
@@ -4244,7 +4268,8 @@
           "receipts",
           "invoices",
           "advances",
-          "stock"
+          "stock",
+          "unpriced_purchases"
         ],
         "title": "PendingOut",
         "type": "object"
@@ -4291,6 +4316,28 @@
           "items"
         ],
         "title": "PendingStockOut",
+        "type": "object"
+      },
+      "PendingUnpricedOut": {
+        "description": "The purchases and deliveries waiting for the cost of a line (D16).",
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/UnpricedPurchaseOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "items"
+        ],
+        "title": "PendingUnpricedOut",
         "type": "object"
       },
       "PracticalInfoIcon": {
@@ -5158,6 +5205,53 @@
         "title": "StockCategoryValueOut",
         "type": "object"
       },
+      "StockCostIn": {
+        "description": "What a line of a purchase or a delivery cost.",
+        "properties": {
+          "cost": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost"
+          },
+          "item": {
+            "title": "Item",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "item",
+          "cost"
+        ],
+        "title": "StockCostIn",
+        "type": "object"
+      },
+      "StockCostsIn": {
+        "description": "« Compléter les prix », « Corriger les prix »: what each line of a purchase\nor a delivery cost, every line at once (D16).",
+        "properties": {
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/StockCostIn"
+            },
+            "title": "Lines",
+            "type": "array"
+          }
+        },
+        "required": [
+          "lines"
+        ],
+        "title": "StockCostsIn",
+        "type": "object"
+      },
       "StockCountIn": {
         "description": "What a stocktake counted of an item.",
         "properties": {
@@ -5518,6 +5612,93 @@
         "title": "StockMovementOut",
         "type": "object"
       },
+      "StockOperationDetailOut": {
+        "description": "An operation of the stock, as its page shows it: its lines valued.",
+        "properties": {
+          "author": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BoardMemberOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cost": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Cost",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "event": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StockEventOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/StockOperationLineOut"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "priceable": {
+            "title": "Priceable",
+            "type": "boolean"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/StockOperationReason"
+          },
+          "unpriced": {
+            "title": "Unpriced",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "reason",
+          "label",
+          "event",
+          "author",
+          "created_at",
+          "unpriced",
+          "priceable",
+          "cost",
+          "lines"
+        ],
+        "title": "StockOperationDetailOut",
+        "type": "object"
+      },
+      "StockOperationFilters": {
+        "description": "The operations the list keeps.",
+        "properties": {
+          "unpriced": {
+            "default": false,
+            "title": "Unpriced",
+            "type": "boolean"
+          }
+        },
+        "title": "StockOperationFilters",
+        "type": "object"
+      },
       "StockOperationIn": {
         "description": "« Entrée ou sortie »: several items in or out at once, for one reason,\nevery key required. A purchase comes in, a consumption goes out, an\nadjustment either way.",
         "properties": {
@@ -5566,6 +5747,69 @@
         "title": "StockOperationIn",
         "type": "object"
       },
+      "StockOperationLineOut": {
+        "description": "A line of an operation, valued at the cost of its time (D16).",
+        "properties": {
+          "cost": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost"
+          },
+          "delta": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Delta",
+            "type": "string"
+          },
+          "item": {
+            "$ref": "#/components/schemas/StockMovementItemOut"
+          },
+          "unit_cost": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Cost"
+          },
+          "unpriced": {
+            "title": "Unpriced",
+            "type": "boolean"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "item",
+          "delta",
+          "cost",
+          "unit_cost",
+          "value",
+          "unpriced"
+        ],
+        "title": "StockOperationLineOut",
+        "type": "object"
+      },
       "StockOperationOut": {
         "description": "An operation of the stock, as « Mouvements récents » tells it.",
         "properties": {
@@ -5611,6 +5855,10 @@
           },
           "reason": {
             "$ref": "#/components/schemas/StockOperationReason"
+          },
+          "unpriced": {
+            "title": "Unpriced",
+            "type": "boolean"
           }
         },
         "required": [
@@ -5620,7 +5868,8 @@
           "event",
           "author",
           "created_at",
-          "movements"
+          "movements",
+          "unpriced"
         ],
         "title": "StockOperationOut",
         "type": "object"
@@ -6210,6 +6459,46 @@
           "overdue"
         ],
         "title": "UnpaidInvoiceOut",
+        "type": "object"
+      },
+      "UnpricedPurchaseOut": {
+        "description": "A purchase or a delivery waiting for the cost of a line, as the bell names it.",
+        "properties": {
+          "author": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BoardMemberOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/StockOperationReason"
+          }
+        },
+        "required": [
+          "id",
+          "reason",
+          "label",
+          "created_at",
+          "author"
+        ],
+        "title": "UnpricedPurchaseOut",
         "type": "object"
       },
       "ValidationErrorItem": {
@@ -11669,7 +11958,7 @@
     },
     "/api/board/stock": {
       "get": {
-        "description": "Every item, by category then by name, with its quantity, whether it is\nlow and how full its bar is; the figures of the chips; the latest stocktake;\nthe latest operations.",
+        "description": "Every item, by category then by name, with its quantity, whether it is\nlow, how full its bar is and its value; the figures of the chips; the latest\nstocktake; the latest operations; the shopping list and its budget; the\norders to receive; the value of the stock.",
         "operationId": "stock_api_read_stock",
         "parameters": [],
         "responses": {
@@ -12058,6 +12347,101 @@
       }
     },
     "/api/board/stock/operations": {
+      "get": {
+        "description": "The operations, the latest first: all of them, or the purchases and\ndeliveries waiting for the cost of a line.",
+        "operationId": "stock_api_list_operations",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "unpriced",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Unpriced",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedStockOperationOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "List the operations of the stock",
+        "tags": [
+          "stock"
+        ]
+      },
       "post": {
         "description": "« Entrée ou sortie »: several items in or out at once, for one reason,\nrecorded with the member. An exit never takes more than is in stock.",
         "operationId": "stock_api_record_entry_or_exit",
@@ -12135,6 +12519,172 @@
         ]
       }
     },
+    "/api/board/stock/operations/{operation_id}": {
+      "get": {
+        "description": "An operation and its lines, each valued at the cost of its time.",
+        "operationId": "stock_api_read_operation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "operation_id",
+            "required": true,
+            "schema": {
+              "title": "Operation Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockOperationDetailOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Read an operation of the stock",
+        "tags": [
+          "stock"
+        ]
+      }
+    },
+    "/api/board/stock/operations/{operation_id}/costs": {
+      "put": {
+        "description": "« Compléter les prix », « Corriger les prix »: what each line cost, every\nline at once. The quantities stay as they are.",
+        "operationId": "stock_api_write_costs",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "operation_id",
+            "required": true,
+            "schema": {
+              "title": "Operation Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StockCostsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockOperationDetailOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Write the costs of a purchase or a delivery",
+        "tags": [
+          "stock"
+        ]
+      }
+    },
     "/api/board/stock/orders/{document_id}": {
       "get": {
         "description": "What an order brings to the stock, and whether it was received.",
@@ -12205,7 +12755,7 @@
     },
     "/api/board/stock/orders/{document_id}/delivery": {
       "delete": {
-        "description": "« Annuler »: the delivery is undone the day it was received, unless some\nof it has left the stock, or a stocktake has counted it, since.",
+        "description": "« Annuler »: the delivery is undone the day it was received, unless one\nof its items has moved, or a stocktake has counted it, since.",
         "operationId": "stock_api_cancel_order_delivery",
         "parameters": [
           {

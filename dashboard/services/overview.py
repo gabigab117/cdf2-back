@@ -19,8 +19,9 @@ from equipment.services.loans import loan_counts
 from events.models import Event
 from events.services.periods import events_in_period
 from notes.models import Note
-from stock.models import StockItem
+from stock.models import StockItem, StockOperation
 from stock.services.items import low_items
+from stock.services.operations import unpriced_purchases
 from tasks.services.tasks import TasksBlock, tasks_block
 from treasury.models import LedgerEntry
 from treasury.services.entries import missing_receipts
@@ -98,6 +99,16 @@ class PendingStock:
 
 
 @dataclass(frozen=True)
+class PendingUnpriced:
+    """The purchases and deliveries waiting for the cost of a line (D16): how
+    many, and the oldest.
+    """
+
+    count: int
+    items: list[StockOperation]
+
+
+@dataclass(frozen=True)
 class Pending:
     """What awaits the board (A6): the bell's panel and the sidebar's badges."""
 
@@ -109,6 +120,7 @@ class Pending:
     invoices: PendingInvoices
     advances: PendingAdvances
     stock: PendingStock
+    unpriced_purchases: PendingUnpriced
 
 
 @dataclass(frozen=True)
@@ -191,6 +203,8 @@ def _pending(loans_by_state: dict[str, int], today: dt.date) -> Pending:
     advances = PendingAdvances(count=count, total=total, items=list(owing[:PENDING_COUNT]))
     low = low_items()
     stock = PendingStock(count=low.count(), items=list(low[:PENDING_COUNT]))
+    waiting = unpriced_purchases()
+    unpriced = PendingUnpriced(count=waiting.count(), items=list(waiting[:PENDING_COUNT]))
     return Pending(
         total=counts["total"]
         + loans.overdue
@@ -198,11 +212,13 @@ def _pending(loans_by_state: dict[str, int], today: dt.date) -> Pending:
         + receipts.count
         + invoices.count
         + advances.count
-        + stock.count,
+        + stock.count
+        + unpriced.count,
         documents=PendingDocuments(counts=counts, items=list(latest)),
         loans=loans,
         receipts=receipts,
         invoices=invoices,
         advances=advances,
         stock=stock,
+        unpriced_purchases=unpriced,
     )

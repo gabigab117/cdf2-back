@@ -1,15 +1,19 @@
 from django.shortcuts import get_object_or_404
-from ninja import Router, Status
+from ninja import Query, Router, Status
+from ninja.pagination import paginate
 
 from core.schemas import REFUSALS, ErrorOut, ValidationErrorOut
 from documents.models import Document, DocumentCategory
-from stock.models import StockItem
+from stock.models import StockItem, StockOperation
 from stock.schemas import (
     OrderLinesIn,
     StockAdjustmentIn,
+    StockCostsIn,
     StockedItemOut,
     StockItemIn,
     StockItemOut,
+    StockOperationDetailOut,
+    StockOperationFilters,
     StockOperationIn,
     StockOperationOut,
     StockOrderOut,
@@ -18,7 +22,13 @@ from stock.schemas import (
 )
 from stock.services.items import create_item, delete_item, update_item
 from stock.services.movements import adjust
-from stock.services.operations import record_operation, record_stocktake
+from stock.services.operations import (
+    operation_detail,
+    operations,
+    record_operation,
+    record_stocktake,
+    update_costs,
+)
 from stock.services.orders import cancel_delivery, order, orders, receive, replace_lines
 from stock.services.overview import stock_overview
 
@@ -35,10 +45,24 @@ WRITE_REFUSALS = {400: ErrorOut, 401: ErrorOut, 403: ErrorOut, 422: ValidationEr
 )
 def read_stock(request):
     """Every item, by category then by name, with its quantity, whether it is
-    low and how full its bar is; the figures of the chips; the latest stocktake;
-    the latest operations.
+    low, how full its bar is and its value; the figures of the chips; the latest
+    stocktake; the latest operations; the shopping list and its budget; the
+    orders to receive; the value of the stock.
     """
     return stock_overview()
+
+
+@router.get(
+    "/stock/operations",
+    response={200: list[StockOperationOut], 401: ErrorOut, 403: ErrorOut, 422: ValidationErrorOut},
+    summary="List the operations of the stock",
+)
+@paginate
+def list_operations(request, filters: Query[StockOperationFilters]):
+    """The operations, the latest first: all of them, or the purchases and
+    deliveries waiting for the cost of a line.
+    """
+    return filters.filter(operations())
 
 
 @router.post(
@@ -51,6 +75,28 @@ def record_entry_or_exit(request, payload: StockOperationIn):
     recorded with the member. An exit never takes more than is in stock.
     """
     return Status(201, record_operation(payload, request.auth))
+
+
+@router.get(
+    "/stock/operations/{operation_id}",
+    response={200: StockOperationDetailOut, 401: ErrorOut, 403: ErrorOut, 404: ErrorOut},
+    summary="Read an operation of the stock",
+)
+def read_operation(request, operation_id: int):
+    """An operation and its lines, each valued at the cost of its time."""
+    return operation_detail(get_object_or_404(operations(), pk=operation_id))
+
+
+@router.put(
+    "/stock/operations/{operation_id}/costs",
+    response={200: StockOperationDetailOut, 400: ErrorOut, **REFUSALS},
+    summary="Write the costs of a purchase or a delivery",
+)
+def write_costs(request, operation_id: int, payload: StockCostsIn):
+    """« Compléter les prix », « Corriger les prix »: what each line cost, every
+    line at once. The quantities stay as they are.
+    """
+    return update_costs(get_object_or_404(StockOperation, pk=operation_id), payload)
 
 
 @router.post(
@@ -152,7 +198,7 @@ def receive_delivery(request, document_id: int):
     summary="Cancel the delivery of an order",
 )
 def cancel_order_delivery(request, document_id: int):
-    """« Annuler »: the delivery is undone the day it was received, unless some
-    of it has left the stock, or a stocktake has counted it, since.
+    """« Annuler »: the delivery is undone the day it was received, unless one
+    of its items has moved, or a stocktake has counted it, since.
     """
     return cancel_delivery(_order(document_id))

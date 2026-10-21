@@ -8,7 +8,7 @@ from accounts.schemas import BoardMemberOut
 from documents.schemas import DocumentCountsOut, DocumentItemOut
 from equipment.schemas import LoanBriefOut, LoanItemOut
 from events.schemas import EventItemOut
-from stock.schemas import LowStockItemOut
+from stock.schemas import LowStockItemOut, UnpricedPurchaseOut
 from tasks.schemas import TaskOut
 from treasury.schemas import LedgerEntryOut, UnpaidInvoiceOut
 
@@ -104,6 +104,14 @@ class PendingStockOut(Schema):
     items: list[LowStockItemOut]
 
 
+class PendingUnpricedOut(Schema):
+    """The purchases and deliveries waiting for the cost of a line (D16)."""
+
+    count: int
+    # The oldest first, at most ten.
+    items: list[UnpricedPurchaseOut]
+
+
 class PendingOut(Schema):
     """What awaits the board (A6): the bell's panel, the sidebar's badges."""
 
@@ -115,6 +123,7 @@ class PendingOut(Schema):
     invoices: PendingInvoicesOut
     advances: PendingAdvancesOut
     stock: PendingStockOut
+    unpriced_purchases: PendingUnpricedOut
 
 
 class LoanedEquipmentOut(Schema):
