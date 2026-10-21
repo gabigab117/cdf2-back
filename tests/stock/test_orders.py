@@ -346,9 +346,30 @@ def test_a_delivery_partly_gone_is_not_cancelled(board_client):
     response = send(board_client, "delete", order_url(document.pk, "/delivery"))
 
     assert response.json() == refusal(
-        "Une partie de la livraison est déjà sortie du stock : « Bonbons assortis »."
+        "Le stock a bougé depuis cette réception (« Bonbons assortis ») : elle ne s’annule plus."
     )
     assert quantity_of(sweets) == 7
+
+
+def test_a_delivery_whose_items_moved_since_is_not_cancelled(board_client):
+    """
+    Given the order of sweets and juice, received, then 5 kg of sweets eaten and
+    5 kg bought back since
+    When a member cancels the delivery
+    Then it is refused, naming the sweets: the 5 kg eaten came from the delivery,
+    and without it the history of the sweets would go below zero
+    """
+    document, sweets, _juice = sweets_and_juice()
+    received(document)
+    put_in_stock(sweets, -5)
+    put_in_stock(sweets, 5)
+
+    response = send(board_client, "delete", order_url(document.pk, "/delivery"))
+
+    assert response.json() == refusal(
+        "Le stock a bougé depuis cette réception (« Bonbons assortis ») : elle ne s’annule plus."
+    )
+    assert quantity_of(sweets) == 12
 
 
 def test_a_delivery_followed_by_a_stocktake_is_not_cancelled(board_client):

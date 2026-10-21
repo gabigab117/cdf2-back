@@ -3,7 +3,7 @@ much of it, entered by hand before the assistant (A19), then received into the
 stock in one click.
 
 A delivery is undone the day it was received, until midnight in Paris, unless
-some of it has left the stock since, or a stocktake has counted it since.
+one of its items has moved since, or a stocktake has counted it since.
 """
 
 import datetime as dt
@@ -27,7 +27,7 @@ from stock.models import (
     StockOperationReason,
 )
 from stock.schemas import OrderLinesIn
-from stock.services.movements import lock, quantities
+from stock.services.movements import lock
 
 RECEIVED = "Cette commande est déjà réceptionnée : annulez d’abord la réception."
 
@@ -171,7 +171,7 @@ def receive(document: Document, member: User) -> Order:
 @transaction.atomic
 def cancel_delivery(document: Document) -> Order:
     """« Annuler »: undo the delivery of an order, the day it was received,
-    unless some of it has left the stock, or a stocktake has counted it, since.
+    unless one of its items has moved, or a stocktake has counted it, since.
     """
     current = order(_locked(document))
     delivery = current.delivery
@@ -179,25 +179,31 @@ def cancel_delivery(document: Document) -> Order:
         raise ValidationError("Cette commande n’est pas réceptionnée.")
     if not current.undoable:
         raise ValidationError("Une réception ne s’annule que le jour même.")
-    movements = list(delivery.movements.all())
     # Locked first: a stocktake of these items, which locks them too, comes
     # either before, and is found below, or once the delivery is undone.
-    locked = lock(movement.item_id for movement in movements)
+    locked = lock(movement.item_id for movement in delivery.movements.all())
     # A stocktake that came after counted what was delivered, whether it found
     # a difference or not: undoing the delivery would make its counts wrong.
     if StockOperation.objects.filter(
         reason=StockOperationReason.STOCKTAKE, created_at__gt=delivery.created_at
     ).exists():
         raise ValidationError("Un inventaire a suivi cette réception : elle ne s’annule plus.")
-    held = quantities(locked)
-    gone = [
-        locked[movement.item_id]
-        for movement in movements
-        if held[movement.item_id] < movement.delta
-    ]
-    if gone:
-        names = ", ".join(f"« {item.name} »" for item in gone)
-        raise ValidationError(f"Une partie de la livraison est déjà sortie du stock : {names}.")
+    # Undone, a delivery leaves the end of each item's history alone: an item
+    # that moved since may have spent what came, even bought back since, and
+    # without the delivery its history, which the valuation replays (D16),
+    # would go below zero.
+    moved = (
+        StockMovement.objects.filter(
+            item_id__in=locked, operation__created_at__gt=delivery.created_at
+        )
+        .values_list("item__name", flat=True)
+        .distinct()
+        .order_by("item__name")
+    )
+    if names := ", ".join(f"« {name} »" for name in moved):
+        raise ValidationError(
+            f"Le stock a bougé depuis cette réception ({names}) : elle ne s’annule plus."
+        )
     delivery.delete()
     return order(orders().get(pk=document.pk))
 
