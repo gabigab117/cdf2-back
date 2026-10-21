@@ -27,6 +27,8 @@ class StockItemIn(InputSchema):
     step: Decimal
     # Any day of its month: the item keeps the month (« mai 2027 »).
     best_before: dt.date | None
+    # The unit cost of the stock of before the costs (D16); None for none.
+    initial_cost: Decimal | None
 
 
 class StockAdjustmentIn(InputSchema):
@@ -42,6 +44,9 @@ class StockLineIn(InputSchema):
     item: int
     # Positive: the direction of the operation signs it.
     quantity: Decimal
+    # What the line cost, all taxes included: a purchase's alone (D16). None
+    # while unknown.
+    cost: Decimal | None = None
 
 
 class StockOperationIn(InputSchema):
@@ -106,10 +111,12 @@ class StockItemOut(Schema):
     step: Decimal
     # The first of its month; None without one.
     best_before: dt.date | None
+    # To the ten-thousandth; None without one.
+    initial_cost: Decimal | None
 
 
 class StockedItemOut(Schema):
-    """An item and where its stock stands."""
+    """An item and where its stock and its value stand."""
 
     item: StockItemOut
     # The sum of its movements.
@@ -119,6 +126,13 @@ class StockedItemOut(Schema):
     # How full its bar is, in percent: the quantity against the threshold, at
     # most 100.
     level: int
+    # Its weighted average cost, to the ten-thousandth (D16); with nothing left,
+    # the latest one. None for an item that has no cost to come at.
+    average_cost: Decimal | None
+    # The value of what is in stock, to the cent; None for an item not valued.
+    value: Decimal | None
+    # The unit cost of its latest purchase paid; None before any.
+    last_unit_cost: Decimal | None
 
 
 class StockCountsOut(Schema):
@@ -188,6 +202,38 @@ class ShoppingLineOut(Schema):
 
     item: StockMovementItemOut
     quantity: Decimal
+    # At the unit cost of its latest purchase paid (D16); None before any.
+    estimated_cost: Decimal | None
+
+
+class ShoppingListEstimatedCostOut(Schema):
+    """What the shopping list should cost (its budget), of its lines that have a
+    cost.
+    """
+
+    total: Decimal
+    # The lines no purchase paid tells the cost of.
+    unpriced_lines: int
+
+
+class StockCategoryValueOut(Schema):
+    """The value of a category's items."""
+
+    category: StockItemCategory
+    value: Decimal
+
+
+class StockValuationOut(Schema):
+    """The value of the stock (D16): its items at their weighted average cost."""
+
+    # Of the items that have one, to the cent.
+    value: Decimal
+    # In the order of the chips, each one, even of no value.
+    categories: list[StockCategoryValueOut]
+    # The items whose stock has no cost to come at.
+    unvalued_items: int
+    # The purchases and deliveries waiting for the cost of a line.
+    unpriced_purchases: int
 
 
 class OrderLineOut(Schema):
@@ -237,9 +283,11 @@ class StockOverviewOut(Schema):
     recent_operations: list[StockOperationOut]
     # The items below their threshold, in the stock's order.
     shopping_list: list[ShoppingLineOut]
+    shopping_list_estimated_cost: ShoppingListEstimatedCostOut
     # The orders validated with lines, not received yet, the first delivered
     # first; then those received today.
     orders: list[StockOrderOut]
+    valuation: StockValuationOut
 
 
 class LowStockItemOut(Schema):

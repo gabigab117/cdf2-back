@@ -76,6 +76,16 @@ def put_in_stock(item, quantity):
     return StockMovementFactory(item=item, delta=Decimal(quantity))
 
 
+def bought(item, quantity, cost):
+    """A purchase of an item, by an operation of its own, at what its line cost."""
+    return StockMovementFactory(item=item, delta=Decimal(quantity), cost=Decimal(cost))
+
+
+def moved(item, delta, reason):
+    """A movement of an item, by an operation of its own, for a reason."""
+    return StockMovementFactory(item=item, delta=Decimal(delta), operation__reason=reason)
+
+
 def quantity_of(item):
     """What the stock holds of an item: the sum of its movements."""
     return sum(movement.delta for movement in StockMovement.objects.filter(item=item))

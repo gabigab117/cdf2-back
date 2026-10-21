@@ -22,6 +22,7 @@ from stock.models import (
     StockOperationReason,
 )
 from stock.services.items import NOTHING, StockedItem, stock_items, stocked
+from stock.services.valuation import valued_movements
 
 NOTHING_LEFT = "Il n’en reste plus en stock."
 
@@ -57,4 +58,4 @@ def adjust(item: StockItem, direction: StockDirection, member: User) -> StockedI
             raise ValidationError(NOTHING_LEFT)
     operation = StockOperation.objects.create(reason=StockOperationReason.ADJUSTMENT, author=member)
     StockMovement.objects.create(operation=operation, item=item, delta=delta)
-    return stocked(stock_items().get(pk=item.pk))
+    return stocked(stock_items().get(pk=item.pk), valued_movements([item.pk])[item.pk])

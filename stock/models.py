@@ -24,6 +24,7 @@ ITEM_TWICE = "Cet article figure déjà dans l’opération."
 NO_QUANTITY = "Indiquez une quantité supérieure à zéro."
 ALREADY_RECEIVED = "Cette commande est déjà réceptionnée."
 ORDER_ITEM_TWICE = "Cet article figure déjà dans la commande."
+COST_ON_ENTRY = "Seule une entrée a un prix."
 
 
 # Named after their model rather than nested in it: the OpenAPI document names an
@@ -84,6 +85,18 @@ class StockItem(models.Model):
     # To the month, as the first of it (« mai 2027 »): shown, never alerted
     # (out of scope).
     best_before = models.DateField("DLUO", null=True, blank=True)
+    # The unit cost of what came in before any purchase had its cost (D16): the
+    # stock of before the costs, entered by hand or counted. Without it, the
+    # first purchase paid above 0 € gives that cost. To the ten-thousandth: a
+    # cup costs less than a cent.
+    initial_cost = models.DecimalField(
+        "prix de départ",
+        max_digits=10,
+        decimal_places=4,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal(0))],
+    )
 
     class Meta:
         verbose_name = "article"
@@ -106,6 +119,11 @@ class StockItem(models.Model):
                 name="stock_item_step_positive",
                 violation_error_message=NO_STEP,
             ),
+            models.CheckConstraint(
+                condition=Q(initial_cost__isnull=True) | Q(initial_cost__gte=0),
+                name="stock_item_initial_cost_not_negative",
+                violation_error_message="Le prix de départ ne peut pas être négatif.",
+            ),
         ]
 
     def __str__(self):
@@ -121,7 +139,8 @@ class StockOperation(models.Model):
     # « Courses buvette »; empty, the reason names the operation.
     label = models.CharField("libellé", max_length=200, blank=True)
     # An event deleted leaves its operations behind, without it: an operation
-    # is never corrected, so refusing would keep the event forever.
+    # is never corrected, but for the costs of a purchase (D16), so refusing
+    # would keep the event forever.
     event = models.ForeignKey(
         Event,
         verbose_name="événement",
@@ -188,6 +207,17 @@ class StockMovement(models.Model):
         error_messages={"invalid": UNKNOWN_ITEM},
     )
     delta = models.DecimalField("variation", max_digits=10, decimal_places=2)
+    # What its line of a purchase or a delivery cost, all taxes included (D16):
+    # the amount paid, from which its unit cost comes. None until it is known;
+    # 0 for a prize given.
+    cost = models.DecimalField(
+        "prix",
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal(0))],
+    )
 
     class Meta:
         verbose_name = "mouvement du stock"
@@ -197,6 +227,11 @@ class StockMovement(models.Model):
                 condition=~Q(delta=0),
                 name="stock_movement_some_delta",
                 violation_error_message=NO_DELTA,
+            ),
+            models.CheckConstraint(
+                condition=Q(cost__isnull=True) | (Q(cost__gte=0) & Q(delta__gt=0)),
+                name="stock_movement_cost_on_entry",
+                violation_error_message=COST_ON_ENTRY,
             ),
             models.UniqueConstraint(
                 fields=["operation", "item"],

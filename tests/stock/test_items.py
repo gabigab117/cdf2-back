@@ -4,13 +4,21 @@ import pytest
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 
-from stock.models import StockItem, StockMovement, StockOperation, StockOperationReason
+from stock.models import (
+    StockItem,
+    StockItemCategory,
+    StockMovement,
+    StockOperation,
+    StockOperationReason,
+)
 from tests.accounts.factories import UserFactory, client_of
 from tests.events.factories import EventFactory
-from tests.helpers import iso, send
+from tests.helpers import iso, messages_by_place, send
 from tests.stock.factories import (
     StockItemFactory,
     StockOperationFactory,
+    bought,
+    moved,
     put_in_stock,
     quantity_of,
 )
@@ -51,6 +59,7 @@ def payload(**changes):
         "threshold": "24",
         "step": "6",
         "best_before": None,
+        "initial_cost": None,
     } | changes
 
 
@@ -149,9 +158,11 @@ def test_the_stock_comes_by_category_then_by_name_with_its_figures(board_client)
 
 def test_an_item_tells_its_fields_and_its_quantity(board_client):
     """
-    Given 1,5 kg of sweets, low below 3 kg, best before March 2027
+    Given 1,5 kg of sweets, low below 3 kg, best before March 2027, bought
+    without a cost
     When a member reads the stock
-    Then the item comes as its form writes it, with its quantity
+    Then the item comes as its form writes it, with its quantity, and no value:
+    nothing tells what its stock cost
     """
     items = build_mockup()
     sweets = items["Bonbons assortis"]
@@ -171,11 +182,98 @@ def test_an_item_tells_its_fields_and_its_quantity(board_client):
             "threshold": "3.00",
             "step": "0.50",
             "best_before": "2027-03-01",
+            "initial_cost": None,
         },
         "quantity": "1.50",
         "low": True,
         "level": 50,
+        "average_cost": None,
+        "value": None,
+        "last_unit_cost": None,
     }
+
+
+def test_the_stock_tells_the_value_of_each_item_and_of_the_whole(board_client):
+    """
+    Given 72 cans bought for 40,80 € in two purchases, 30 of them consumed since;
+    10 kegs entered by hand, without any cost; 2 kg of sweets bought for 18,00 €,
+    and 1 kg more waiting for its cost
+    When a member reads the stock
+    Then each item tells its average cost, its value and its latest purchase
+    paid; the stock is worth 50,80 €, by category; the kegs are not valued,
+    and one purchase waits for its cost
+    """
+    cans = StockItemFactory(name="Canettes de soda 33 cl")
+    bought(cans, 48, "26.40")
+    bought(cans, 24, "14.40")
+    moved(cans, -30, StockOperationReason.CONSUMPTION)
+    kegs = StockItemFactory(name="Fûts de bière 20 L", threshold=Decimal(12), step=Decimal(1))
+    moved(kegs, 10, StockOperationReason.ADJUSTMENT)
+    sweets = StockItemFactory(
+        name="Bonbons assortis",
+        category=StockItemCategory.FOOD,
+        unit="kg",
+        threshold=Decimal(5),
+        step=Decimal("0.5"),
+    )
+    bought(sweets, 2, "18.00")
+    put_in_stock(sweets, 1)
+
+    body = board_client.get(STOCK).json()
+
+    assert [
+        (entry["item"]["name"], entry["average_cost"], entry["value"], entry["last_unit_cost"])
+        for entry in body["items"]
+    ] == [
+        ("Canettes de soda 33 cl", "0.5667", "23.80", "0.6000"),
+        ("Fûts de bière 20 L", None, None, None),
+        ("Bonbons assortis", "9.0000", "27.00", "9.0000"),
+    ]
+    assert body["valuation"] == {
+        "value": "50.80",
+        "categories": [
+            {"category": "drinks", "value": "23.80"},
+            {"category": "food", "value": "27.00"},
+            {"category": "supplies", "value": "0.00"},
+            {"category": "lotto_raffle", "value": "0.00"},
+        ],
+        "unvalued_items": 1,
+        "unpriced_purchases": 1,
+    }
+
+
+def test_the_shopping_list_tells_its_budget_at_the_latest_costs(board_client):
+    """
+    Given 42 cans left of a purchase paid 0,60 € a can, below 96; 10 kegs of
+    no cost, below 12; 3 kg of sweets bought at 9,00 € a kilo, below 5 kg
+    When a member reads the stock
+    Then the 72 cans to buy should cost 43,20 €, the 2 kg of sweets 18,00 €:
+    61,20 € in all, the kegs' cost unknown
+    """
+    cans = StockItemFactory(name="Canettes de soda 33 cl")
+    bought(cans, 24, "14.40")
+    moved(cans, 18, StockOperationReason.ADJUSTMENT)
+    kegs = StockItemFactory(name="Fûts de bière 20 L", threshold=Decimal(12), step=Decimal(1))
+    moved(kegs, 10, StockOperationReason.ADJUSTMENT)
+    sweets = StockItemFactory(
+        name="Bonbons assortis",
+        category=StockItemCategory.FOOD,
+        threshold=Decimal(5),
+        step=Decimal("0.5"),
+    )
+    bought(sweets, 3, "27.00")
+
+    body = board_client.get(STOCK).json()
+
+    assert [
+        (line["item"]["name"], line["quantity"], line["estimated_cost"])
+        for line in body["shopping_list"]
+    ] == [
+        ("Canettes de soda 33 cl", "72.00", "43.20"),
+        ("Fûts de bière 20 L", "2.00", None),
+        ("Bonbons assortis", "2.00", "18.00"),
+    ]
+    assert body["shopping_list_estimated_cost"] == {"total": "61.20", "unpriced_lines": 1}
 
 
 def test_an_item_never_moved_has_nothing_in_stock(board_client):
@@ -278,10 +376,11 @@ def test_the_stock_takes_a_fixed_number_of_queries(board_client, django_assert_m
         reason=StockOperationReason.STOCKTAKE, event=EventFactory(), author=UserFactory()
     )
 
-    # Authentication (2), the items with their quantities, the latest stocktake,
-    # the latest operations with their event and member, their movements; the
-    # orders with their event, their lines and their delivery.
-    with django_assert_max_num_queries(9):
+    # Authentication (2), the movements valued, the items with their
+    # quantities, the latest stocktake, the latest operations with their event
+    # and member, their movements; the orders with their event, their lines and
+    # their delivery.
+    with django_assert_max_num_queries(10):
         board_client.get(STOCK)
 
 
@@ -306,8 +405,21 @@ def test_a_member_adds_an_item(board_client):
         "threshold": "24.00",
         "step": "6.00",
         "best_before": "2027-02-01",
+        "initial_cost": None,
     }
     assert quantity_of(item) == 0
+
+
+def test_a_member_gives_an_item_its_initial_cost(board_client):
+    """
+    Given a member of the board
+    When they add cups at a starting cost of 0,0125 € each
+    Then the item keeps it to the ten-thousandth: a cup costs less than a cent
+    """
+    response = send(board_client, "post", ITEMS_PATH, payload(initial_cost="0.0125"))
+
+    assert response.json()["initial_cost"] == "0.0125"
+    assert StockItem.objects.get().initial_cost == Decimal("0.0125")
 
 
 @pytest.mark.parametrize(
@@ -331,13 +443,24 @@ def test_a_member_adds_an_item(board_client):
                 "Assurez-vous que cette valeur comporte au plus 10 caractères (actuellement 17).",
             ),
         ),
+        (
+            {"initial_cost": "-0.5"},
+            refusal("initial_cost", "Assurez-vous que cette valeur est supérieure ou égale à 0."),
+        ),
+        (
+            {"initial_cost": "0.12345"},
+            refusal(
+                "initial_cost", "Assurez-vous qu’il n’y a pas plus de 4 chiffres après la virgule."
+            ),
+        ),
     ],
 )
 def test_an_item_out_of_rule_is_refused(board_client, changes, error):
     """
     Given apple juice in stock already
     When a member adds an item named alike, without a name, below a threshold
-    of zero, of a step of nothing or too fine, or of a unit too long
+    of zero, of a step of nothing or too fine, of a unit too long, or of a
+    starting cost below zero or finer than the ten-thousandth
     Then it is refused, under the field the member typed
     """
     StockItemFactory(name="Jus de pomme 1 L")
@@ -365,6 +488,26 @@ def test_a_category_is_one_of_the_chips(board_client):
     )
 
 
+def test_an_item_written_without_its_starting_cost_is_refused(board_client):
+    """
+    Given juice at a starting cost of 0,90 €
+    When a form that knows no starting cost corrects it, such as a page left
+    open on the release before
+    Then it is refused, rather than erasing the starting cost
+    """
+    juice = StockItemFactory(initial_cost=Decimal("0.9"))
+    body = payload()
+    del body["initial_cost"]
+
+    response = send(board_client, "put", url(juice.pk), body)
+
+    assert messages_by_place(response) == {
+        ("body", "payload", "initial_cost"): "Ce champ est obligatoire."
+    }
+    juice.refresh_from_db()
+    assert juice.initial_cost == Decimal("0.9")
+
+
 def test_a_member_corrects_an_item_whose_movements_stay(board_client):
     """
     Given 18 litres of juice in stock
@@ -390,6 +533,7 @@ def test_a_member_corrects_an_item_whose_movements_stay(board_client):
         "threshold": "30.00",
         "step": "6.00",
         "best_before": "2027-03-01",
+        "initial_cost": None,
     }
     assert quantity_of(juice) == 18
 
@@ -495,6 +639,24 @@ def test_plus_adds_a_step_recorded_with_the_member(board_client, board_member):
     ]
 
 
+def test_plus_tells_the_new_value_of_the_item(board_client):
+    """
+    Given 24 cans bought for 14,40 €
+    When a member clicks on plus
+    Then the 24 cans that come in, at 0,60 € still, make the cans worth 28,80 €
+    """
+    cans = StockItemFactory()
+    bought(cans, 24, "14.40")
+
+    body = adjust(board_client, cans, "in").json()
+
+    assert (body["average_cost"], body["value"], body["last_unit_cost"]) == (
+        "0.6000",
+        "28.80",
+        "0.6000",
+    )
+
+
 def test_minus_takes_a_step_out(board_client):
     """
     Given 144 cans in stock, moved by 24
@@ -591,10 +753,12 @@ def test_the_shopping_list_of_the_mockup_brings_each_low_item_back_to_its_thresh
         {
             "item": {"id": items["Jus de fruits 1 L"].pk, "name": "Jus de fruits 1 L", "unit": ""},
             "quantity": "6.00",
+            "estimated_cost": None,
         },
         {
             "item": {"id": items["Bonbons assortis"].pk, "name": "Bonbons assortis", "unit": "kg"},
             "quantity": "1.50",
+            "estimated_cost": None,
         },
         {
             "item": {
@@ -603,6 +767,7 @@ def test_the_shopping_list_of_the_mockup_brings_each_low_item_back_to_its_thresh
                 "unit": "",
             },
             "quantity": "2.00",
+            "estimated_cost": None,
         },
     ]
 

@@ -110,6 +110,56 @@ def test_a_movement_changes_the_quantity():
         movement.save()
 
 
+def test_an_initial_cost_is_never_negative():
+    """
+    Given an item whose starting cost is below zero
+    When it is checked, then written
+    Then its starting cost is refused, and the database refuses it too
+    """
+    item = StockItemFactory.build(initial_cost=Decimal("-0.5"))
+
+    assert errors_of(item) == {
+        "initial_cost": ["Assurez-vous que cette valeur est supérieure ou égale à 0."]
+    }
+    with pytest.raises(IntegrityError):
+        item.save()
+
+
+def test_only_an_entry_has_a_cost():
+    """
+    Given 24 cans going out, with a cost
+    When the movement is checked, then written
+    Then it is refused, and the database refuses it too
+    """
+    movement = StockMovementFactory.build(
+        operation=StockOperationFactory(),
+        item=StockItemFactory(),
+        delta=Decimal(-24),
+        cost=Decimal("14.40"),
+    )
+
+    assert errors_of(movement) == {"__all__": ["Seule une entrée a un prix."]}
+    with pytest.raises(IntegrityError):
+        movement.save()
+
+
+def test_a_cost_is_never_negative():
+    """
+    Given 24 cans coming in at a cost below zero
+    When the movement is checked, then written
+    Then its cost is refused, and the database refuses it too
+    """
+    movement = StockMovementFactory.build(
+        operation=StockOperationFactory(), item=StockItemFactory(), cost=Decimal(-1)
+    )
+
+    assert errors_of(movement) == {
+        "cost": ["Assurez-vous que cette valeur est supérieure ou égale à 0."]
+    }
+    with pytest.raises(IntegrityError):
+        movement.save()
+
+
 def test_an_operation_moves_an_item_once():
     """
     Given an operation that moves the juice already

@@ -4,7 +4,7 @@ import pytest
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 
-from stock.models import StockItem, StockOperation, StockOperationReason
+from stock.models import StockItem, StockMovement, StockOperation, StockOperationReason
 from tests.events.factories import EventFactory
 from tests.helpers import iso, member_json, messages_by_place, send
 from tests.stock.factories import (
@@ -83,6 +83,61 @@ def test_a_purchase_brings_several_items_in(board_client, board_member):
         ],
     }
     assert (quantity_of(cans), quantity_of(water)) == (432, 120)
+
+
+def test_a_purchase_tells_what_each_line_cost(board_client):
+    """
+    Given cans and water
+    When a member records the shopping of the bar, the cans for 26,40 €, the
+    water without its cost
+    Then each line keeps what it cost, and the water waits for its cost
+    """
+    cans = StockItemFactory()
+    water = StockItemFactory()
+    body = entry((cans, 48), (water, 24))
+    body["lines"][0]["cost"] = "26.40"
+
+    response = send(board_client, "post", OPERATIONS_PATH, body)
+
+    assert response.status_code == 201
+    assert dict(StockMovement.objects.values_list("item", "cost")) == {
+        cans.pk: Decimal("26.40"),
+        water.pk: None,
+    }
+
+
+@pytest.mark.parametrize(
+    ("reason", "direction", "cost", "message"),
+    [
+        ("consumption", "out", "3.00", "Seul un achat a un prix."),
+        ("adjustment", "in", "3.00", "Seul un achat a un prix."),
+        ("purchase", "in", "-1", "Assurez-vous que cette valeur est supérieure ou égale à 0."),
+        (
+            "purchase",
+            "in",
+            "2.125",
+            "Assurez-vous qu’il n’y a pas plus de 2 chiffres après la virgule.",
+        ),
+    ],
+)
+def test_a_cost_out_of_rule_is_refused_under_its_line(
+    board_client, reason, direction, cost, message
+):
+    """
+    Given cans in stock
+    When an entry or an exit gives a line a cost, though it is no purchase; or a
+    purchase gives one below zero, or finer than the cent
+    Then it is refused under the cost of its line, and nothing is recorded
+    """
+    cans = StockItemFactory()
+    put_in_stock(cans, 24)
+    body = entry((cans, 2), direction=direction, reason=reason)
+    body["lines"][0]["cost"] = cost
+
+    response = send(board_client, "post", OPERATIONS_PATH, body)
+
+    assert messages_by_place(response) == {("body", "lines", 0, "cost"): message}
+    assert StockOperation.objects.count() == 1
 
 
 def test_a_consumption_takes_items_out(board_client):

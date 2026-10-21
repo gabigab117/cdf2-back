@@ -4916,6 +4916,18 @@
       "ShoppingLineOut": {
         "description": "An item below its threshold, and what brings it back to it, rounded up\nto its step (A19).",
         "properties": {
+          "estimated_cost": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Cost"
+          },
           "item": {
             "$ref": "#/components/schemas/StockMovementItemOut"
           },
@@ -4927,9 +4939,30 @@
         },
         "required": [
           "item",
-          "quantity"
+          "quantity",
+          "estimated_cost"
         ],
         "title": "ShoppingLineOut",
+        "type": "object"
+      },
+      "ShoppingListEstimatedCostOut": {
+        "description": "What the shopping list should cost (its budget), of its lines that have a\ncost.",
+        "properties": {
+          "total": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total",
+            "type": "string"
+          },
+          "unpriced_lines": {
+            "title": "Unpriced Lines",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "unpriced_lines"
+        ],
+        "title": "ShoppingListEstimatedCostOut",
         "type": "object"
       },
       "ShortageOut": {
@@ -5106,6 +5139,25 @@
         "title": "StockAdjustmentIn",
         "type": "object"
       },
+      "StockCategoryValueOut": {
+        "description": "The value of a category's items.",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/StockItemCategory"
+          },
+          "value": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "category",
+          "value"
+        ],
+        "title": "StockCategoryValueOut",
+        "type": "object"
+      },
       "StockCountIn": {
         "description": "What a stocktake counted of an item.",
         "properties": {
@@ -5255,6 +5307,21 @@
           "category": {
             "$ref": "#/components/schemas/StockItemCategory"
           },
+          "initial_cost": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Initial Cost"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -5294,7 +5361,8 @@
           "unit",
           "threshold",
           "step",
-          "best_before"
+          "best_before",
+          "initial_cost"
         ],
         "title": "StockItemIn",
         "type": "object"
@@ -5320,6 +5388,18 @@
           "id": {
             "title": "Id",
             "type": "integer"
+          },
+          "initial_cost": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Initial Cost"
           },
           "name": {
             "title": "Name",
@@ -5347,7 +5427,8 @@
           "unit",
           "threshold",
           "step",
-          "best_before"
+          "best_before",
+          "initial_cost"
         ],
         "title": "StockItemOut",
         "type": "object"
@@ -5355,6 +5436,21 @@
       "StockLineIn": {
         "description": "A line of an entry or an exit: an item, and how much of it.",
         "properties": {
+          "cost": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost"
+          },
           "item": {
             "title": "Item",
             "type": "integer"
@@ -5661,6 +5757,12 @@
             },
             "title": "Shopping List",
             "type": "array"
+          },
+          "shopping_list_estimated_cost": {
+            "$ref": "#/components/schemas/ShoppingListEstimatedCostOut"
+          },
+          "valuation": {
+            "$ref": "#/components/schemas/StockValuationOut"
           }
         },
         "required": [
@@ -5669,16 +5771,75 @@
           "last_stocktake",
           "recent_operations",
           "shopping_list",
-          "orders"
+          "shopping_list_estimated_cost",
+          "orders",
+          "valuation"
         ],
         "title": "StockOverviewOut",
         "type": "object"
       },
-      "StockedItemOut": {
-        "description": "An item and where its stock stands.",
+      "StockValuationOut": {
+        "description": "The value of the stock (D16): its items at their weighted average cost.",
         "properties": {
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/StockCategoryValueOut"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "unpriced_purchases": {
+            "title": "Unpriced Purchases",
+            "type": "integer"
+          },
+          "unvalued_items": {
+            "title": "Unvalued Items",
+            "type": "integer"
+          },
+          "value": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "categories",
+          "unvalued_items",
+          "unpriced_purchases"
+        ],
+        "title": "StockValuationOut",
+        "type": "object"
+      },
+      "StockedItemOut": {
+        "description": "An item and where its stock and its value stand.",
+        "properties": {
+          "average_cost": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Cost"
+          },
           "item": {
             "$ref": "#/components/schemas/StockItemOut"
+          },
+          "last_unit_cost": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Unit Cost"
           },
           "level": {
             "title": "Level",
@@ -5692,13 +5853,28 @@
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Quantity",
             "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
           }
         },
         "required": [
           "item",
           "quantity",
           "low",
-          "level"
+          "level",
+          "average_cost",
+          "value",
+          "last_unit_cost"
         ],
         "title": "StockedItemOut",
         "type": "object"

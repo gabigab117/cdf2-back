@@ -13,6 +13,7 @@ from django.db.models import Case, F, ProtectedError, QuerySet, Sum, Value, When
 
 from stock.models import StockItem, StockItemCategory
 from stock.schemas import StockItemIn
+from stock.services.valuation import ValuedMovement, item_valuation
 
 # Nothing in stock, written as a quantity is: to the hundredth.
 NOTHING = Decimal("0.00")
@@ -28,13 +29,18 @@ CATEGORY_SORT_ORDER = Case(
 
 @dataclass(frozen=True)
 class StockedItem:
-    """An item and where its stock stands."""
+    """An item and where its stock and its value stand."""
 
     item: StockItem
     quantity: Decimal
     low: bool
     # How full its bar is, in percent.
     level: int
+    # Its weighted average cost, the value of what is in stock, and the unit
+    # cost of its latest purchase paid (D16).
+    average_cost: Decimal | None
+    value: Decimal | None
+    last_unit_cost: Decimal | None
 
 
 def stock_items() -> QuerySet[StockItem]:
@@ -55,13 +61,19 @@ def low_items() -> QuerySet[StockItem]:
     return stock_items().filter(low=True)
 
 
-def stocked(item: StockItem) -> StockedItem:
-    """An item read by stock_items(), with its level."""
+def stocked(item: StockItem, history: list[ValuedMovement]) -> StockedItem:
+    """An item read by stock_items(), with its level, and its value from its
+    movements valued (its history).
+    """
+    valuation = item_valuation(item, history)
     return StockedItem(
         item=item,
         quantity=item.quantity,
         low=item.low,
         level=level(item.quantity, item.threshold),
+        average_cost=valuation.average_cost,
+        value=valuation.value,
+        last_unit_cost=valuation.last_unit_cost,
     )
 
 
@@ -116,6 +128,7 @@ def _save(item: StockItem, data: StockItemIn) -> StockItem:
     item.step = data.step
     # To the month, as the first of it.
     item.best_before = data.best_before.replace(day=1) if data.best_before else None
+    item.initial_cost = data.initial_cost
     item.full_clean()
     item.save()
     # Read again as the database rounds its numbers: « 24.00 » for « 24 ».

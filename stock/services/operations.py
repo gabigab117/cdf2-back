@@ -46,6 +46,10 @@ HUNDREDTHS = DecimalValidator(DELTA.max_digits, DELTA.decimal_places)
 # What an entry or an exit moves; what a stocktake counts, nothing included.
 SOME = (MinValueValidator(Decimal("0.01"), NO_QUANTITY), HUNDREDTHS)
 ANY = (MinValueValidator(Decimal(0)), HUNDREDTHS)
+# What the line of a purchase cost (D16), as its movement keeps it, to the cent:
+# a prize given costs nothing.
+COSTS = StockMovement._meta.get_field("cost").validators
+PURCHASE_COST_ONLY = "Seul un achat a un prix."
 
 Rows = list[tuple[int, Decimal]]
 
@@ -68,12 +72,14 @@ def recent_operations() -> list[StockOperation]:
 @transaction.atomic
 def record_operation(data: StockOperationIn, member: User) -> StockOperation:
     """« Entrée ou sortie »: several items in or out at once, for one reason,
-    recorded with its member. An exit never takes more than is in stock.
+    recorded with its member. An exit never takes more than is in stock; a
+    purchase may tell what each line cost (D16).
     """
     reason = StockOperationReason(data.reason)
     operation = StockOperation(reason=reason, label=data.label, event_id=data.event, author=member)
     rows = [(line.item, line.quantity) for line in data.lines]
     locked, errors = _checked(operation, rows, "lines", "quantity", SOME)
+    errors |= _cost_errors(reason, [line.cost for line in data.lines])
     wrong_direction = WRONG_DIRECTIONS.get((reason, data.direction))
     if wrong_direction:
         errors["reason"] = [wrong_direction]
@@ -84,8 +90,10 @@ def record_operation(data: StockOperationIn, member: User) -> StockOperation:
         _refuse_beyond(rows, locked)
     operation.save()
     StockMovement.objects.bulk_create(
-        StockMovement(operation=operation, item_id=item, delta=sign * quantity)
-        for item, quantity in rows
+        StockMovement(
+            operation=operation, item_id=line.item, delta=sign * line.quantity, cost=line.cost
+        )
+        for line in data.lines
     )
     return operations().get(pk=operation.pk)
 
@@ -148,6 +156,25 @@ def _checked(
     if not rows:
         errors[NON_FIELD_ERRORS] = [NO_ROW[prefix]]
     return locked, errors
+
+
+def _cost_errors(reason: StockOperationReason, costs: list[Decimal | None]) -> dict[str, list[str]]:
+    """Check the cost of each line, under its position: a purchase's alone,
+    never negative, to the cent. A line without one waits for it.
+    """
+    errors: dict[str, list[str]] = {}
+    for index, cost in enumerate(costs):
+        if cost is None:
+            continue
+        if reason != StockOperationReason.PURCHASE:
+            errors[f"lines.{index}.cost"] = [PURCHASE_COST_ONLY]
+            continue
+        try:
+            for validate in COSTS:
+                validate(cost)
+        except ValidationError as error:
+            errors[f"lines.{index}.cost"] = error.messages
+    return errors
 
 
 def _refuse_beyond(rows: Rows, locked: dict[int, StockItem]) -> None:
