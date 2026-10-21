@@ -6,6 +6,7 @@ from core.schemas import REFUSALS, ErrorOut, ValidationErrorOut
 from documents.models import Document, DocumentCategory
 from stock.models import StockItem, StockOperation
 from stock.schemas import (
+    ItemHistoryLineOut,
     OrderLinesIn,
     StockAdjustmentIn,
     StockCostsIn,
@@ -20,7 +21,7 @@ from stock.schemas import (
     StockOverviewOut,
     StocktakeIn,
 )
-from stock.services.items import create_item, delete_item, update_item
+from stock.services.items import create_item, delete_item, item_history, update_item
 from stock.services.movements import adjust
 from stock.services.operations import (
     operation_detail,
@@ -139,6 +140,25 @@ def delete(request, item_id: int):
     """Delete an item that has never moved: the history keeps the others."""
     delete_item(get_object_or_404(StockItem, pk=item_id))
     return Status(204, None)
+
+
+@router.get(
+    "/stock/items/{item_id}/history",
+    response={
+        200: list[ItemHistoryLineOut],
+        401: ErrorOut,
+        403: ErrorOut,
+        404: ErrorOut,
+        422: ValidationErrorOut,
+    },
+    summary="Read the stock card of an item",
+)
+@paginate
+def read_item_history(request, item_id: int):
+    """« Fiche de stock »: the movements of an item, the latest first, each
+    valued, with the stock, its value and its average cost after it.
+    """
+    return item_history(get_object_or_404(StockItem, pk=item_id))
 
 
 @router.post(

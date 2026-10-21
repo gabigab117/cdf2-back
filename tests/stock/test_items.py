@@ -36,6 +36,7 @@ OPERATIONS = [
     ("post", ITEMS_PATH),
     ("put", f"{ITEMS_PATH}/1"),
     ("delete", f"{ITEMS_PATH}/1"),
+    ("get", f"{ITEMS_PATH}/1/history"),
     ("post", f"{ITEMS_PATH}/1/adjustments"),
     ("get", f"{STOCK}/operations"),
     ("post", f"{STOCK}/operations"),

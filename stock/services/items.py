@@ -11,9 +11,9 @@ from decimal import ROUND_CEILING, ROUND_HALF_UP, Decimal
 from django.core.exceptions import ValidationError
 from django.db.models import Case, F, ProtectedError, QuerySet, Sum, Value, When
 
-from stock.models import StockItem, StockItemCategory
+from stock.models import StockItem, StockItemCategory, StockOperation
 from stock.schemas import StockItemIn
-from stock.services.valuation import ValuedMovement, item_valuation
+from stock.services.valuation import ValuedMovement, item_valuation, valued_movements
 
 # Nothing in stock, written as a quantity is: to the hundredth.
 NOTHING = Decimal("0.00")
@@ -41,6 +41,24 @@ class StockedItem:
     average_cost: Decimal | None
     value: Decimal | None
     last_unit_cost: Decimal | None
+
+
+@dataclass(frozen=True)
+class ItemHistoryLine:
+    """A movement of an item as its stock card tells it (« fiche de stock »):
+    what moved, at what cost, and where the stock, its value and its average
+    cost stood after it (D16).
+    """
+
+    operation: StockOperation
+    delta: Decimal
+    cost: Decimal | None
+    unit_cost: Decimal | None
+    value: Decimal | None
+    unpriced: bool
+    quantity_after: Decimal
+    value_after: Decimal | None
+    average_cost_after: Decimal | None
 
 
 def stock_items() -> QuerySet[StockItem]:
@@ -75,6 +93,30 @@ def stocked(item: StockItem, history: list[ValuedMovement]) -> StockedItem:
         value=valuation.value,
         last_unit_cost=valuation.last_unit_cost,
     )
+
+
+def item_history(item: StockItem) -> list[ItemHistoryLine]:
+    """« Fiche de stock »: the movements of an item, the latest first, each with
+    its operation and its value. The whole item is replayed for any page of it.
+    """
+    history = valued_movements([item.pk]).get(item.pk, [])
+    operations = StockOperation.objects.select_related("event").in_bulk(
+        {movement.operation_id for movement in history}
+    )
+    return [
+        ItemHistoryLine(
+            operation=operations[movement.operation_id],
+            delta=movement.delta,
+            cost=movement.cost,
+            unit_cost=movement.unit_cost,
+            value=movement.value,
+            unpriced=movement.unpriced,
+            quantity_after=movement.quantity_after,
+            value_after=movement.value_after,
+            average_cost_after=movement.average_cost_after,
+        )
+        for movement in reversed(history)
+    ]
 
 
 def level(quantity: Decimal, threshold: Decimal) -> int:

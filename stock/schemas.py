@@ -266,6 +266,41 @@ class StockOperationDetailOut(Schema):
     lines: list[StockOperationLineOut]
 
 
+class ItemHistoryOperationOut(Schema):
+    """The operation of a line of an item's stock card."""
+
+    id: int
+    reason: StockOperationReason
+    # Empty, the reason names it.
+    label: str
+    created_at: dt.datetime
+    # None for an operation of no event, or once its event is deleted.
+    event: StockEventOut | None
+
+
+class ItemHistoryLineOut(Schema):
+    """A line of an item's stock card (« fiche de stock », D16): a movement,
+    valued at the cost of its time, and where the stock stood after it.
+    """
+
+    operation: ItemHistoryOperationOut
+    # Positive in, negative out.
+    delta: Decimal
+    # What the line of a purchase or a delivery cost; None while unknown.
+    cost: Decimal | None
+    # The unit cost it moved at, to the ten-thousandth, and what it moved, to
+    # the cent; None for an item whose stock has no cost to come at.
+    unit_cost: Decimal | None
+    value: Decimal | None
+    # A line of a purchase or a delivery waiting for its cost.
+    unpriced: bool
+    quantity_after: Decimal
+    # None likewise.
+    value_after: Decimal | None
+    # None once the stock is empty, or for an item not valued.
+    average_cost_after: Decimal | None
+
+
 class UnpricedPurchaseOut(Schema):
     """A purchase or a delivery waiting for the cost of a line, as the bell names it."""
 

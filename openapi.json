@@ -2009,6 +2009,141 @@
         "title": "InvoiceExpenseIn",
         "type": "object"
       },
+      "ItemHistoryLineOut": {
+        "description": "A line of an item's stock card (« fiche de stock », D16): a movement,\nvalued at the cost of its time, and where the stock stood after it.",
+        "properties": {
+          "average_cost_after": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Cost After"
+          },
+          "cost": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost"
+          },
+          "delta": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Delta",
+            "type": "string"
+          },
+          "operation": {
+            "$ref": "#/components/schemas/ItemHistoryOperationOut"
+          },
+          "quantity_after": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Quantity After",
+            "type": "string"
+          },
+          "unit_cost": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Cost"
+          },
+          "unpriced": {
+            "title": "Unpriced",
+            "type": "boolean"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "value_after": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value After"
+          }
+        },
+        "required": [
+          "operation",
+          "delta",
+          "cost",
+          "unit_cost",
+          "value",
+          "unpriced",
+          "quantity_after",
+          "value_after",
+          "average_cost_after"
+        ],
+        "title": "ItemHistoryLineOut",
+        "type": "object"
+      },
+      "ItemHistoryOperationOut": {
+        "description": "The operation of a line of an item's stock card.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "event": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StockEventOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/StockOperationReason"
+          }
+        },
+        "required": [
+          "id",
+          "reason",
+          "label",
+          "created_at",
+          "event"
+        ],
+        "title": "ItemHistoryOperationOut",
+        "type": "object"
+      },
       "LastStocktakeOut": {
         "description": "The latest stocktake, which dates the stock's title.",
         "properties": {
@@ -3923,6 +4058,27 @@
           "count"
         ],
         "title": "PagedEventItemOut",
+        "type": "object"
+      },
+      "PagedItemHistoryLineOut": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ItemHistoryLineOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "count"
+        ],
+        "title": "PagedItemHistoryLineOut",
         "type": "object"
       },
       "PagedLedgerEntryOut": {
@@ -12341,6 +12497,112 @@
           }
         ],
         "summary": "Adjust a stock item by its step",
+        "tags": [
+          "stock"
+        ]
+      }
+    },
+    "/api/board/stock/items/{item_id}/history": {
+      "get": {
+        "description": "« Fiche de stock »: the movements of an item, the latest first, each\nvalued, with the stock, its value and its average cost after it.",
+        "operationId": "stock_api_read_item_history",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedItemHistoryLineOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Read the stock card of an item",
         "tags": [
           "stock"
         ]
