@@ -8,6 +8,7 @@ from ninja import Field, FilterLookup, FilterSchema, Schema
 from accounts.schemas import BoardMemberOut
 from core.schemas import InputSchema
 from stock.models import StockOperationReason
+from stock.schemas import StockCategoryValueOut, StockMovementItemOut
 from treasury.models import (
     LedgerCategory,
     LedgerEntryKind,
@@ -271,3 +272,109 @@ class GeneralMeetingReportOut(Schema):
     expense_categories: list[LedgerCategoryTotalOut]
     # The expenses of the year missing their receipt, the oldest first.
     missing_receipts: list[LedgerEntryOut]
+
+
+class ManagementRowOut(Schema):
+    """The management of an event over a fiscal year, or of the general running
+    (D16): its result once its goods are counted.
+    """
+
+    # None for the general running.
+    event: LedgerEventOut | None
+    income: Decimal
+    expense: Decimal
+    # The share of its expenses gone into stock.
+    stocked_purchases: Decimal
+    # What its operations took out of the stock, at the average cost, less
+    # what they brought back.
+    consumption_cost: Decimal
+    # Income less expense, plus the stocked purchases, less the consumption.
+    management_result: Decimal
+    # Its bar income less the drinks and food it consumed.
+    bar_margin: Decimal
+    # The bar margin over the bar income, to the thousandth; None without any.
+    margin_rate: Decimal | None
+    # What its purchases of the year that no expense paid brought into stock.
+    unlinked_purchases: Decimal
+
+
+class ManagementTotalsOut(Schema):
+    """The results of a fiscal year, and what its stock changed of them."""
+
+    result: Decimal
+    # The value of the stock on 1 January, and on 31 December, or today for
+    # the current year.
+    opening_value: Decimal
+    closing_value: Decimal
+    stock_change: Decimal
+    # The result plus the stock change.
+    adjusted_result: Decimal
+    # The sum of the management results.
+    management_result: Decimal
+
+
+class StockLossOut(Schema):
+    """What the stocktakes of no event found missing of an item over the year:
+    above zero for a loss, below for goods found.
+    """
+
+    item: StockMovementItemOut
+    quantity: Decimal
+    # None for an item not valued.
+    value: Decimal | None
+
+
+class StockLossesOut(Schema):
+    # The value of the losses of the items valued.
+    total: Decimal
+    # The largest loss first.
+    items: list[StockLossOut]
+
+
+class ManagementStockOut(Schema):
+    # The value at the end of the year, in the order of the chips.
+    categories: list[StockCategoryValueOut]
+    losses: StockLossesOut
+
+
+class ReconciliationOut(Schema):
+    """From the management results to the adjusted result: each line adds to
+    the one before.
+    """
+
+    management_result: Decimal
+    # The purchases of the year no expense paid.
+    unlinked_purchases: Decimal
+    # The purchases of the year an expense of another year paid.
+    paid_another_year: Decimal
+    # Below zero: the purchases of another year an expense of the year paid.
+    recorded_another_year: Decimal
+    adjusted_result: Decimal
+
+
+class ManagementControlsOut(Schema):
+    """What the figures of the year still wait for."""
+
+    # Purchases and deliveries of the year waiting for the cost of a line.
+    unpriced_purchases: int
+    # Purchases and deliveries of the year above 0 € that no expense paid.
+    unlinked_purchases: int
+    # Items whose stock has no cost to come at, at the end of the year.
+    unvalued_items: int
+
+
+class ManagementOut(Schema):
+    """« Contrôle de gestion » (D16): a fiscal year's management, by event then
+    without one, its stock and its reconciliation, a bounded aggregate (A7).
+    """
+
+    year: int
+    # The years that have entries, and the current one, the latest first.
+    years: list[int]
+    # The events that have entries or operations, the first to start first.
+    events: list[ManagementRowOut]
+    general: ManagementRowOut
+    totals: ManagementTotalsOut
+    stock: ManagementStockOut
+    reconciliation: ReconciliationOut
+    controls: ManagementControlsOut

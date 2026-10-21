@@ -3591,6 +3591,220 @@
         "title": "LowStockItemOut",
         "type": "object"
       },
+      "ManagementControlsOut": {
+        "description": "What the figures of the year still wait for.",
+        "properties": {
+          "unlinked_purchases": {
+            "title": "Unlinked Purchases",
+            "type": "integer"
+          },
+          "unpriced_purchases": {
+            "title": "Unpriced Purchases",
+            "type": "integer"
+          },
+          "unvalued_items": {
+            "title": "Unvalued Items",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "unpriced_purchases",
+          "unlinked_purchases",
+          "unvalued_items"
+        ],
+        "title": "ManagementControlsOut",
+        "type": "object"
+      },
+      "ManagementOut": {
+        "description": "« Contrôle de gestion » (D16): a fiscal year's management, by event then\nwithout one, its stock and its reconciliation, a bounded aggregate (A7).",
+        "properties": {
+          "controls": {
+            "$ref": "#/components/schemas/ManagementControlsOut"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/ManagementRowOut"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "general": {
+            "$ref": "#/components/schemas/ManagementRowOut"
+          },
+          "reconciliation": {
+            "$ref": "#/components/schemas/ReconciliationOut"
+          },
+          "stock": {
+            "$ref": "#/components/schemas/ManagementStockOut"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/ManagementTotalsOut"
+          },
+          "year": {
+            "title": "Year",
+            "type": "integer"
+          },
+          "years": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Years",
+            "type": "array"
+          }
+        },
+        "required": [
+          "year",
+          "years",
+          "events",
+          "general",
+          "totals",
+          "stock",
+          "reconciliation",
+          "controls"
+        ],
+        "title": "ManagementOut",
+        "type": "object"
+      },
+      "ManagementRowOut": {
+        "description": "The management of an event over a fiscal year, or of the general running\n(D16): its result once its goods are counted.",
+        "properties": {
+          "bar_margin": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Bar Margin",
+            "type": "string"
+          },
+          "consumption_cost": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Consumption Cost",
+            "type": "string"
+          },
+          "event": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LedgerEventOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expense": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Expense",
+            "type": "string"
+          },
+          "income": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Income",
+            "type": "string"
+          },
+          "management_result": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Management Result",
+            "type": "string"
+          },
+          "margin_rate": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Margin Rate"
+          },
+          "stocked_purchases": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Stocked Purchases",
+            "type": "string"
+          },
+          "unlinked_purchases": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Unlinked Purchases",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event",
+          "income",
+          "expense",
+          "stocked_purchases",
+          "consumption_cost",
+          "management_result",
+          "bar_margin",
+          "margin_rate",
+          "unlinked_purchases"
+        ],
+        "title": "ManagementRowOut",
+        "type": "object"
+      },
+      "ManagementStockOut": {
+        "properties": {
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/StockCategoryValueOut"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "losses": {
+            "$ref": "#/components/schemas/StockLossesOut"
+          }
+        },
+        "required": [
+          "categories",
+          "losses"
+        ],
+        "title": "ManagementStockOut",
+        "type": "object"
+      },
+      "ManagementTotalsOut": {
+        "description": "The results of a fiscal year, and what its stock changed of them.",
+        "properties": {
+          "adjusted_result": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Adjusted Result",
+            "type": "string"
+          },
+          "closing_value": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Closing Value",
+            "type": "string"
+          },
+          "management_result": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Management Result",
+            "type": "string"
+          },
+          "opening_value": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Opening Value",
+            "type": "string"
+          },
+          "result": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Result",
+            "type": "string"
+          },
+          "stock_change": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Stock Change",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result",
+          "opening_value",
+          "closing_value",
+          "stock_change",
+          "adjusted_result",
+          "management_result"
+        ],
+        "title": "ManagementTotalsOut",
+        "type": "object"
+      },
       "MeOut": {
         "properties": {
           "email": {
@@ -4992,6 +5206,45 @@
         "title": "PublicProgrammeItemOut",
         "type": "object"
       },
+      "ReconciliationOut": {
+        "description": "From the management results to the adjusted result: each line adds to\nthe one before.",
+        "properties": {
+          "adjusted_result": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Adjusted Result",
+            "type": "string"
+          },
+          "management_result": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Management Result",
+            "type": "string"
+          },
+          "paid_another_year": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Paid Another Year",
+            "type": "string"
+          },
+          "recorded_another_year": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Recorded Another Year",
+            "type": "string"
+          },
+          "unlinked_purchases": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Unlinked Purchases",
+            "type": "string"
+          }
+        },
+        "required": [
+          "management_result",
+          "unlinked_purchases",
+          "paid_another_year",
+          "recorded_another_year",
+          "adjusted_result"
+        ],
+        "title": "ReconciliationOut",
+        "type": "object"
+      },
       "ReimbursementIn": {
         "description": "How the committee paid an advance back: every key required.",
         "properties": {
@@ -5869,6 +6122,60 @@
           "quantity"
         ],
         "title": "StockLineIn",
+        "type": "object"
+      },
+      "StockLossOut": {
+        "description": "What the stocktakes of no event found missing of an item over the year:\nabove zero for a loss, below for goods found.",
+        "properties": {
+          "item": {
+            "$ref": "#/components/schemas/StockMovementItemOut"
+          },
+          "quantity": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Quantity",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "item",
+          "quantity",
+          "value"
+        ],
+        "title": "StockLossOut",
+        "type": "object"
+      },
+      "StockLossesOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/StockLossOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total",
+            "type": "string"
+          }
+        },
+        "required": [
+          "total",
+          "items"
+        ],
+        "title": "StockLossesOut",
         "type": "object"
       },
       "StockMovementItemOut": {
@@ -15390,6 +15697,76 @@
           }
         ],
         "summary": "Record the expense of an invoice",
+        "tags": [
+          "treasury"
+        ]
+      }
+    },
+    "/api/board/treasury/management": {
+      "get": {
+        "description": "« Contrôle de gestion » (D16): the management result of each event once\nits goods are counted, the value of the stock and its change over the\nyear, the reconciliation of the results, and what the figures wait for.",
+        "operationId": "treasury_api_read_management",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "year",
+            "required": true,
+            "schema": {
+              "maximum": 9999,
+              "minimum": 1,
+              "title": "Year",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagementOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Read the management control of a fiscal year",
         "tags": [
           "treasury"
         ]

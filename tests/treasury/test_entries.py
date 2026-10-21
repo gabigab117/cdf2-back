@@ -19,6 +19,7 @@ ENTRIES = f"{TREASURY}/entries"
 OPERATIONS = [
     ("get", f"{TREASURY}/results?year=2026"),
     ("get", f"{TREASURY}/report?year=2026"),
+    ("get", f"{TREASURY}/management?year=2026"),
     ("get", ENTRIES),
     ("post", ENTRIES),
     ("get", f"{ENTRIES}/1"),

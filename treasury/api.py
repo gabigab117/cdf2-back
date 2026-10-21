@@ -17,6 +17,7 @@ from treasury.schemas import (
     LedgerEntryFilters,
     LedgerEntryIn,
     LedgerEntryOut,
+    ManagementOut,
     NewLedgerEntryIn,
     ReimbursementIn,
     StockPurchaseIn,
@@ -29,6 +30,7 @@ from treasury.services.entries import (
     update_entry,
 )
 from treasury.services.invoices import attach_invoice, create_invoice_expense
+from treasury.services.management import fiscal_year_management
 from treasury.services.reimbursements import cancel_reimbursement, mark_reimbursed
 from treasury.services.report import general_meeting_report
 from treasury.services.results import fiscal_year_results
@@ -64,6 +66,19 @@ def read_report(request, query: Query[FiscalYearQuery]):
     category brought in or cost, and the expenses missing their receipt.
     """
     return general_meeting_report(query.year)
+
+
+@router.get(
+    "/treasury/management",
+    response={200: ManagementOut, 401: ErrorOut, 403: ErrorOut, 422: ValidationErrorOut},
+    summary="Read the management control of a fiscal year",
+)
+def read_management(request, query: Query[FiscalYearQuery]):
+    """« Contrôle de gestion » (D16): the management result of each event once
+    its goods are counted, the value of the stock and its change over the
+    year, the reconciliation of the results, and what the figures wait for.
+    """
+    return fiscal_year_management(query.year)
 
 
 @router.get(
