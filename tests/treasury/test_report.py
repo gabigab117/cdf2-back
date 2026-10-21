@@ -7,6 +7,7 @@ import pytest
 from tests.documents.factories import DocumentFactory
 from tests.treasury.factories import LedgerEntryFactory
 from tests.treasury.mockup import EXPENSE, INCOME, RESULT, build_mockup
+from tests.treasury.scenario import reference_scenario
 
 pytestmark = pytest.mark.django_db
 
@@ -87,7 +88,35 @@ def test_reading_the_report_takes_a_fixed_number_of_queries(
 ):
     build_mockup()
 
-    # Authentication (2), the totals by event, the years, the categories, and
-    # the receipts missing with their links.
-    with django_assert_max_num_queries(6):
+    # Authentication (2), the totals by event, the years, the categories, the
+    # receipts missing with their links, then the management of the year: the
+    # items, their movements, the expenses that paid a purchase, the bar income.
+    with django_assert_max_num_queries(10):
         board_client.get(REPORT, {"year": 2026})
+
+
+def test_the_report_tells_the_stock_and_the_management_of_its_year(board_client, mockup_day):
+    """
+    Given the reference scenario of the brocante (D16)
+    When a member reads the report of 2026
+    Then it tells the stock, worth nothing on 1 January and 22,67 € today, the
+    adjusted result of 32,67 €, the management result of the brocante and of
+    the general running, and the 1,13 € of losses
+    """
+    reference_scenario()
+
+    management = board_client.get(REPORT, {"year": 2026}).json()["management"]
+
+    assert management["totals"] == {
+        "result": "10.00",
+        "opening_value": "0.00",
+        "closing_value": "22.67",
+        "stock_change": "22.67",
+        "adjusted_result": "32.67",
+        "management_result": "18.27",
+    }
+    assert [(row["event"]["title"], row["management_result"]) for row in management["events"]] == [
+        ("Brocante", "19.40")
+    ]
+    assert management["general"]["management_result"] == "-1.13"
+    assert management["stock"]["losses"]["total"] == "1.13"

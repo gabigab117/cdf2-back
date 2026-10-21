@@ -78,7 +78,7 @@ def read_management(request, query: Query[FiscalYearQuery]):
     its goods are counted, the value of the stock and its change over the
     year, the reconciliation of the results, and what the figures wait for.
     """
-    return fiscal_year_management(query.year)
+    return fiscal_year_management(fiscal_year_results(query.year))
 
 
 @router.get(

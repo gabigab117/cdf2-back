@@ -1831,6 +1831,9 @@
             "title": "Income Categories",
             "type": "array"
           },
+          "management": {
+            "$ref": "#/components/schemas/ManagementOut"
+          },
           "missing_receipts": {
             "items": {
               "$ref": "#/components/schemas/LedgerEntryOut"
@@ -1853,7 +1856,8 @@
           "general",
           "income_categories",
           "expense_categories",
-          "missing_receipts"
+          "missing_receipts",
+          "management"
         ],
         "title": "GeneralMeetingReportOut",
         "type": "object"

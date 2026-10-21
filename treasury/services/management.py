@@ -29,7 +29,7 @@ from stock.services.items import NOTHING
 from stock.services.overview import CategoryValue
 from stock.services.valuation import NO_VALUE, PRICED_REASONS, ValuedMovement, valued_movements
 from treasury.models import LedgerCategory, LedgerEntry, LedgerEntryKind
-from treasury.services.results import ZERO, LedgerEvent, LedgerTotals, fiscal_year_results
+from treasury.services.results import ZERO, FiscalYearResults, LedgerEvent, LedgerTotals
 
 # The goods of the bar: its supplies, such as the cups, are not in its margin.
 BAR_CATEGORIES = (StockItemCategory.DRINKS, StockItemCategory.FOOD)
@@ -219,12 +219,13 @@ class _StockYear:
             self.losses.append(StockLoss(item=item, quantity=lost_quantity, value=lost_value))
 
 
-def fiscal_year_management(year: int) -> FiscalYearManagement:
-    """The management control of a fiscal year: a row for each event that has
-    entries or operations in it, the first to start first, then the general
-    running; the totals, the stock, the reconciliation and the controls.
+def fiscal_year_management(results: FiscalYearResults) -> FiscalYearManagement:
+    """The management control of a fiscal year, from its results: a row for
+    each event that has entries or operations in it, the first to start first,
+    then the general running; the totals, the stock, the reconciliation and
+    the controls.
     """
-    results = fiscal_year_results(year)
+    year = results.year
     stock = _StockYear(year)
     items = StockItem.objects.in_bulk()
     for item_id, history in valued_movements().items():

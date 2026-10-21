@@ -1,5 +1,6 @@
 """The report of a fiscal year for the general meeting (6.6, A18): its totals
-and results, what each category brought in or cost, and the receipts it misses.
+and results, what each category brought in or cost, and the receipts it misses;
+its stock and the management result of each event (D16).
 """
 
 from dataclasses import dataclass
@@ -14,6 +15,7 @@ from treasury.models import (
     LedgerEntryKind,
 )
 from treasury.services.entries import missing_receipts
+from treasury.services.management import FiscalYearManagement, fiscal_year_management
 from treasury.services.results import (
     LedgerEventResult,
     LedgerTotals,
@@ -37,6 +39,9 @@ class GeneralMeetingReport:
     income_categories: list[CategoryTotal]
     expense_categories: list[CategoryTotal]
     missing_receipts: list[LedgerEntry]
+    # The stock on 1 January and at the end of the year, the adjusted result,
+    # and each event's management result.
+    management: FiscalYearManagement
 
 
 def general_meeting_report(year: int) -> GeneralMeetingReport:
@@ -60,6 +65,7 @@ def general_meeting_report(year: int) -> GeneralMeetingReport:
         income_categories=_ordered(sums, LedgerEntryKind.INCOME, INCOME_CATEGORIES),
         expense_categories=_ordered(sums, LedgerEntryKind.EXPENSE, EXPENSE_CATEGORIES),
         missing_receipts=list(missing_receipts().filter(date__year=year)),
+        management=fiscal_year_management(results),
     )
 
 

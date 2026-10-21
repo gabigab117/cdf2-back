@@ -258,22 +258,6 @@ class LedgerCategoryTotalOut(Schema):
     count: int
 
 
-class GeneralMeetingReportOut(Schema):
-    """The report of a fiscal year for the general meeting: a bounded aggregate (A7)."""
-
-    year: int
-    totals: LedgerTotalsOut
-    # The events that have entries, the first to start first.
-    events: list[LedgerEventResultOut]
-    # The entries of the committee's general running.
-    general: LedgerTotalsOut
-    # The categories that have entries, in the order of the form.
-    income_categories: list[LedgerCategoryTotalOut]
-    expense_categories: list[LedgerCategoryTotalOut]
-    # The expenses of the year missing their receipt, the oldest first.
-    missing_receipts: list[LedgerEntryOut]
-
-
 class ManagementRowOut(Schema):
     """The management of an event over a fiscal year, or of the general running
     (D16): its result once its goods are counted.
@@ -378,3 +362,21 @@ class ManagementOut(Schema):
     stock: ManagementStockOut
     reconciliation: ReconciliationOut
     controls: ManagementControlsOut
+
+
+class GeneralMeetingReportOut(Schema):
+    """The report of a fiscal year for the general meeting: a bounded aggregate (A7)."""
+
+    year: int
+    totals: LedgerTotalsOut
+    # The events that have entries, the first to start first.
+    events: list[LedgerEventResultOut]
+    # The entries of the committee's general running.
+    general: LedgerTotalsOut
+    # The categories that have entries, in the order of the form.
+    income_categories: list[LedgerCategoryTotalOut]
+    expense_categories: list[LedgerCategoryTotalOut]
+    # The expenses of the year missing their receipt, the oldest first.
+    missing_receipts: list[LedgerEntryOut]
+    # The stock and the management of the year (D16).
+    management: ManagementOut

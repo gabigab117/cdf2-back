@@ -5,51 +5,27 @@ reconciliation, and what the figures wait for.
 
 import datetime as dt
 from decimal import Decimal
-from zoneinfo import ZoneInfo
 
 import pytest
 
-from stock.models import StockItemCategory, StockOperation, StockOperationReason
+from stock.models import StockItemCategory, StockOperationReason
 from tests.events.factories import EventFactory
 from tests.helpers import iso
 from tests.stock.factories import StockItemFactory, bought, moved, put_in_stock
 from tests.treasury.factories import IncomeFactory, LedgerEntryFactory
+from tests.treasury.scenario import PARIS, recorded, reference_scenario
 from treasury.services.management import fiscal_year_management
+from treasury.services.results import fiscal_year_results
 
 pytestmark = pytest.mark.django_db
 
 MANAGEMENT = "/api/board/treasury/management"
-PARIS = ZoneInfo("Europe/Paris")
 CONSUMPTION = StockOperationReason.CONSUMPTION
 STOCKTAKE = StockOperationReason.STOCKTAKE
 
 
-def recorded(movement, moment, event=None):
-    """Place the operation of a movement at a moment, and at an event."""
-    StockOperation.objects.filter(pk=movement.operation_id).update(created_at=moment, event=event)
-    return movement.operation
-
-
-def reference_scenario():
-    """The reference scenario of the phase (D16), at the brocante of 13
-    September 2026: the shopping of the bar, 50,00 €, puts 48 cans in stock
-    for 26,40 €; 24 more are bought for 14,40 €, no expense paying them; the
-    bar consumes 30 and takes 60,00 €; a stocktake of no event finds 40.
-    """
-    brocante = EventFactory(title="Brocante", starts_at=dt.datetime(2026, 9, 13, 7, tzinfo=PARIS))
-    cans = StockItemFactory(name="Canettes de soda 33 cl", category=StockItemCategory.DRINKS)
-    shopping = LedgerEntryFactory(
-        label="Courses buvette", amount=Decimal("50.00"), event=brocante, date=dt.date(2026, 9, 12)
-    )
-    shopping.stock_purchase = recorded(
-        bought(cans, 48, "26.40"), dt.datetime(2026, 9, 12, 10, tzinfo=PARIS), brocante
-    )
-    shopping.save()
-    recorded(bought(cans, 24, "14.40"), dt.datetime(2026, 9, 12, 11, tzinfo=PARIS))
-    recorded(moved(cans, -30, CONSUMPTION), dt.datetime(2026, 9, 13, 18, tzinfo=PARIS), brocante)
-    recorded(moved(cans, -2, STOCKTAKE), dt.datetime(2026, 9, 20, 10, tzinfo=PARIS))
-    IncomeFactory(amount=Decimal("60.00"), event=brocante, date=dt.date(2026, 9, 13))
-    return brocante, cans
+def management(year):
+    return fiscal_year_management(fiscal_year_results(year))
 
 
 def test_the_management_of_the_reference_scenario(mockup_day):
@@ -64,7 +40,7 @@ def test_the_management_of_the_reference_scenario(mockup_day):
     """
     brocante, cans = reference_scenario()
 
-    report = fiscal_year_management(2026)
+    report = management(2026)
 
     [row] = report.events
     assert (row.event.id, row.income, row.expense, row.stocked_purchases) == (
@@ -213,7 +189,7 @@ def test_an_event_without_bar_income_has_no_margin_rate(mockup_day):
     recorded(bought(cans, 48, "26.40"), dt.datetime(2026, 10, 1, 10, tzinfo=PARIS))
     recorded(moved(cans, -12, CONSUMPTION), dt.datetime(2026, 10, 4, 18, tzinfo=PARIS), loto)
 
-    [row] = fiscal_year_management(2026).events
+    [row] = management(2026).events
 
     assert (row.event.title, row.income, row.consumption_cost) == ("Loto", 0, Decimal("6.60"))
     assert (row.management_result, row.bar_margin, row.margin_rate) == (
@@ -238,7 +214,7 @@ def test_the_supplies_stay_out_of_the_bar_margin(mockup_day):
     recorded(moved(cups, -40, CONSUMPTION), dt.datetime(2026, 9, 13, 18, 5, tzinfo=PARIS), brocante)
     IncomeFactory(amount=Decimal("60.00"), event=brocante, date=dt.date(2026, 9, 13))
 
-    [row] = fiscal_year_management(2026).events
+    [row] = management(2026).events
 
     assert (row.consumption_cost, row.bar_margin) == (Decimal("18.50"), Decimal("43.50"))
 
@@ -255,7 +231,7 @@ def test_a_closed_year_and_the_next_share_the_value_of_the_stock(mockup_day):
     recorded(bought(cans, 48, "26.40"), dt.datetime(2025, 12, 20, 10, tzinfo=PARIS))
     recorded(moved(cans, -30, CONSUMPTION), dt.datetime(2026, 1, 10, 10, tzinfo=PARIS))
 
-    closed, current = fiscal_year_management(2025), fiscal_year_management(2026)
+    closed, current = management(2025), management(2026)
 
     assert (closed.totals.opening_value, closed.totals.closing_value) == (0, Decimal("26.40"))
     assert (closed.reconciliation.unlinked_purchases, closed.totals.adjusted_result) == (
@@ -288,7 +264,7 @@ def test_a_purchase_paid_in_one_year_and_recorded_in_the_next(mockup_day):
     )
     shopping.save()
 
-    closed, current = fiscal_year_management(2025), fiscal_year_management(2026)
+    closed, current = management(2025), management(2026)
 
     assert (closed.general.stocked_purchases, closed.reconciliation.recorded_another_year) == (
         Decimal("26.40"),
@@ -317,7 +293,7 @@ def test_the_controls_count_what_the_figures_wait_for(mockup_day):
         moved(sweets, 5, StockOperationReason.ADJUSTMENT), dt.datetime(2026, 9, 3, tzinfo=PARIS)
     )
 
-    controls = fiscal_year_management(2026).controls
+    controls = management(2026).controls
 
     assert (controls.unpriced_purchases, controls.unlinked_purchases, controls.unvalued_items) == (
         1,
@@ -343,7 +319,7 @@ def test_the_losses_of_an_item_not_valued_have_no_value(mockup_day):
     recorded(bought(cans, 48, "26.40"), dt.datetime(2026, 9, 1, 10, tzinfo=PARIS))
     recorded(moved(cans, 1, STOCKTAKE), dt.datetime(2026, 9, 20, 10, tzinfo=PARIS))
 
-    losses = fiscal_year_management(2026).stock.losses
+    losses = management(2026).stock.losses
 
     assert [(loss.item.name, loss.quantity, loss.value) for loss in losses.items] == [
         ("Bonbons", Decimal(2), None),
@@ -364,6 +340,6 @@ def test_a_margin_rate_is_rounded_half_up(mockup_day):
     recorded(moved(cans, -46, CONSUMPTION), dt.datetime(2026, 10, 4, 18, tzinfo=PARIS), loto)
     IncomeFactory(amount=Decimal("80.00"), event=loto, date=dt.date(2026, 10, 4))
 
-    [row] = fiscal_year_management(2026).events
+    [row] = management(2026).events
 
     assert (row.bar_margin, row.margin_rate) == (Decimal("57.00"), Decimal("0.713"))
