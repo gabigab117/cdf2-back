@@ -418,6 +418,31 @@ def test_cancelling_a_delivery_looks_for_a_later_stocktake_once_its_items_are_lo
     assert items_locked < stocktake_sought
 
 
+def test_cancelling_a_delivery_locks_the_order_then_the_delivery_then_its_items(board_client):
+    """
+    Given the order of sweets and juice, received today
+    When a member cancels the delivery
+    Then the order is locked first, then the delivery, then its items: a
+    member writing the costs of the delivery at the same time, who locks it
+    too, waits instead of being caught in a deadlock
+    """
+    document, _sweets, _juice = sweets_and_juice()
+    received(document)
+
+    with CaptureQueriesContext(connection) as queries:
+        send(board_client, "delete", order_url(document.pk, "/delivery"))
+
+    locks = [query["sql"] for query in queries.captured_queries if "FOR UPDATE" in query["sql"]]
+    assert [
+        next(
+            table
+            for table in (Document, StockOperation, StockItem)
+            if f'FROM "{table._meta.db_table}"' in sql
+        )
+        for sql in locks
+    ] == [Document, StockOperation, StockItem]
+
+
 def test_an_order_not_received_has_no_delivery_to_cancel(board_client):
     """
     Given the order of sweets and juice, not received

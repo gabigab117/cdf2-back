@@ -179,7 +179,10 @@ def cancel_delivery(document: Document) -> Order:
         raise ValidationError("Cette commande n’est pas réceptionnée.")
     if not current.undoable:
         raise ValidationError("Une réception ne s’annule que le jour même.")
-    # Locked first: a stocktake of these items, which locks them too, comes
+    # Locked after its order, before its items: a member writing its costs, who
+    # locks it too (D16), waits, rather than meeting the deletion of its lines.
+    delivery = StockOperation.objects.select_for_update().get(pk=delivery.pk)
+    # Locked next: a stocktake of these items, which locks them too, comes
     # either before, and is found below, or once the delivery is undone.
     locked = lock(movement.item_id for movement in delivery.movements.all())
     # A stocktake that came after counted what was delivered, whether it found
