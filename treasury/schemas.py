@@ -7,6 +7,7 @@ from ninja import Field, FilterLookup, FilterSchema, Schema
 
 from accounts.schemas import BoardMemberOut
 from core.schemas import InputSchema
+from stock.models import StockOperationReason
 from treasury.models import (
     LedgerCategory,
     LedgerEntryKind,
@@ -76,6 +77,43 @@ class LedgerEntryFilters(FilterSchema):
         return Q(payment_method=LedgerPaymentMethod.ADVANCE, reimbursed_on__isnull=True)
 
 
+class StockPurchaseLineIn(InputSchema):
+    """A line of the purchase an expense puts in stock: an item, how much of it,
+    and what it cost, all taxes included (D16).
+    """
+
+    # The id of the item.
+    item: int
+    quantity: Decimal
+    cost: Decimal
+
+
+class StockPurchaseIn(InputSchema):
+    """« Mettre en stock »: the purchase an expense paid, its lines with their
+    costs, every key required.
+    """
+
+    lines: list[StockPurchaseLineIn]
+
+
+class ExistingPurchaseLineIn(InputSchema):
+    """What a line of a purchase recorded in the stock cost."""
+
+    # The id of the item of the line.
+    item: int
+    cost: Decimal
+
+
+class ExistingPurchaseIn(InputSchema):
+    """« Achat déjà saisi »: a purchase or a delivery recorded in the stock, paid
+    by the expense, the cost of each of its lines given.
+    """
+
+    # The id of the stock operation.
+    operation: int
+    lines: list[ExistingPurchaseLineIn]
+
+
 class ReimbursementIn(InputSchema):
     """How the committee paid an advance back: every key required."""
 
@@ -125,6 +163,16 @@ class LedgerReceiptOut(Schema):
     size: int
 
 
+class LedgerStockPurchaseOut(Schema):
+    """The stock purchase an expense paid (D16)."""
+
+    id: int
+    reason: StockOperationReason
+    # Empty, the reason names it.
+    label: str
+    created_at: dt.datetime
+
+
 class LedgerEntryOut(Schema):
     """An entry of the journal, as its line and its page show it."""
 
@@ -152,6 +200,12 @@ class LedgerEntryOut(Schema):
     # The member to ask for a missing receipt: who advanced the expense, or
     # else who recorded it; None once both accounts are deleted.
     contact: BoardMemberOut | None
+    # The stock purchase an expense paid (D16); None for none.
+    stock_purchase: LedgerStockPurchaseOut | None
+    # What that purchase cost: the share of the expense gone into stock; and
+    # what is left of the expense, a direct charge. None without a purchase.
+    stocked_cost: Decimal | None
+    unstocked_cost: Decimal | None
 
 
 class UnpaidInvoiceOut(Schema):

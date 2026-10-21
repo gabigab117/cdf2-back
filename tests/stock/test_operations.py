@@ -609,6 +609,7 @@ def test_an_operation_tells_its_lines_valued(board_client, board_member):
                 "unpriced": True,
             },
         ],
+        "expense": None,
     }
 
 

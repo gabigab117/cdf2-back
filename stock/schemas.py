@@ -244,6 +244,15 @@ class StockOperationLineOut(Schema):
     unpriced: bool
 
 
+class OperationExpenseOut(Schema):
+    """The expense of the treasury that paid an operation (D16)."""
+
+    id: int
+    label: str
+    amount: Decimal
+    date: dt.date
+
+
 class StockOperationDetailOut(Schema):
     """An operation of the stock, as its page shows it: its lines valued."""
 
@@ -264,6 +273,9 @@ class StockOperationDetailOut(Schema):
     cost: Decimal
     # In the order they were written.
     lines: list[StockOperationLineOut]
+    # The expense that paid it; None for none. Its costs are then corrected
+    # from that expense.
+    expense: OperationExpenseOut | None
 
 
 class ItemHistoryOperationOut(Schema):

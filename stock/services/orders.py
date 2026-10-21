@@ -28,6 +28,7 @@ from stock.models import (
 )
 from stock.schemas import OrderLinesIn
 from stock.services.movements import lock
+from stock.services.operations import lock_operation, paid_by
 
 RECEIVED = "Cette commande est déjà réceptionnée : annulez d’abord la réception."
 
@@ -181,7 +182,12 @@ def cancel_delivery(document: Document) -> Order:
         raise ValidationError("Une réception ne s’annule que le jour même.")
     # Locked after its order, before its items: a member writing its costs, who
     # locks it too (D16), waits, rather than meeting the deletion of its lines.
-    delivery = StockOperation.objects.select_for_update().get(pk=delivery.pk)
+    delivery = lock_operation(delivery.pk)
+    # Paid, it holds part of an expense (D16): the treasury lets it go first.
+    if paid_by(delivery) is not None:
+        raise ValidationError(
+            "Cette réception est payée par une dépense : retirez d’abord ce rattachement."
+        )
     # Locked next: a stocktake of these items, which locks them too, comes
     # either before, and is found below, or once the delivery is undone.
     locked = lock(movement.item_id for movement in delivery.movements.all())

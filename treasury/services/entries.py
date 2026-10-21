@@ -5,13 +5,27 @@ advance names the member who paid it, who stays named once they have left the
 board, or once their account is deleted, as long as the advance keeps them.
 """
 
+from decimal import Decimal
+
 from django.core.exceptions import ValidationError
 from django.core.files.base import File
 from django.db import transaction
-from django.db.models import Case, CharField, Q, QuerySet, Value, When
+from django.db.models import (
+    Case,
+    CharField,
+    F,
+    OuterRef,
+    Q,
+    QuerySet,
+    Subquery,
+    Sum,
+    Value,
+    When,
+)
 
 from accounts.models import User
 from documents.models import Document
+from stock.models import StockMovement
 from treasury.models import (
     LedgerCategory,
     LedgerEntry,
@@ -24,6 +38,9 @@ from treasury.services.receipts import receipt_document
 
 MEMBER_OF_ADVANCE = "Choisissez le membre qui a avancé la dépense."
 HAS_RECEIPT = "Cette ligne a déjà son justificatif."
+BELOW_STOCKED_COST = (
+    "Le montant ne peut pas être plus petit que les prix des articles mis en stock."
+)
 
 # Where the receipt of an entry stands (6.2): an expense needs one, but for its
 # bank fees; an income needs none, though one may be attached.
@@ -38,13 +55,31 @@ RECEIPT_STATE = Case(
 )
 
 
+# What the stock purchase of an expense cost (D16): the share of the expense gone
+# into stock. None for an expense that paid none: the subquery finds no line.
+STOCKED_COST = Subquery(
+    StockMovement.objects.filter(operation=OuterRef("stock_purchase"))
+    .order_by()
+    .values("operation")
+    .annotate(total=Sum("cost", default=Decimal(0)))
+    .values("total")
+)
+
+
 def ledger_entries() -> QuerySet[LedgerEntry]:
     """The entries as the ledger reads them, the latest first, with their
-    event, their people, their receipt and where it stands.
+    event, their people, their receipt and where it stands, and the stock
+    purchase an expense paid, with its share of the expense and what is left
+    of it.
     """
-    return LedgerEntry.objects.select_related(
-        "event", "advanced_by", "created_by", "receipt"
-    ).annotate(receipt_state=RECEIPT_STATE)
+    return (
+        LedgerEntry.objects.select_related(
+            "event", "advanced_by", "created_by", "receipt", "stock_purchase"
+        )
+        .annotate(receipt_state=RECEIPT_STATE, stocked_cost=STOCKED_COST)
+        # None without a stock purchase, as its stocked cost.
+        .annotate(unstocked_cost=F("amount") - F("stocked_cost"))
+    )
 
 
 def record_entry(data: LedgerEntryIn, member: User, file: File | None = None) -> LedgerEntry:
@@ -92,10 +127,17 @@ def missing_receipts() -> QuerySet[LedgerEntry]:
 
 @transaction.atomic
 def update_entry(entry: LedgerEntry, data: LedgerEntryIn) -> LedgerEntry:
-    """Correct an entry whole. Its receipt and its reimbursement stay as they are."""
-    # Locked: what the entry holds besides its fields, its reimbursement, is
-    # read as it stands.
-    entry = _save(LedgerEntry.objects.select_for_update().get(pk=entry.pk), data)
+    """Correct an entry whole. Its receipt, its reimbursement and its stock
+    purchase stay as they are: its amount never falls below what that purchase
+    cost (D16).
+    """
+    # Locked: what the entry holds besides its fields, its reimbursement and its
+    # stock purchase, is read as it stands. The purchase's costs are read
+    # without locking it: its own writes lock it before the entry.
+    entry = (
+        LedgerEntry.objects.select_for_update().annotate(stocked_cost=STOCKED_COST).get(pk=entry.pk)
+    )
+    entry = _save(entry, data, stocked_cost=entry.stocked_cost)
     return ledger_entries().get(pk=entry.pk)
 
 
@@ -104,7 +146,9 @@ def delete_entry(entry: LedgerEntry) -> None:
     entry.delete()
 
 
-def _save(entry: LedgerEntry, data: LedgerEntryIn) -> LedgerEntry:
+def _save(
+    entry: LedgerEntry, data: LedgerEntryIn, stocked_cost: Decimal | None = None
+) -> LedgerEntry:
     keeps_member = (
         entry.pk is not None
         and entry.payment_method == LedgerPaymentMethod.ADVANCE
@@ -112,14 +156,17 @@ def _save(entry: LedgerEntry, data: LedgerEntryIn) -> LedgerEntry:
         and entry.advanced_by_id == data.advanced_by
     )
     _write(entry, data)
-    check_entry(entry, keeps_member=keeps_member)
+    check_entry(entry, keeps_member=keeps_member, stocked_cost=stocked_cost)
     entry.save()
     return entry
 
 
-def check_entry(entry: LedgerEntry, keeps_member: bool) -> None:
+def check_entry(
+    entry: LedgerEntry, keeps_member: bool, stocked_cost: Decimal | None = None
+) -> None:
     """Check an entry before it is written: its fields and constraints, as the
-    model words them, and the member of an advance.
+    model words them, the member of an advance, and, for an expense that paid a
+    stock purchase, an amount never below what that purchase cost (D16).
 
     The database cannot require that member: a deleted account leaves its
     advances behind without one. Whoever is named already, a member who has left
@@ -136,6 +183,9 @@ def check_entry(entry: LedgerEntry, keeps_member: bool) -> None:
     advance = entry.payment_method == LedgerPaymentMethod.ADVANCE
     if advance and entry.advanced_by_id is None and not keeps_member:
         errors.setdefault("advanced_by", []).append(ValidationError(MEMBER_OF_ADVANCE))
+    # An amount the model refuses already says why on its own.
+    if stocked_cost is not None and "amount" not in errors and entry.amount < stocked_cost:
+        errors["amount"] = [ValidationError(BELOW_STOCKED_COST)]
     if errors:
         raise ValidationError(errors)
 

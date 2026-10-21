@@ -22,6 +22,8 @@ NO_AMOUNT = "Indiquez un montant supérieur à zéro."
 INCOME_NOT_ADVANCED = "Une recette n’est pas avancée par un membre."
 ADVANCE_ALONE_NAMES_MEMBER = "Seule une avance nomme le membre qui l’a faite."
 REIMBURSED_BEFORE_ADVANCE = "Le remboursement ne peut pas précéder l’avance."
+STOCK_PURCHASE_OF_EXPENSE = "Seule une dépense paie un achat du stock."
+PAID_BY_ANOTHER = "Cet achat est déjà payé par une autre dépense."
 
 
 # Named after their model rather than nested in it: the OpenAPI document names an
@@ -179,6 +181,18 @@ class LedgerEntry(models.Model):
         related_name="ledger_entry",
         error_messages={"unique": "Ce document justifie déjà une autre ligne."},
     )
+    # The purchase or the delivery of the stock this expense paid (D16): its
+    # costs are the share of the expense gone into stock. An operation is paid
+    # by a single expense; one an expense paid is not cancelled.
+    stock_purchase = models.OneToOneField(
+        "stock.StockOperation",
+        verbose_name="achat du stock",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="ledger_entry",
+        error_messages={"unique": PAID_BY_ANOTHER},
+    )
     supplier = models.CharField("fournisseur", max_length=200, blank=True)
     note = models.TextField("note", blank=True)
     # A deleted account leaves its entries behind, without a name.
@@ -237,6 +251,11 @@ class LedgerEntry(models.Model):
                 name="ledger_entry_reimbursed_after_advance",
                 violation_error_message=REIMBURSED_BEFORE_ADVANCE,
             ),
+            models.CheckConstraint(
+                condition=Q(stock_purchase__isnull=True) | Q(kind=LedgerEntryKind.EXPENSE),
+                name="ledger_entry_stock_purchase_of_expense",
+                violation_error_message=STOCK_PURCHASE_OF_EXPENSE,
+            ),
         ]
 
     def __str__(self):
@@ -274,5 +293,7 @@ class LedgerEntry(models.Model):
             and self.reimbursed_on < self.date
         ):
             errors["reimbursed_on"] = REIMBURSED_BEFORE_ADVANCE
+        if self.stock_purchase_id is not None and self.kind == LedgerEntryKind.INCOME:
+            errors["kind"] = STOCK_PURCHASE_OF_EXPENSE
         if errors:
             raise ValidationError(errors)

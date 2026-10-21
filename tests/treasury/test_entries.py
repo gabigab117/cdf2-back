@@ -27,6 +27,10 @@ OPERATIONS = [
     ("post", f"{ENTRIES}/1/receipt"),
     ("post", f"{ENTRIES}/1/reimbursement"),
     ("delete", f"{ENTRIES}/1/reimbursement"),
+    ("post", f"{ENTRIES}/1/stock-purchase"),
+    ("put", f"{ENTRIES}/1/stock-purchase"),
+    ("delete", f"{ENTRIES}/1/stock-purchase"),
+    ("get", f"{TREASURY}/stock-purchases"),
     ("post", f"{TREASURY}/invoices/1/expense"),
     ("post", f"{TREASURY}/invoices/1/attach"),
 ]
@@ -149,6 +153,9 @@ def test_a_member_records_an_expense_of_an_event(board_client, board_member):
         "receipt": None,
         "receipt_state": "missing",
         "contact": member_json(board_member),
+        "stock_purchase": None,
+        "stocked_cost": None,
+        "unstocked_cost": None,
     }
 
 

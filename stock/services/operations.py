@@ -13,7 +13,7 @@ from decimal import Decimal
 
 from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
 from django.core.validators import DecimalValidator, MinValueValidator
-from django.db import transaction
+from django.db import models, transaction
 from django.db.models import Case, Exists, OuterRef, Prefetch, Q, QuerySet, Value, When
 from django.utils.formats import number_format
 
@@ -59,6 +59,7 @@ PURCHASE_COST_ONLY = "Seul un achat a un prix."
 PRICED_ONLY = "Seuls un achat et une réception ont des prix."
 NOT_IN_OPERATION = "Cet article n’est pas dans l’opération."
 EVERY_LINE = "Donnez le prix de chaque ligne de l’opération, ou laissez-le vide."
+PAID_BY_EXPENSE = "Cet achat est payé par une dépense : ses prix se corrigent depuis elle."
 
 Rows = list[tuple[int, Decimal]]
 
@@ -101,6 +102,9 @@ class OperationDetail:
     # What the lines that have a cost cost, in all.
     cost: Decimal
     lines: list[OperationLine]
+    # The ledger entry that paid it (D16), read by its reverse relation: the
+    # stock imports nothing of the treasury. None for none.
+    expense: models.Model | None
 
 
 def operations() -> QuerySet[StockOperation]:
@@ -109,7 +113,8 @@ def operations() -> QuerySet[StockOperation]:
     """
     movements = StockMovement.objects.select_related("item").order_by("pk")
     return (
-        StockOperation.objects.select_related("event", "author")
+        # The expense that paid a purchase (D16), from the treasury.
+        StockOperation.objects.select_related("event", "author", "ledger_entry")
         .annotate(unpriced=Case(When(UNPRICED, then=Value(True)), default=Value(False)))
         .prefetch_related(Prefetch("movements", queryset=movements))
     )
@@ -155,7 +160,21 @@ def operation_detail(operation: StockOperation) -> OperationDetail:
         priceable=operation.reason in PRICED_REASONS,
         cost=sum((line.cost for line in lines if line.cost is not None), NO_VALUE),
         lines=lines,
+        expense=paid_by(operation),
     )
+
+
+def lock_operation(operation_id: int) -> StockOperation:
+    """Lock an operation, then read it as operations() does: its lines, and
+    the expense that paid it.
+    """
+    # Its event and its expense, outer joins, are read without being locked.
+    return operations().select_for_update(of=("self",)).get(pk=operation_id)
+
+
+def paid_by(operation: StockOperation) -> models.Model | None:
+    """The ledger entry that paid an operation (D16), or None."""
+    return getattr(operation, "ledger_entry", None)
 
 
 def recent_operations() -> list[StockOperation]:
@@ -258,10 +277,21 @@ def _checked(
 def update_costs(operation: StockOperation, data: StockCostsIn) -> OperationDetail:
     """« Compléter les prix », « Corriger les prix »: what each line of a purchase
     or a delivery cost, all at once (D16), the only correction of an operation.
-    Its quantities stay as they are, and every value follows.
+    Its quantities stay as they are, and every value follows. A purchase an
+    expense paid has its costs corrected from that expense.
     """
-    # Its event, an outer join, is read without being locked.
-    operation = operations().select_for_update(of=("self",)).get(pk=operation.pk)
+    operation = lock_operation(operation.pk)
+    if paid_by(operation) is not None:
+        raise ValidationError(PAID_BY_EXPENSE)
+    save_costs(operation, data)
+    # Its prefetched lines hold their new costs: the values are read anew.
+    return operation_detail(operation)
+
+
+def save_costs(operation: StockOperation, data: StockCostsIn) -> None:
+    """Write what each line of an operation locked by lock_operation() cost:
+    every line given once, each cost within bounds, or none of them.
+    """
     if operation.reason not in PRICED_REASONS:
         raise ValidationError(PRICED_ONLY)
     movements = {movement.item_id: movement for movement in operation.movements.all()}
@@ -281,8 +311,6 @@ def update_costs(operation: StockOperation, data: StockCostsIn) -> OperationDeta
     for line in data.lines:
         movements[line.item].cost = line.cost
     StockMovement.objects.bulk_update(movements.values(), ["cost"])
-    # Its prefetched lines hold their new costs: the values are read anew.
-    return operation_detail(operation)
 
 
 def _cost_errors(costs: list[Decimal | None], *, allowed: bool = True) -> dict[str, list[str]]:

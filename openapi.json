@@ -1651,6 +1651,55 @@
         "title": "EventOut",
         "type": "object"
       },
+      "ExistingPurchaseIn": {
+        "description": "« Achat déjà saisi »: a purchase or a delivery recorded in the stock, paid\nby the expense, the cost of each of its lines given.",
+        "properties": {
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/ExistingPurchaseLineIn"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "operation": {
+            "title": "Operation",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "operation",
+          "lines"
+        ],
+        "title": "ExistingPurchaseIn",
+        "type": "object"
+      },
+      "ExistingPurchaseLineIn": {
+        "description": "What a line of a purchase recorded in the stock cost.",
+        "properties": {
+          "cost": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Cost"
+          },
+          "item": {
+            "title": "Item",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "item",
+          "cost"
+        ],
+        "title": "ExistingPurchaseLineIn",
+        "type": "object"
+      },
       "ExtractedTaskIn": {
         "description": "A task the minutes of a meeting list, to create when they are validated.",
         "properties": {
@@ -2514,9 +2563,43 @@
               }
             ]
           },
+          "stock_purchase": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LedgerStockPurchaseOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "stocked_cost": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stocked Cost"
+          },
           "supplier": {
             "title": "Supplier",
             "type": "string"
+          },
+          "unstocked_cost": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unstocked Cost"
           }
         },
         "required": [
@@ -2537,7 +2620,10 @@
           "created_at",
           "receipt",
           "receipt_state",
-          "contact"
+          "contact",
+          "stock_purchase",
+          "stocked_cost",
+          "unstocked_cost"
         ],
         "title": "LedgerEntryOut",
         "type": "object"
@@ -2653,6 +2739,35 @@
         ],
         "title": "LedgerReceiptState",
         "type": "string"
+      },
+      "LedgerStockPurchaseOut": {
+        "description": "The stock purchase an expense paid (D16).",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/StockOperationReason"
+          }
+        },
+        "required": [
+          "id",
+          "reason",
+          "label",
+          "created_at"
+        ],
+        "title": "LedgerStockPurchaseOut",
+        "type": "object"
       },
       "LedgerTotalsOut": {
         "description": "What came in and went out, the result, and over how many entries.",
@@ -3834,6 +3949,37 @@
           "loans"
         ],
         "title": "OccupancyOut",
+        "type": "object"
+      },
+      "OperationExpenseOut": {
+        "description": "The expense of the treasury that paid an operation (D16).",
+        "properties": {
+          "amount": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "amount",
+          "date"
+        ],
+        "title": "OperationExpenseOut",
         "type": "object"
       },
       "OrderLineIn": {
@@ -5801,6 +5947,16 @@
               }
             ]
           },
+          "expense": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OperationExpenseOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "id": {
             "title": "Id",
             "type": "integer"
@@ -5838,7 +5994,8 @@
           "unpriced",
           "priceable",
           "cost",
-          "lines"
+          "lines",
+          "expense"
         ],
         "title": "StockOperationDetailOut",
         "type": "object"
@@ -6181,6 +6338,63 @@
           "valuation"
         ],
         "title": "StockOverviewOut",
+        "type": "object"
+      },
+      "StockPurchaseIn": {
+        "description": "« Mettre en stock »: the purchase an expense paid, its lines with their\ncosts, every key required.",
+        "properties": {
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/StockPurchaseLineIn"
+            },
+            "title": "Lines",
+            "type": "array"
+          }
+        },
+        "required": [
+          "lines"
+        ],
+        "title": "StockPurchaseIn",
+        "type": "object"
+      },
+      "StockPurchaseLineIn": {
+        "description": "A line of the purchase an expense puts in stock: an item, how much of it,\nand what it cost, all taxes included (D16).",
+        "properties": {
+          "cost": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Cost"
+          },
+          "item": {
+            "title": "Item",
+            "type": "integer"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Quantity"
+          }
+        },
+        "required": [
+          "item",
+          "quantity",
+          "cost"
+        ],
+        "title": "StockPurchaseLineIn",
         "type": "object"
       },
       "StockValuationOut": {
@@ -14715,6 +14929,276 @@
         ]
       }
     },
+    "/api/board/treasury/entries/{entry_id}/stock-purchase": {
+      "delete": {
+        "description": "« Retirer »: the expense pays the purchase no more; it stays in the stock.",
+        "operationId": "treasury_api_unlink_purchase",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedgerEntryOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Unlink the stock purchase of an expense",
+        "tags": [
+          "treasury"
+        ]
+      },
+      "post": {
+        "description": "« Mettre en stock » (D16): the purchase an expense paid, recorded in the\nstock with its label and its event, each line with its cost.",
+        "operationId": "treasury_api_create_purchase",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StockPurchaseIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedgerEntryOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Put in stock what an expense paid",
+        "tags": [
+          "treasury"
+        ]
+      },
+      "put": {
+        "description": "« Achat déjà saisi » (D16): a purchase or a delivery recorded in the\nstock is paid by the expense, the cost of each line given. Given again, its\ncosts are corrected.",
+        "operationId": "treasury_api_link_purchase",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExistingPurchaseIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedgerEntryOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Link a stock purchase to the expense that paid it",
+        "tags": [
+          "treasury"
+        ]
+      }
+    },
     "/api/board/treasury/invoices/{document_id}/attach": {
       "post": {
         "description": "« Ligne déjà saisie »: an invoice becomes the receipt of an expense\nentered without one, rather than an expense recorded twice.",
@@ -15046,6 +15530,93 @@
           }
         ],
         "summary": "Read the results of a fiscal year",
+        "tags": [
+          "treasury"
+        ]
+      }
+    },
+    "/api/board/treasury/stock-purchases": {
+      "get": {
+        "description": "The purchases and deliveries of the stock no expense paid yet, the\nlatest first: what « Achat déjà saisi » chooses from.",
+        "operationId": "treasury_api_list_unlinked_purchases",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedStockOperationOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "List the stock purchases no expense paid",
         "tags": [
           "treasury"
         ]

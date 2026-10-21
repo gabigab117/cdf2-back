@@ -5,8 +5,10 @@ from ninja.pagination import paginate
 from core.schemas import REFUSALS, ErrorOut, ValidationErrorOut
 from documents.models import Document
 from documents.schemas import DocumentOut
+from stock.schemas import StockOperationOut
 from treasury.models import LedgerEntry
 from treasury.schemas import (
+    ExistingPurchaseIn,
     FiscalYearQuery,
     FiscalYearResultsOut,
     GeneralMeetingReportOut,
@@ -17,6 +19,7 @@ from treasury.schemas import (
     LedgerEntryOut,
     NewLedgerEntryIn,
     ReimbursementIn,
+    StockPurchaseIn,
 )
 from treasury.services.entries import (
     attach_receipt,
@@ -29,6 +32,12 @@ from treasury.services.invoices import attach_invoice, create_invoice_expense
 from treasury.services.reimbursements import cancel_reimbursement, mark_reimbursed
 from treasury.services.report import general_meeting_report
 from treasury.services.results import fiscal_year_results
+from treasury.services.stock_purchases import (
+    create_stock_purchase,
+    link_existing_purchase,
+    unlink_stock_purchase,
+    unlinked_purchases,
+)
 
 router = Router(tags=["treasury"])
 
@@ -148,6 +157,54 @@ def reimburse(request, entry_id: int, payload: ReimbursementIn):
 def cancel_reimbursement_of(request, entry_id: int):
     """« Annuler le remboursement »: the advance is owed again."""
     return cancel_reimbursement(get_object_or_404(LedgerEntry, pk=entry_id))
+
+
+@router.post(
+    "/treasury/entries/{entry_id}/stock-purchase",
+    response={200: LedgerEntryOut, 400: ErrorOut, **REFUSALS},
+    summary="Put in stock what an expense paid",
+)
+def create_purchase(request, entry_id: int, payload: StockPurchaseIn):
+    """« Mettre en stock » (D16): the purchase an expense paid, recorded in the
+    stock with its label and its event, each line with its cost.
+    """
+    return create_stock_purchase(get_object_or_404(LedgerEntry, pk=entry_id), payload, request.auth)
+
+
+@router.put(
+    "/treasury/entries/{entry_id}/stock-purchase",
+    response={200: LedgerEntryOut, 400: ErrorOut, **REFUSALS},
+    summary="Link a stock purchase to the expense that paid it",
+)
+def link_purchase(request, entry_id: int, payload: ExistingPurchaseIn):
+    """« Achat déjà saisi » (D16): a purchase or a delivery recorded in the
+    stock is paid by the expense, the cost of each line given. Given again, its
+    costs are corrected.
+    """
+    return link_existing_purchase(get_object_or_404(LedgerEntry, pk=entry_id), payload)
+
+
+@router.delete(
+    "/treasury/entries/{entry_id}/stock-purchase",
+    response={200: LedgerEntryOut, **REFUSALS},
+    summary="Unlink the stock purchase of an expense",
+)
+def unlink_purchase(request, entry_id: int):
+    """« Retirer »: the expense pays the purchase no more; it stays in the stock."""
+    return unlink_stock_purchase(get_object_or_404(LedgerEntry, pk=entry_id))
+
+
+@router.get(
+    "/treasury/stock-purchases",
+    response={200: list[StockOperationOut], 401: ErrorOut, 403: ErrorOut, 422: ValidationErrorOut},
+    summary="List the stock purchases no expense paid",
+)
+@paginate
+def list_unlinked_purchases(request):
+    """The purchases and deliveries of the stock no expense paid yet, the
+    latest first: what « Achat déjà saisi » chooses from.
+    """
+    return unlinked_purchases()
 
 
 @router.post(
