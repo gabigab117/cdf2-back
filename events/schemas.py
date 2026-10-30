@@ -6,6 +6,7 @@ from pydantic import AwareDatetime
 from accounts.schemas import BoardMemberOut
 from core.schemas import InputSchema
 from events.models import EventCategory, PracticalInfoIcon
+from photos.schemas import PublicAlbumOut
 
 
 class ProgrammeItemIn(InputSchema):
@@ -121,6 +122,12 @@ class PublicEventItemOut(Schema):
     venue_name: str
     price_label: str
     price_detail: str
+    # The id of its cover while the site may show its photo (D17), or none.
+    cover: int | None
+
+    @staticmethod
+    def resolve_cover(event):
+        return event.visible_cover
 
 
 class PublicProgrammeItemOut(Schema):
@@ -144,6 +151,9 @@ class PublicEventOut(PublicEventItemOut):
     summary: str
     programme: list[PublicProgrammeItemOut]
     practical_infos: list[PublicPracticalInfoOut]
+    # « L'an dernier »: the latest album of the site of its previous edition, with
+    # its first photos (PREVIOUS_EDITION_PHOTOS), or none.
+    previous_edition_album: PublicAlbumOut | None
     next_events: list[PublicEventItemOut]
 
 

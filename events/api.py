@@ -26,6 +26,7 @@ from events.services.agenda import (
 from events.services.calendar import calendar_feed, calendar_file
 from events.services.events import create_event, delete_event, update_event
 from events.services.periods import Period, events_in_period
+from photos.services.site import previous_edition_album
 
 router = Router(tags=["events"])
 
@@ -186,9 +187,12 @@ def event_file(request, slug: str):
     summary="Get a published event",
 )
 def public_event(request, slug: str):
-    """A published event's page, past ones included, with the events that follow it."""
+    """A published event's page, past ones included, with its previous edition's
+    album and the events that follow it.
+    """
     event = get_object_or_404(
         published_events().prefetch_related("programme", "practical_infos"), slug=slug
     )
+    event.previous_edition_album = previous_edition_album(event)
     event.next_events = next_events(event)
     return event

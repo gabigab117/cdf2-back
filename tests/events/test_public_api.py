@@ -93,6 +93,7 @@ def test_an_agenda_event_holds_what_the_site_shows_and_no_one_s_name(client):
             "venue_name": "Salle des fêtes",
             "price_label": "3 € le carton",
             "price_detail": "Buvette sur place",
+            "cover": None,
         }
     ]
 
@@ -242,6 +243,8 @@ def test_an_event_page_holds_its_public_content_and_the_next_events(client):
         "practical_infos": [
             {"icon": "parking", "title": "Enfants accompagnés", "text": "Un adulte par groupe."}
         ],
+        "cover": None,
+        "previous_edition_album": None,
     }
     assert [item["title"] for item in next_events] == ["Loto", "Marché"]
     assert next_events[0]["slug"] == loto.slug

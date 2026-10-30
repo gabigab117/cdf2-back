@@ -25,6 +25,8 @@ PUBLIC_OPERATIONS = {
     ("get", "/api/public/agenda"),
     ("get", "/api/public/agenda.ics"),
     ("get", "/api/public/photos/{photo_id}/{rendition}"),
+    ("get", "/api/public/albums"),
+    ("get", "/api/public/albums/{album_id}"),
 }
 
 
@@ -186,7 +188,13 @@ def test_the_site_answers_with_schemas_of_its_own(client, settings):
     document = client.get("/api/openapi.json").json()
 
     site = answer_schemas(document, site=True)
-    assert {"PagedPublicEventItemOut", "PublicEventOut", "AgendaOut"} <= site
+    assert {
+        "PagedPublicEventItemOut",
+        "PublicEventOut",
+        "AgendaOut",
+        "PagedPublicAlbumItemOut",
+        "PublicAlbumOut",
+    } <= site
     assert site & answer_schemas(document, site=False) == set()
 
 

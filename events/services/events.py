@@ -6,17 +6,11 @@ from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.db.models import ProtectedError
 from django.utils import timezone
-from django.utils.text import slugify
 
 from core.errors import line_errors
-from core.text import count_text
+from core.text import count_text, french_slug
 from events.models import Event, PracticalInfo, ProgrammeItem
 from events.schemas import EventIn
-
-# slugify() drops the letters Unicode does not decompose, French ligatures among
-# them ("œufs" would become "ufs"), and glues the words an apostrophe joins
-# ("dautomne"): both are spelled out beforehand.
-_SLUG_SPELLING = str.maketrans({"œ": "oe", "Œ": "Oe", "æ": "ae", "Æ": "Ae", "'": " ", "’": " "})
 
 # The fields of EventIn that are not copied onto the event as they come.
 _NOT_COPIED = {"slug", "lead", "previous_edition", "programme", "practical_infos"}
@@ -28,7 +22,7 @@ def event_slug(title: str, starts_at: dt.datetime) -> str:
 
     Each edition of a yearly event thus gets its own address.
     """
-    return _slugify(f"{title} {timezone.localtime(starts_at).year}")
+    return french_slug(f"{title} {timezone.localtime(starts_at).year}")
 
 
 def create_event(data: EventIn) -> Event:
@@ -70,7 +64,7 @@ def _save(event: Event, data: EventIn) -> Event:
     lead_unchanged = event.pk is not None and event.lead_id == data.lead
     for name, value in data.model_dump(exclude=_NOT_COPIED).items():
         setattr(event, name, value)
-    event.slug = _slugify(data.slug) if data.slug else event_slug(data.title, data.starts_at)
+    event.slug = french_slug(data.slug) if data.slug else event_slug(data.title, data.starts_at)
     event.lead_id = data.lead
     event.previous_edition_id = data.previous_edition
     programme = [
@@ -92,10 +86,6 @@ def _save(event: Event, data: EventIn) -> Event:
     event.practical_infos.all().delete()
     PracticalInfo.objects.bulk_create(practical_infos)
     return event
-
-
-def _slugify(text: str) -> str:
-    return slugify(text.translate(_SLUG_SPELLING))
 
 
 def _validate(event: Event, exclude: set[str], lines: dict[str, list[models.Model]]) -> None:

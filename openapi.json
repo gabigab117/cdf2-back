@@ -4798,6 +4798,27 @@
         "title": "PagedNoteOut",
         "type": "object"
       },
+      "PagedPublicAlbumItemOut": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PublicAlbumItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "count"
+        ],
+        "title": "PagedPublicAlbumItemOut",
+        "type": "object"
+      },
       "PagedPublicEventItemOut": {
         "properties": {
           "count": {
@@ -5350,6 +5371,84 @@
         "title": "ProgrammeItemOut",
         "type": "object"
       },
+      "PublicAlbumItemOut": {
+        "description": "An album of the site: one with a visible photo, which only a published\nalbum has.",
+        "properties": {
+          "cover": {
+            "title": "Cover",
+            "type": "integer"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "photos_count": {
+            "title": "Photos Count",
+            "type": "integer"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "title",
+          "date",
+          "cover",
+          "photos_count"
+        ],
+        "title": "PublicAlbumItemOut",
+        "type": "object"
+      },
+      "PublicAlbumOut": {
+        "description": "An album of the site with its visible photos, in the order they were taken.",
+        "properties": {
+          "cover": {
+            "title": "Cover",
+            "type": "integer"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "photos": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Photos",
+            "type": "array"
+          },
+          "photos_count": {
+            "title": "Photos Count",
+            "type": "integer"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "title",
+          "date",
+          "cover",
+          "photos_count",
+          "photos"
+        ],
+        "title": "PublicAlbumOut",
+        "type": "object"
+      },
       "PublicEventFilters": {
         "properties": {
           "category": {
@@ -5371,6 +5470,17 @@
         "properties": {
           "category": {
             "$ref": "#/components/schemas/EventCategory"
+          },
+          "cover": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover"
           },
           "ends_at": {
             "anyOf": [
@@ -5423,7 +5533,8 @@
           "start_label",
           "venue_name",
           "price_label",
-          "price_detail"
+          "price_detail",
+          "cover"
         ],
         "title": "PublicEventItemOut",
         "type": "object"
@@ -5433,6 +5544,17 @@
         "properties": {
           "category": {
             "$ref": "#/components/schemas/EventCategory"
+          },
+          "cover": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover"
           },
           "ends_at": {
             "anyOf": [
@@ -5481,6 +5603,16 @@
             },
             "title": "Practical Infos",
             "type": "array"
+          },
+          "previous_edition_album": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PublicAlbumOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "price_detail": {
             "title": "Price Detail",
@@ -5537,12 +5669,14 @@
           "venue_name",
           "price_label",
           "price_detail",
+          "cover",
           "venue_address",
           "latitude",
           "longitude",
           "summary",
           "programme",
           "practical_infos",
+          "previous_edition_album",
           "next_events"
         ],
         "title": "PublicEventOut",
@@ -17793,6 +17927,121 @@
         ]
       }
     },
+    "/api/public/albums": {
+      "get": {
+        "description": "The albums with a visible photo, the latest first, by page (D17).",
+        "operationId": "photos_api_list_public_albums",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedPublicAlbumItemOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "List the site's albums",
+        "tags": [
+          "site"
+        ]
+      }
+    },
+    "/api/public/albums/{album_id}": {
+      "get": {
+        "description": "An album with a visible photo, and those photos: any other is not found.",
+        "operationId": "photos_api_get_public_album",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "album_id",
+            "required": true,
+            "schema": {
+              "title": "Album Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicAlbumOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Get an album of the site",
+        "tags": [
+          "site"
+        ]
+      }
+    },
     "/api/public/events": {
       "get": {
         "description": "The published events to come, the next first, by page.",
@@ -17872,7 +18121,7 @@
     },
     "/api/public/events/{slug}": {
       "get": {
-        "description": "A published event's page, past ones included, with the events that follow it.",
+        "description": "A published event's page, past ones included, with its previous edition's\nalbum and the events that follow it.",
         "operationId": "events_api_public_event",
         "parameters": [
           {

@@ -5,6 +5,7 @@ from ninja import FilterSchema, Schema
 
 from accounts.schemas import BoardMemberOut
 from core.schemas import InputSchema
+from core.text import french_slug
 
 
 # Named after their model rather than nested in it: the OpenAPI document names an
@@ -119,3 +120,44 @@ class EventCoverOut(Schema):
     # Whether the site shows it: its photo is visible.
     visible: bool
     albums: list[AlbumItemOut]
+
+
+# The public site's own schemas (D17): no board schema is reused for it. They name
+# no one: no member, no file name.
+
+
+class PublicAlbumItemOut(Schema):
+    """An album of the site: one with a visible photo, which only a published
+    album has.
+    """
+
+    # Its address: its number, then its title, "12-brocante-2026". The number
+    # finds it; a title changed since leaves the address out of date.
+    slug: str
+    title: str
+    date: dt.date
+    # The id of its public cover: its own while visible, else its first visible
+    # photo.
+    cover: int
+    # Its visible photos only.
+    photos_count: int
+
+    @staticmethod
+    def resolve_slug(album):
+        return french_slug(f"{album.pk} {album.title}")
+
+    @staticmethod
+    def resolve_cover(album):
+        return album.public_cover
+
+
+class PublicAlbumOut(PublicAlbumItemOut):
+    """An album of the site with its visible photos, in the order they were taken."""
+
+    # The ids of its photos: all of them on its page, an album holding 300 at
+    # most; the first ones under « L'an dernier » (PREVIOUS_EDITION_PHOTOS).
+    photos: list[int]
+
+    @staticmethod
+    def resolve_photos(album):
+        return [photo.pk for photo in album.visible_photos]

@@ -108,4 +108,4 @@ def test_the_command_tells_what_it_wrote(settings):
 
     assert "9 demo events written." in out.getvalue()
     assert "14 demo equipment and 9 demo loans written." in out.getvalue()
-    assert "5 demo albums and 36 demo photos written." in out.getvalue()
+    assert "5 demo albums and 40 demo photos written." in out.getvalue()

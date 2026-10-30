@@ -7,7 +7,7 @@ from collections.abc import Iterable
 from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
 from django.core.files.base import File
 from django.db import transaction
-from django.db.models import Count, F, Prefetch, QuerySet
+from django.db.models import Count, F, OuterRef, Prefetch, QuerySet, Subquery
 from django.db.models.fields.files import FieldFile
 
 from accounts.models import User
@@ -18,6 +18,9 @@ from photos.services.images import read_photo
 # An album is seen whole, in a single grid, and its selection covers it all: it
 # holds this many photos at most (D17, card 8.3).
 MAX_ALBUM_PHOTOS = 300
+
+# The order of the albums, on the board as on the site: the latest first.
+ALBUM_ORDER = ("-date", "-created_at", "-pk")
 
 # The order of an album's photos: as they were taken, those without a date last,
 # then as they were added.
@@ -34,6 +37,13 @@ def visible_photos() -> QuerySet[Photo]:
     return Photo.objects.filter(album__published=True, hidden=False, image_rights_to_review=False)
 
 
+def visible_cover() -> Subquery:
+    """The id of a cover, an album's or an event's, while the site may show its
+    photo; null otherwise. An expression, to annotate a list with.
+    """
+    return Subquery(visible_photos().filter(pk=OuterRef("cover")).values("pk"))
+
+
 def albums() -> QuerySet[Album]:
     """The albums of the board, the latest first, with their event and their number
     of photos.
@@ -41,7 +51,7 @@ def albums() -> QuerySet[Album]:
     return (
         Album.objects.select_related("event")
         .annotate(photos_count=Count("photos"))
-        .order_by("-date", "-created_at", "-pk")
+        .order_by(*ALBUM_ORDER)
     )
 
 

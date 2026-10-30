@@ -94,7 +94,8 @@ DEMO_ALBUMS = [
     DemoAlbum(
         "Chasse aux œufs",
         "Chasse aux œufs",
-        photos=6,
+        # More than « L'an dernier » shows on the page of the egg hunt to come.
+        photos=10,
         published=True,
         sky=((150, 200, 240), (236, 242, 226)),
         ground=(120, 180, 90),

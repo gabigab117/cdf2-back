@@ -19,6 +19,8 @@ from photos.schemas import (
     PhotoOut,
     PhotoRendition,
     PhotoSelectionIn,
+    PublicAlbumItemOut,
+    PublicAlbumOut,
 )
 from photos.services.covers import event_cover, set_event_cover
 from photos.services.photos import (
@@ -37,6 +39,7 @@ from photos.services.photos import (
     visible_photos,
 )
 from photos.services.serving import ZIP, photo_response, zip_response
+from photos.services.site import public_albums, public_albums_with_photos
 
 router = Router(tags=["photos"])
 
@@ -242,3 +245,26 @@ def choose_event_cover(request, event_id: int, payload: CoverIn):
 def public_file(request, photo_id: int, rendition: PhotoRendition):
     """A size of a photo the site shows (D17): any other is not found."""
     return photo_response(get_object_or_404(visible_photos(), pk=photo_id), rendition, public=True)
+
+
+@public_router.get(
+    "/albums",
+    auth=None,
+    response={200: list[PublicAlbumItemOut], 422: ValidationErrorOut},
+    summary="List the site's albums",
+)
+@paginate
+def list_public_albums(request):
+    """The albums with a visible photo, the latest first, by page (D17)."""
+    return public_albums()
+
+
+@public_router.get(
+    "/albums/{album_id}",
+    auth=None,
+    response={200: PublicAlbumOut, 404: ErrorOut, 422: ValidationErrorOut},
+    summary="Get an album of the site",
+)
+def get_public_album(request, album_id: int):
+    """An album with a visible photo, and those photos: any other is not found."""
+    return get_object_or_404(public_albums_with_photos(), pk=album_id)

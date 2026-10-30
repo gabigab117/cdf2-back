@@ -9,7 +9,7 @@ from django.db.models import QuerySet
 
 from events.models import Event
 from photos.models import Album, Photo
-from photos.services.photos import albums, visible_photos
+from photos.services.photos import albums, visible_cover, visible_photos
 
 NOT_A_CHOICE = "Choisissez une photo des albums de l’événement ou de son édition précédente."
 
@@ -39,6 +39,11 @@ def event_cover(event: Event) -> EventCover:
         visible=event.cover_id is not None and visible_photos().filter(pk=event.cover_id).exists(),
         albums=list(cover_choices(event)),
     )
+
+
+def with_visible_covers(events: QuerySet[Event]) -> QuerySet[Event]:
+    """Events with their cover while the site may show it, as `visible_cover`."""
+    return events.annotate(visible_cover=visible_cover())
 
 
 def set_event_cover(event: Event, cover: int | None) -> EventCover:

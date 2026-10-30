@@ -36,13 +36,13 @@ def test_the_seed_writes_the_albums_of_the_mockup(private_files):
     """
     demo = seed()
 
-    assert (len(demo.albums), demo.photos) == (5, 36)
+    assert (len(demo.albums), demo.photos) == (5, 40)
     albums = albums_by_title()
     assert {title: (album.published, album.photos.count()) for title, album in albums.items()} == {
         "Brocante 2026": (True, 12),
         "Fête du 14 juillet": (True, 8),
         "Feu de la Saint-Jean": (False, 6),
-        "Chasse aux œufs": (True, 6),
+        "Chasse aux œufs": (True, 10),
         "Coulisses du bureau": (False, 4),
     }
     brocante = albums["Brocante 2026"]
@@ -57,7 +57,7 @@ def test_the_seed_writes_the_albums_of_the_mockup(private_files):
     egg_hunt = events_in_period("upcoming").get(title="Chasse aux œufs")
     assert egg_hunt.cover == albums["Chasse aux œufs"].cover
     assert egg_hunt.previous_edition == albums["Chasse aux œufs"].event
-    assert len(stored_files(private_files, "photos")) == 3 * 36
+    assert len(stored_files(private_files, "photos")) == 3 * 40
 
 
 def test_the_seed_runs_again_and_keeps_an_album_made_by_hand(
@@ -78,5 +78,5 @@ def test_the_seed_runs_again_and_keeps_an_album_made_by_hand(
 
     assert Album.objects.count() == 6
     assert sorted(Photo.objects.values_list("sha256", flat=True)) == drawings
-    assert len(stored_files(private_files, "photos")) == 3 * 36
+    assert len(stored_files(private_files, "photos")) == 3 * 40
     assert Album.objects.filter(pk=by_hand.pk).exists()

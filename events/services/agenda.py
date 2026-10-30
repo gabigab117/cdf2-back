@@ -6,19 +6,24 @@ from django.db.models import Max, Q, QuerySet
 
 from events.models import Event, EventCategory
 from events.services.periods import events_in_period
+from photos.services.covers import with_visible_covers
 
 # How many events an event's page suggests next, under "Ensuite au programme".
 NEXT_EVENTS_COUNT = 2
 
 
 def published_events() -> QuerySet[Event]:
-    """Every published event, past ones included, the oldest first."""
-    return Event.objects.filter(published=True).order_by("starts_at", "pk")
+    """Every published event, past ones included, the oldest first, with its
+    cover while the site may show it.
+    """
+    return with_visible_covers(Event.objects.filter(published=True).order_by("starts_at", "pk"))
 
 
 def agenda() -> QuerySet[Event]:
-    """The agenda of the site: the published events to come, the next first."""
-    return events_in_period("upcoming").filter(published=True)
+    """The agenda of the site: the published events to come, the next first, with
+    their cover while the site may show it.
+    """
+    return with_visible_covers(events_in_period("upcoming").filter(published=True))
 
 
 def agenda_categories() -> list[EventCategory]:
