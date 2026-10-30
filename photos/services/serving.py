@@ -2,13 +2,18 @@
 photo is visible (D17).
 """
 
+from django.http import StreamingHttpResponse
 from django.http.response import HttpResponseBase
 from django.utils.cache import patch_cache_control
+from django.utils.http import content_disposition_header
 
 from documents.services.files import WEBP
 from documents.services.serving import stored_file_response
-from photos.models import Photo
+from photos.models import Album, Photo
 from photos.schemas import PhotoRendition
+from photos.services.zip import zip_images
+
+ZIP = "application/zip"
 
 
 def photo_response(photo: Photo, rendition: PhotoRendition, *, public: bool) -> HttpResponseBase:
@@ -22,4 +27,20 @@ def photo_response(photo: Photo, rendition: PhotoRendition, *, public: bool) -> 
         patch_cache_control(response, no_cache=True)
     else:
         patch_cache_control(response, private=True, no_store=True)
+    return response
+
+
+def zip_response(album: Album, photos: list[Photo]) -> StreamingHttpResponse:
+    """The zip of a selection's images, downloaded under the album's title.
+
+    Sent piece by piece, which nginx buffers: the worker is free within seconds.
+    An X-Accel-Buffering: no would hold it as long as a slow download, past
+    gunicorn's timeout.
+    """
+    response = StreamingHttpResponse(
+        zip_images(photos),
+        content_type=ZIP,
+        headers={"Content-Disposition": content_disposition_header(True, f"{album.title}.zip")},
+    )
+    patch_cache_control(response, private=True, no_store=True)
     return response

@@ -33,3 +33,9 @@ def board_client(board_member):
 def mockup_day(monkeypatch):
     """Today is the mockup's day, Thursday 1 October 2026, in Paris."""
     monkeypatch.setattr(timezone, "localdate", lambda *args, **kwargs: dt.date(2026, 10, 1))
+
+
+@pytest.fixture(autouse=True)
+def small_demo_photos(monkeypatch):
+    """The demo photos drawn small: they go through the same processing, quicker."""
+    monkeypatch.setattr("photos.services.demo.DEMO_SIZE", (48, 32))

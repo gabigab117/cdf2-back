@@ -1,5 +1,5 @@
-"""`manage.py seed_demo`: the fictitious events, equipment and loans of the mockup,
-for the preproduction.
+"""`manage.py seed_demo`: the fictitious events, equipment, loans and albums of the
+mockup, for the preproduction.
 """
 
 from django.conf import settings
@@ -8,12 +8,13 @@ from django.utils import timezone
 
 from equipment.services.demo import seed_demo_equipment
 from events.services.demo import seed_demo_events
+from photos.services.demo import seed_demo_albums
 
 
 class Command(BaseCommand):
     help = (
         "Write the fictitious events of the mockup, published, then its equipment and "
-        "loans, around today. "
+        "loans, around today, and its albums of drawn photos. "
         "Refused unless the environment sets DEMO_DATA_ENABLED: never in production."
     )
 
@@ -30,5 +31,11 @@ class Command(BaseCommand):
             self.style.SUCCESS(
                 f"{len(inventory.equipment)} demo equipment and {len(inventory.loans)} "
                 "demo loans written."
+            )
+        )
+        albums = seed_demo_albums(today)
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"{len(albums.albums)} demo albums and {albums.photos} demo photos written."
             )
         )

@@ -99,7 +99,7 @@ def test_the_command_tells_what_it_wrote(settings):
     """
     Given an environment that allows demo data
     When `manage.py seed_demo` runs, on the mockup's day
-    Then it says how many events, equipment and loans it wrote
+    Then it says how many events, equipment, loans, albums and photos it wrote
     """
     settings.DEMO_DATA_ENABLED = True
     out = StringIO()
@@ -108,3 +108,4 @@ def test_the_command_tells_what_it_wrote(settings):
 
     assert "9 demo events written." in out.getvalue()
     assert "14 demo equipment and 9 demo loans written." in out.getvalue()
+    assert "5 demo albums and 36 demo photos written." in out.getvalue()

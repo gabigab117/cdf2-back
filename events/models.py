@@ -89,6 +89,17 @@ class Event(models.Model):
     capacity = models.PositiveIntegerField(
         "capacité", null=True, blank=True, validators=[MinValueValidator(1)]
     )
+    # A photo of its albums or of its previous edition's (D17), shown on the site
+    # only while the photo is. It is set from the Photos tab, never with the rest
+    # of the event; named as a string, the photos importing the events.
+    cover = models.ForeignKey(
+        "photos.Photo",
+        verbose_name="couverture",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
     updated_at = models.DateTimeField("modifié le", auto_now=True)
 
     class Meta:

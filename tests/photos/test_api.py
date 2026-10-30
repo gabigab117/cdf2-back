@@ -16,10 +16,21 @@ ALBUMS = "/api/board/albums"
 # Every operation of the board on the albums and photos, naming any id: a
 # refusal comes before the object is looked up.
 OPERATIONS = [
+    ("get", ALBUMS),
     ("post", ALBUMS),
+    ("get", f"{ALBUMS}/1"),
+    ("put", f"{ALBUMS}/1"),
+    ("put", f"{ALBUMS}/1/published"),
+    ("put", f"{ALBUMS}/1/cover"),
+    ("delete", f"{ALBUMS}/1"),
     ("post", f"{ALBUMS}/1/photos"),
+    ("put", f"{ALBUMS}/1/photos/hidden"),
+    ("put", f"{ALBUMS}/1/photos/image-rights-to-review"),
+    ("post", f"{ALBUMS}/1/photos/delete"),
+    ("post", f"{ALBUMS}/1/photos/zip"),
     ("get", "/api/board/photos/1/thumbnail"),
-    ("delete", "/api/board/photos/1"),
+    ("get", "/api/board/events/1/cover"),
+    ("put", "/api/board/events/1/cover"),
 ]
 
 
@@ -47,7 +58,7 @@ def add_photo(client, album, content=None, name="IMG_0042.jpg"):
 def test_an_anonymous_visitor_gets_a_401(client, method, path):
     """
     Given a visitor without an access token
-    When they create an album, add, read or delete a photo of the board
+    When they read or change an album, its photos or an event's cover
     Then the API refuses with a 401
     """
     response = getattr(client, method)(path)
@@ -60,7 +71,7 @@ def test_an_anonymous_visitor_gets_a_401(client, method, path):
 def test_an_account_outside_the_board_gets_a_403(method, path):
     """
     Given an active account outside the board
-    When it creates an album, adds, reads or deletes a photo of the board
+    When it reads or changes an album, its photos or an event's cover
     Then the API refuses with a 403
     """
     response = getattr(client_of(UserFactory()), method)(path)
@@ -92,7 +103,11 @@ def test_a_member_creates_a_private_album_of_an_event(board_client):
         "date": "2026-09-13",
         "event": {"id": event.id, "title": "Brocante d’automne"},
         "published": False,
+        "cover": None,
+        "photos_count": 0,
+        "contributors_count": 0,
         "created_at": iso(album.created_at),
+        "photos": [],
     }
 
 
@@ -200,6 +215,26 @@ def test_a_photo_for_an_unknown_album_is_not_found(board_client, private_files):
 
     assert response.status_code == 404
     assert stored_files(private_files, "photos") == []
+
+
+def test_a_full_album_refuses_a_photo_before_reading_it(board_client, private_files, monkeypatch):
+    """
+    Given an album one photo short of the most an album holds
+    When a member adds a photo, then a file of any kind
+    Then the photo is recorded
+    And the file is refused on the file, as the album is full, and nothing more is stored
+    """
+    monkeypatch.setattr("photos.services.photos.MAX_ALBUM_PHOTOS", 2)
+    album = AlbumFactory()
+    PhotoFactory(album=album)
+    assert add_photo(board_client, album).status_code == 201
+
+    response = add_photo(board_client, album, pdf(), "facture.pdf")
+
+    assert messages_by_place(response) == {
+        ("body", "file"): "Un album compte 2 photos au plus : créez-en un second."
+    }
+    assert len(stored_files(private_files, "photos")) == 6
 
 
 def test_a_photo_that_fails_to_record_leaves_no_file(board_member, private_files, monkeypatch):
@@ -333,40 +368,3 @@ def test_on_the_server_nginx_sends_the_photo(client, settings):
     assert response.content == b""
     assert response["X-Accel-Redirect"] == f"/_private/{photo.display.name}"
     assert response["X-Accel-Redirect"].startswith("/_private/photos/")
-
-
-# Deletion
-
-
-def test_a_member_deletes_a_photo_and_its_three_files(
-    board_client, private_files, django_capture_on_commit_callbacks
-):
-    """
-    Given the cover of an album, as when the person on it asks for its removal
-    When a member deletes it
-    Then the photo is gone, its three files once the deletion is done
-    And the album has no cover left
-    """
-    photo = PhotoFactory()
-    album = photo.album
-    album.cover = photo
-    album.save()
-
-    with django_capture_on_commit_callbacks(execute=True):
-        response = board_client.delete(f"/api/board/photos/{photo.id}")
-        assert len(stored_files(private_files, "photos")) == 3
-
-    assert response.status_code == 204
-    assert not Photo.objects.exists()
-    assert stored_files(private_files, "photos") == []
-    album.refresh_from_db()
-    assert album.cover is None
-
-
-def test_deleting_an_unknown_photo_is_not_found(board_client):
-    """
-    Given no photo of that id
-    When a member deletes it
-    Then the API answers 404
-    """
-    assert board_client.delete("/api/board/photos/999999").status_code == 404
