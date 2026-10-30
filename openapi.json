@@ -583,7 +583,6 @@
                 "type": "number"
               },
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -684,7 +683,6 @@
           "amount": {
             "anyOf": [
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -825,7 +823,6 @@
           "amount": {
             "anyOf": [
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -1682,7 +1679,6 @@
                 "type": "number"
               },
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               }
             ],
@@ -2068,7 +2064,6 @@
           "average_cost_after": {
             "anyOf": [
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -2080,7 +2075,6 @@
           "cost": {
             "anyOf": [
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -2090,7 +2084,6 @@
             "title": "Cost"
           },
           "delta": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Delta",
             "type": "string"
           },
@@ -2098,14 +2091,12 @@
             "$ref": "#/components/schemas/ItemHistoryOperationOut"
           },
           "quantity_after": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Quantity After",
             "type": "string"
           },
           "unit_cost": {
             "anyOf": [
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -2121,7 +2112,6 @@
           "value": {
             "anyOf": [
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -2133,7 +2123,6 @@
           "value_after": {
             "anyOf": [
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -2302,7 +2291,6 @@
             "type": "integer"
           },
           "total": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Total",
             "type": "string"
           }
@@ -2386,7 +2374,6 @@
                 "type": "number"
               },
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               }
             ],
@@ -2467,7 +2454,6 @@
             ]
           },
           "amount": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Amount",
             "type": "string"
           },
@@ -2580,7 +2566,6 @@
           "stocked_cost": {
             "anyOf": [
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -2596,7 +2581,6 @@
           "unstocked_cost": {
             "anyOf": [
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -2668,17 +2652,14 @@
             "$ref": "#/components/schemas/LedgerEventOut"
           },
           "expense": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Expense",
             "type": "string"
           },
           "income": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Income",
             "type": "string"
           },
           "result": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Result",
             "type": "string"
           }
@@ -2781,17 +2762,14 @@
             "type": "integer"
           },
           "expense": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Expense",
             "type": "string"
           },
           "income": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Income",
             "type": "string"
           },
           "result": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Result",
             "type": "string"
           }
@@ -2967,7 +2945,6 @@
         "description": "The cheque a type of borrower leaves by default (A16).",
         "properties": {
           "amount": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Amount",
             "type": "string"
           },
@@ -3070,7 +3047,6 @@
                 "type": "number"
               },
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -3314,7 +3290,6 @@
             ]
           },
           "deposit_amount": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Deposit Amount",
             "type": "string"
           },
@@ -3571,12 +3546,10 @@
             "type": "string"
           },
           "quantity": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Quantity",
             "type": "string"
           },
           "threshold": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Threshold",
             "type": "string"
           },
@@ -3673,12 +3646,10 @@
         "description": "The management of an event over a fiscal year, or of the general running\n(D16): its result once its goods are counted.",
         "properties": {
           "bar_margin": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Bar Margin",
             "type": "string"
           },
           "consumption_cost": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Consumption Cost",
             "type": "string"
           },
@@ -3693,24 +3664,20 @@
             ]
           },
           "expense": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Expense",
             "type": "string"
           },
           "income": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Income",
             "type": "string"
           },
           "management_result": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Management Result",
             "type": "string"
           },
           "margin_rate": {
             "anyOf": [
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -3720,12 +3687,10 @@
             "title": "Margin Rate"
           },
           "stocked_purchases": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Stocked Purchases",
             "type": "string"
           },
           "unlinked_purchases": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Unlinked Purchases",
             "type": "string"
           }
@@ -3768,32 +3733,26 @@
         "description": "The results of a fiscal year, and what its stock changed of them.",
         "properties": {
           "adjusted_result": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Adjusted Result",
             "type": "string"
           },
           "closing_value": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Closing Value",
             "type": "string"
           },
           "management_result": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Management Result",
             "type": "string"
           },
           "opening_value": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Opening Value",
             "type": "string"
           },
           "result": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Result",
             "type": "string"
           },
           "stock_change": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Stock Change",
             "type": "string"
           }
@@ -3867,7 +3826,6 @@
                 "type": "number"
               },
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               }
             ],
@@ -4173,7 +4131,6 @@
         "description": "The expense of the treasury that paid an operation (D16).",
         "properties": {
           "amount": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Amount",
             "type": "string"
           },
@@ -4213,7 +4170,6 @@
                 "type": "number"
               },
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               }
             ],
@@ -4234,7 +4190,6 @@
             "$ref": "#/components/schemas/StockMovementItemOut"
           },
           "quantity": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Quantity",
             "type": "string"
           }
@@ -4669,7 +4624,6 @@
             "type": "array"
           },
           "total": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Total",
             "type": "string"
           }
@@ -5214,27 +5168,22 @@
         "description": "From the management results to the adjusted result: each line adds to\nthe one before.",
         "properties": {
           "adjusted_result": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Adjusted Result",
             "type": "string"
           },
           "management_result": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Management Result",
             "type": "string"
           },
           "paid_another_year": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Paid Another Year",
             "type": "string"
           },
           "recorded_another_year": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Recorded Another Year",
             "type": "string"
           },
           "unlinked_purchases": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Unlinked Purchases",
             "type": "string"
           }
@@ -5525,7 +5474,6 @@
           "estimated_cost": {
             "anyOf": [
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -5538,7 +5486,6 @@
             "$ref": "#/components/schemas/StockMovementItemOut"
           },
           "quantity": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Quantity",
             "type": "string"
           }
@@ -5555,7 +5502,6 @@
         "description": "What the shopping list should cost (its budget), of its lines that have a\ncost.",
         "properties": {
           "total": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Total",
             "type": "string"
           },
@@ -5752,7 +5698,6 @@
             "$ref": "#/components/schemas/StockItemCategory"
           },
           "value": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Value",
             "type": "string"
           }
@@ -5773,7 +5718,6 @@
                 "type": "number"
               },
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -5820,7 +5764,6 @@
                 "type": "number"
               },
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               }
             ],
@@ -5966,7 +5909,6 @@
                 "type": "number"
               },
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -5985,7 +5927,6 @@
                 "type": "number"
               },
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               }
             ],
@@ -5997,7 +5938,6 @@
                 "type": "number"
               },
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               }
             ],
@@ -6045,7 +5985,6 @@
           "initial_cost": {
             "anyOf": [
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -6059,12 +5998,10 @@
             "type": "string"
           },
           "step": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Step",
             "type": "string"
           },
           "threshold": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Threshold",
             "type": "string"
           },
@@ -6095,7 +6032,6 @@
                 "type": "number"
               },
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -6114,7 +6050,6 @@
                 "type": "number"
               },
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               }
             ],
@@ -6135,14 +6070,12 @@
             "$ref": "#/components/schemas/StockMovementItemOut"
           },
           "quantity": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Quantity",
             "type": "string"
           },
           "value": {
             "anyOf": [
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -6170,7 +6103,6 @@
             "type": "array"
           },
           "total": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Total",
             "type": "string"
           }
@@ -6210,7 +6142,6 @@
         "description": "What an operation changed of one item.",
         "properties": {
           "delta": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Delta",
             "type": "string"
           },
@@ -6239,7 +6170,6 @@
             ]
           },
           "cost": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Cost",
             "type": "string"
           },
@@ -6377,7 +6307,6 @@
           "cost": {
             "anyOf": [
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -6387,7 +6316,6 @@
             "title": "Cost"
           },
           "delta": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Delta",
             "type": "string"
           },
@@ -6397,7 +6325,6 @@
           "unit_cost": {
             "anyOf": [
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -6413,7 +6340,6 @@
           "value": {
             "anyOf": [
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -6677,7 +6603,6 @@
                 "type": "number"
               },
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               }
             ],
@@ -6693,7 +6618,6 @@
                 "type": "number"
               },
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               }
             ],
@@ -6727,7 +6651,6 @@
             "type": "integer"
           },
           "value": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Value",
             "type": "string"
           }
@@ -6747,7 +6670,6 @@
           "average_cost": {
             "anyOf": [
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -6762,7 +6684,6 @@
           "last_unit_cost": {
             "anyOf": [
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -6780,14 +6701,12 @@
             "type": "boolean"
           },
           "quantity": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Quantity",
             "type": "string"
           },
           "value": {
             "anyOf": [
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -6852,7 +6771,6 @@
                 "type": "number"
               },
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               }
             ],
@@ -7093,7 +7011,6 @@
           "amount": {
             "anyOf": [
               {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -14547,7 +14464,6 @@
                         "type": "number"
                       },
                       {
-                        "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                         "type": "string"
                       }
                     ],

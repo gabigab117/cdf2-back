@@ -1,10 +1,10 @@
 # No hook may rewrite a migration. Both ruff hooks carry `--force-exclude` in
-# their upstream `entry` (checked in v0.16.10): without it, the exclusion
+# their upstream `entry` (checked in v0.17.3): without it, the exclusion
 # declared in pyproject.toml would be ignored for the paths pre-commit passes as
 # arguments. Do not repeat it here, ruff rejects the duplicate.
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.10
+    rev: v0.17.3
     hooks:
       - id: ruff-check
         args: [--fix]
