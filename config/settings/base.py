@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "equipment",
     "events",
     "notes",
+    "photos",
     "reservations",
     "stations",
     "stock",
@@ -117,6 +118,8 @@ MEDIA_ROOT = Path(env("MEDIA_ROOT", default=str(BASE_DIR / "private")))
 # The largest file a member may upload, in bytes: below the 20 MB nginx
 # accepts, so that the API, rather than nginx, tells the member.
 DOCUMENT_MAX_SIZE = env.int("DOCUMENT_MAX_SIZE", default=15 * 1024 * 1024)
+# The largest photo, likewise: a phone's photo, even of 48 million pixels.
+PHOTO_MAX_SIZE = env.int("PHOTO_MAX_SIZE", default=15 * 1024 * 1024)
 
 # Where nginx serves the private files from, once the API has checked the
 # access (X-Accel-Redirect). None: Django sends them itself, as in development.

@@ -24,6 +24,7 @@ PUBLIC_OPERATIONS = {
     ("get", "/api/public/events/{slug}.ics"),
     ("get", "/api/public/agenda"),
     ("get", "/api/public/agenda.ics"),
+    ("get", "/api/public/photos/{photo_id}/{rendition}"),
 }
 
 

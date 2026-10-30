@@ -24,6 +24,8 @@ from equipment.api import router as equipment_router
 from events.api import public_router as events_public_router
 from events.api import router as events_router
 from notes.api import router as notes_router
+from photos.api import public_router as photos_public_router
+from photos.api import router as photos_router
 from reservations.api import router as reservations_router
 from stations.api import router as stations_router
 from stock.api import router as stock_router
@@ -128,4 +130,6 @@ api.add_router("/board/", equipment_router)
 api.add_router("/board/", loans_router)
 api.add_router("/board/", treasury_router)
 api.add_router("/board/", stock_router)
+api.add_router("/board/", photos_router)
 api.add_router("/public/", events_public_router)
+api.add_router("/public/", photos_public_router)

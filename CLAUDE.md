@@ -110,7 +110,7 @@ def test_loan_over_availability_rejected(api_client):
   - **Les comptes du bureau sont au seul superuser** (5.9) : leur routeur porte `SuperuserAuth`, sous-classe de `BoardMemberAuth`. Un membre du bureau qui n'est pas superuser reçoit un 403 à lui (`NotSuperuserError`), « Accès réservé à l'administrateur des comptes. ». Ninja choisit le handler d'une exception d'après sa classe la plus précise : ce 403-là passe avant celui des membres.
 - **Un objet inaccessible n'existe pas** : queryset filtré par utilisateur et par portée avant toute lecture (`get_object_or_404(<queryset filtré>, pk=...)`) → 404, jamais 403. Exemple : seul l'auteur d'une note peut la modifier. Le 404 répond « Introuvable. » (handler de `config/api.py`) : Ninja, lui, répond en anglais.
 - **Endpoints publics** (ceux que lisent les pages publiques rendues côté serveur) : `auth=None`, lecture seule, sous `/api/public/`, avec des **schémas de sortie dédiés** sans aucune donnée personnelle. Jamais de schéma interne réutilisé pour un endpoint public : un champ ajouté pour l'usage interne fuiterait.
-  - Le routeur du site (`public_router`, dans `events/api.py`) est monté sur `/public/`. Chaque opération y déclare `auth=None` une à une : une opération ajoutée sans y penser reste privée.
+  - Chaque app qui publie des opérations a son routeur du site (`public_router`, dans `events/api.py` et `photos/api.py`), monté sur `/public/`. Chaque opération y déclare `auth=None` une à une : une opération ajoutée sans y penser reste privée.
   - Un test vérifie qu'aucun schéma d'une réponse publique ne sert aussi une opération privée, les énumérations mises à part.
   - **Une URL absolue tirée de la requête** (`build_absolute_uri`) ne vaut que pour ce que le navigateur ou l'agenda du visiteur appelle à travers nginx, comme les fichiers iCalendar. Le rendu serveur de Nuxt appelle l'API avec `Host: 127.0.0.1` : une réponse JSON qu'il lit donne des chemins relatifs.
 - **Requêtes optimisées par défaut** : `select_related` / `prefetch_related` sur toute liste. Pas de N+1.
@@ -132,14 +132,15 @@ def test_loan_over_availability_rejected(api_client):
   - Ils sont servis par un endpoint qui contrôle l'accès : authentification, ou visibilité publique pour une photo publiée. On utilise `FileResponse` en dev et **nginx `X-Accel-Redirect`** en prod (`PRIVATE_FILES_ACCEL_PREFIX`, `documents/services/serving.py`).
   - Le type est vérifié **sur le contenu** à l'envoi, et la réponse porte le type enregistré, `X-Content-Type-Options: nosniff` et un `Content-Disposition` écrit par `content_disposition_header` (`filename*` en UTF-8 pour un nom accentué).
   - Aucun dossier n'est servi directement par nginx.
-  - **Une photo publique** (phase 8) n'est servie que si son album est publié, qu'elle n'est pas masquée du site et que son droit à l'image n'est pas « À vérifier ». Sinon, elle n'existe pas (404).
-    - La règle tient dans un seul queryset, que lisent le service de l'image, les listes publiques et la couverture d'un événement.
-    - La réponse porte `X-Robots-Tag: noindex` : l'image n'entre pas dans les moteurs d'images, et une photo retirée n'y survit pas.
-    - Une dépublication, un masquage ou une suppression prend effet tout de suite.
+  - **Une photo publique** n'est servie que si son album est publié, qu'elle n'est pas masquée du site et que son droit à l'image n'est pas « À vérifier ». Sinon, elle n'existe pas (404).
+    - La règle tient dans un seul queryset, `visible_photos()` (`photos/services/photos.py`) : toute lecture publique d'une photo part de lui, son fichier comme les listes et les couvertures.
+    - Elle part sans son nom d'origine, qui peut nommer quelqu'un (`photo-<id>.webp`), et en `Cache-Control: no-cache` : revalidée à chaque affichage, une dépublication, un masquage ou une suppression prend effet tout de suite.
+    - Son `X-Robots-Tag: noindex` est posé par nginx (`map` sur `/_private/photos/`, `deploy/nginx/`) : un en-tête de Django ne survit pas à un `X-Accel-Redirect`. Les fichiers des photos restent donc sous `photos/`.
   - **Images en WebP, par django-imagekit** (`documents/services/files.py`) :
     - toute image acceptée (JPEG, PNG, HEIC par pillow-heif, WebP) devient un WebP, redressé (`ImageOps.exif_transpose`, l'API publique de Pillow, plutôt que le `Transpose` de pilkit) et réduit à 4 000 px ;
     - le WebP de Pillow n'écrit ni EXIF ni XMP sans qu'on les lui passe : la position GPS d'une photo ne reste pas ;
     - un PDF se reconnaît à sa signature `%PDF-` : Python n'a plus de détection par le contenu depuis le retrait d'`imghdr`, et Pillow ne lit pas les PDF.
+  - **Une photo d'album** (`photos/services/images.py`) est gardée en trois WebP, l'original n'étant décodé qu'une fois : `image` (4 000 px, la spec des documents), `display` (2 048 px) tiré d'elle, `thumbnail` (640 px) tiré de l'affichage. Sa date de prise de vue est lue dans l'EXIF avant que les métadonnées tombent, à l'heure de Paris.
   - **Un PDF que l'application fait** : l'attestation sur l'honneur d'un achat sans ticket (D14, `documents/services/statements.py`).
     - ReportLab, la librairie qu'emploie la documentation de Django, en Python pur. Il n'est pas thread-safe : les workers sont synchrones, sans threads.
     - Polices standard du PDF (Helvetica), rien à embarquer. Elles écrivent le jeu Windows-1252, français et « € » compris ; un caractère hors de ce jeu, comme un emoji, s'imprime en carré noir, sans erreur.

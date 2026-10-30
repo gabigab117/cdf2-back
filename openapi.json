@@ -144,6 +144,104 @@
         "title": "AgendaOut",
         "type": "object"
       },
+      "AlbumEventOut": {
+        "description": "The event an album belongs to.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "AlbumEventOut",
+        "type": "object"
+      },
+      "AlbumIn": {
+        "description": "An album as a member creates it: private until it is published (D17).\n\nIts values are checked by the model, whose messages are in French.",
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "event": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "date",
+          "event"
+        ],
+        "title": "AlbumIn",
+        "type": "object"
+      },
+      "AlbumOut": {
+        "description": "An album of the board.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "event": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AlbumEventOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "published": {
+            "title": "Published",
+            "type": "boolean"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "date",
+          "event",
+          "published",
+          "created_at"
+        ],
+        "title": "AlbumOut",
+        "type": "object"
+      },
       "AssignmentIn": {
         "properties": {
           "name": {
@@ -4814,6 +4912,84 @@
         "title": "PendingUnpricedOut",
         "type": "object"
       },
+      "PhotoOut": {
+        "description": "A photo of an album, as the board sees it.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "height": {
+            "title": "Height",
+            "type": "integer"
+          },
+          "hidden": {
+            "title": "Hidden",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "image_rights_to_review": {
+            "title": "Image Rights To Review",
+            "type": "boolean"
+          },
+          "original_name": {
+            "title": "Original Name",
+            "type": "string"
+          },
+          "taken_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taken At"
+          },
+          "uploaded_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BoardMemberOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "width": {
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "original_name",
+          "width",
+          "height",
+          "taken_at",
+          "hidden",
+          "image_rights_to_review",
+          "uploaded_by",
+          "created_at"
+        ],
+        "title": "PhotoOut",
+        "type": "object"
+      },
+      "PhotoRendition": {
+        "description": "A size of a photo smaller than its image, named after its field.",
+        "enum": [
+          "thumbnail",
+          "display"
+        ],
+        "title": "PhotoRendition",
+        "type": "string"
+      },
       "PracticalInfoIcon": {
         "enum": [
           "people",
@@ -7766,6 +7942,193 @@
         "summary": "Send a new link",
         "tags": [
           "accounts"
+        ]
+      }
+    },
+    "/api/board/albums": {
+      "post": {
+        "description": "Record an album, private until a member publishes it (D17).",
+        "operationId": "photos_api_create",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlbumIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlbumOut"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Create an album",
+        "tags": [
+          "photos"
+        ]
+      }
+    },
+    "/api/board/albums/{album_id}/photos": {
+      "post": {
+        "description": "Record a photo, sent alone: an album of many photos is sent one at a time.\n\nIts type is read from its content; it is kept in WebP, without its\nmetadata, in three sizes.",
+        "operationId": "photos_api_upload",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "album_id",
+            "required": true,
+            "schema": {
+              "title": "Album Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "format": "binary",
+                    "title": "File",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "title": "FileParams",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhotoOut"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Add a photo to an album",
+        "tags": [
+          "photos"
         ]
       }
     },
@@ -12125,6 +12488,171 @@
         ]
       }
     },
+    "/api/board/photos/{photo_id}": {
+      "delete": {
+        "description": "Delete a photo and its files: also how a removal asked for is done (D17).",
+        "operationId": "photos_api_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "photo_id",
+            "required": true,
+            "schema": {
+              "title": "Photo Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Delete a photo",
+        "tags": [
+          "photos"
+        ]
+      }
+    },
+    "/api/board/photos/{photo_id}/{rendition}": {
+      "get": {
+        "description": "A size of any photo, published or not.",
+        "operationId": "photos_api_read_file",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "photo_id",
+            "required": true,
+            "schema": {
+              "title": "Photo Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "A size of a photo smaller than its image, named after its field.",
+            "in": "path",
+            "name": "rendition",
+            "required": true,
+            "schema": {
+              "description": "A size of a photo smaller than its image, named after its field.",
+              "enum": [
+                "thumbnail",
+                "display"
+              ],
+              "title": "PhotoRendition",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/webp": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "The photo, in the size asked for"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "security": [
+          {
+            "BoardMemberAuth": []
+          }
+        ],
+        "summary": "Read a photo",
+        "tags": [
+          "photos"
+        ]
+      }
+    },
     "/api/board/reservations/{reservation_id}": {
       "delete": {
         "operationId": "reservations_api_delete",
@@ -16156,6 +16684,75 @@
           }
         },
         "summary": "Calendar file of an event",
+        "tags": [
+          "site"
+        ]
+      }
+    },
+    "/api/public/photos/{photo_id}/{rendition}": {
+      "get": {
+        "description": "A size of a photo the site shows (D17): any other is not found.",
+        "operationId": "photos_api_public_file",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "photo_id",
+            "required": true,
+            "schema": {
+              "title": "Photo Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "A size of a photo smaller than its image, named after its field.",
+            "in": "path",
+            "name": "rendition",
+            "required": true,
+            "schema": {
+              "description": "A size of a photo smaller than its image, named after its field.",
+              "enum": [
+                "thumbnail",
+                "display"
+              ],
+              "title": "PhotoRendition",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/webp": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "The photo, in the size asked for"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorOut"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Read a visible photo",
         "tags": [
           "site"
         ]

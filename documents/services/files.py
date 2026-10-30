@@ -87,11 +87,44 @@ class StoredFile:
     sha256: str
 
 
+@dataclass(frozen=True)
+class Upload:
+    """The bytes a member sent, read once, with the file's name and their
+    fingerprint.
+    """
+
+    data: bytes
+    name: str
+    sha256: str
+
+
+@dataclass(frozen=True)
+class ImageHeader:
+    """What an image's header tells, before any pixel is decoded."""
+
+    format: str
+    exif: Image.Exif
+
+
 def read_upload(file: File, max_size: int | None = None) -> StoredFile:
     """An uploaded file ready to store: a PDF, or an image converted to WebP.
 
     Every refusal is located on the file: empty, too large, of a type not
     accepted, or unreadable.
+    """
+    upload = read_file(file, max_size)
+    data = upload.data
+    if data.startswith(PDF_SIGNATURE):
+        return StoredFile(ContentFile(data), upload.name, PDF, len(data), upload.sha256)
+    webp = to_webp(data, read_image_header(data, NOT_ACCEPTED))
+    return StoredFile(
+        ContentFile(webp), renamed(upload.name, ".webp"), WEBP, len(webp), upload.sha256
+    )
+
+
+def read_file(file: File, max_size: int | None) -> Upload:
+    """The bytes of an uploaded file, refused on the file when it is empty or
+    too large.
     """
     if not file.size:
         raise _refusal("Le fichier est vide.")
@@ -101,42 +134,53 @@ def read_upload(file: File, max_size: int | None = None) -> StoredFile:
     # file. Written from them, the file takes the group of its folder, which
     # nginx reads; a temporary upload moved in place would keep its own.
     data = file.read()
-    sha256 = hashlib.sha256(data).hexdigest()
-    name = PurePath(file.name).name
-    if data.startswith(PDF_SIGNATURE):
-        return StoredFile(ContentFile(data), name, PDF, len(data), sha256)
-    webp = _webp(data)
-    return StoredFile(ContentFile(webp), renamed(name, ".webp"), WEBP, len(webp), sha256)
+    return Upload(data, PurePath(file.name).name, hashlib.sha256(data).hexdigest())
 
 
-def renamed(name: str, suffix: str) -> str:
-    """A file's name with another extension, within the 255 characters stored."""
-    return PurePath(name).stem[: 255 - len(suffix)] + suffix
+def read_image_header(data: bytes, not_accepted: str) -> ImageHeader:
+    """The header of an accepted image, of a size the server can hold.
 
-
-def _webp(data: bytes) -> bytes:
+    Refused on the file: any other content, with the message given, an image
+    of too many pixels, or one whose decoder cannot even start.
+    """
     try:
         # Opening reads the header alone: the size is known before any pixel
         # is decoded.
         with Image.open(BytesIO(data), formats=IMAGE_FORMATS) as image:
             width, height = image.size
-            image_format = image.format
+            header = ImageHeader(image.format, image.getexif())
     except Image.DecompressionBombError as error:
         raise _refusal(TOO_LARGE_IMAGE) from error
     except UnidentifiedImageError as error:
-        raise _refusal(NOT_ACCEPTED) from error
+        raise _refusal(not_accepted) from error
     except OSError as error:
         # A format recognised whose decoder cannot even start, as a WebP cut short.
         raise _refusal(UNREADABLE) from error
     if width * height > MAX_PIXELS:
         raise _refusal(TOO_LARGE_IMAGE)
-    spec = WebpPicture if image_format == "PNG" else WebpPhoto
+    return header
+
+
+def to_webp(data: bytes, header: ImageHeader) -> bytes:
+    """An accepted image in WebP: a PNG, such as a screenshot, without loss."""
+    return generate(WebpPicture if header.format == "PNG" else WebpPhoto, data)
+
+
+def generate(spec: type[ImageSpec], data: bytes) -> bytes:
+    """The image a spec makes of an image's bytes, refused on the file when its
+    pixels cannot be decoded.
+    """
     try:
         return spec(source=ContentFile(data)).generate().read()
     except OSError as error:
         # A header that reads well over pixels that do not, as a file cut
         # short: only decoding tells, Image.verify checking nothing but a PNG.
         raise _refusal(UNREADABLE) from error
+
+
+def renamed(name: str, suffix: str) -> str:
+    """A file's name with another extension, within the 255 characters stored."""
+    return PurePath(name).stem[: 255 - len(suffix)] + suffix
 
 
 def _refusal(message: str) -> ValidationError:

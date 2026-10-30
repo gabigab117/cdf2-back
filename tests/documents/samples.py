@@ -57,7 +57,9 @@ def opened(content):
     return Image.open(BytesIO(content))
 
 
-def stored_files(private_files):
-    """The files on disk, outside any test of their content."""
-    folder = Path(private_files) / "documents"
-    return sorted(folder.iterdir()) if folder.exists() else []
+def stored_files(private_files, folder="documents"):
+    """The files on disk, of the documents or of the photos, outside any test of
+    their content.
+    """
+    path = Path(private_files) / folder
+    return sorted(path.iterdir()) if path.exists() else []

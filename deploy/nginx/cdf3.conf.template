@@ -7,6 +7,15 @@
 
 limit_req_zone $binary_remote_addr zone=cdf3_{{INSTANCE}}_admin:1m rate=10r/m;
 
+# The photos are never indexed (D17). Their files are sent from /_private/photos/
+# once Django has checked who asks: a header Django set would not survive the
+# X-Accel-Redirect, so nginx sets it. Elsewhere the value is empty, which adds
+# no header.
+map $uri $cdf3_{{INSTANCE}}_robots {
+    ~^/_private/photos/  "noindex";
+    default              "";
+}
+
 upstream cdf3_{{INSTANCE}}_api {
     server 127.0.0.1:{{API_PORT}};
     keepalive 8;
@@ -27,6 +36,7 @@ server {
     add_header Referrer-Policy "same-origin" always;
     proxy_hide_header X-Content-Type-Options;
     proxy_hide_header Referrer-Policy;
+    add_header X-Robots-Tag $cdf3_{{INSTANCE}}_robots always;
     # Preproduction only (fictitious data): never indexed. The production's
     # rendering drops every line that ends with "preprod only".
     add_header X-Robots-Tag "noindex, nofollow" always;  # preprod only
