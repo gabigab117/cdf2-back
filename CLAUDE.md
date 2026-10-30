@@ -132,6 +132,10 @@ def test_loan_over_availability_rejected(api_client):
   - Ils sont servis par un endpoint qui contrôle l'accès : authentification, ou visibilité publique pour une photo publiée. On utilise `FileResponse` en dev et **nginx `X-Accel-Redirect`** en prod (`PRIVATE_FILES_ACCEL_PREFIX`, `documents/services/serving.py`).
   - Le type est vérifié **sur le contenu** à l'envoi, et la réponse porte le type enregistré, `X-Content-Type-Options: nosniff` et un `Content-Disposition` écrit par `content_disposition_header` (`filename*` en UTF-8 pour un nom accentué).
   - Aucun dossier n'est servi directement par nginx.
+  - **Une photo publique** (phase 8) n'est servie que si son album est publié, qu'elle n'est pas masquée du site et que son droit à l'image n'est pas « À vérifier ». Sinon, elle n'existe pas (404).
+    - La règle tient dans un seul queryset, que lisent le service de l'image, les listes publiques et la couverture d'un événement.
+    - La réponse porte `X-Robots-Tag: noindex` : l'image n'entre pas dans les moteurs d'images, et une photo retirée n'y survit pas.
+    - Une dépublication, un masquage ou une suppression prend effet tout de suite.
   - **Images en WebP, par django-imagekit** (`documents/services/files.py`) :
     - toute image acceptée (JPEG, PNG, HEIC par pillow-heif, WebP) devient un WebP, redressé (`ImageOps.exif_transpose`, l'API publique de Pillow, plutôt que le `Transpose` de pilkit) et réduit à 4 000 px ;
     - le WebP de Pillow n'écrit ni EXIF ni XMP sans qu'on les lui passe : la position GPS d'une photo ne reste pas ;
@@ -254,7 +258,7 @@ def test_loan_over_availability_rejected(api_client):
 - **Toute entrée passe par un schéma.** Aucune confiance dans le client : règles métier et transitions de statut vérifiées côté serveur. Jamais de `ModelSchema` en `fields = "__all__"` ni en `exclude` sur une entrée : un champ ajouté au modèle deviendrait modifiable sans que personne l'ait décidé.
 - **Données personnelles (RGPD)**
   - On ne stocke que ce qu'une card demande.
-  - Aucune donnée personnelle dans un endpoint public.
+  - Aucune donnée personnelle dans un endpoint public. Seule exception : l'image d'une photo publiée, où une personne peut être reconnaissable. Une photo d'ambiance ou de groupe se publie ; une personne cadrée seule, seulement avec son accord ou celui de ses parents, recueilli hors de l'application par le membre qui publie. L'API publique ne donne jamais un nom, ni celui du membre qui a ajouté la photo.
   - Les durées de conservation sont appliquées chaque nuit par `purge_personal_data`, dans l'unité de purge (`deploy/`). Un service par app (`services/purge.py`) fait un seul `update()` par règle :
     - les délais se comptent en mois du calendrier (`relativedelta`) depuis le jour du retour à Paris, la date de retour prévue d'un prêt annulé, ou le dernier jour de l'événement (`events_over_by`). En fin de mois, ils finissent le lendemain : un retour du 30 novembre s'efface le 1er mars ;
     - un nom effacé devient « Nom effacé » (`ERASED_NAME`) : un prêt à un tiers, une réservation et un bénévole en gardent un, et leurs lignes restent, totaux compris ;
